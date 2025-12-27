@@ -8,6 +8,7 @@ export interface Ticket {
   images?: string[];
   tags: string[];
   note?: string;
+  barcodeFormat?: string;
   completed: boolean;
   completedAt?: number;
   isDeleted: boolean;

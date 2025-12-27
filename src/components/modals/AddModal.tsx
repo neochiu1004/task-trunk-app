@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2 } from 'lucide-react';
+import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2 } from 'lucide-react';
 import { Template } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { TagSelectInput } from '../ticket/TagSelectInput';
+import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
+import { useToast } from '@/hooks/use-toast';
+import { WebImageSearch } from '@/components/ui/web-image-search';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -23,6 +26,7 @@ interface AddModalProps {
     originalImage?: string;
     images: string[];
     tags: string[];
+    barcodeFormat?: string;
     completed: boolean;
     completedAt?: number;
     isDeleted: boolean;
@@ -40,15 +44,43 @@ export const AddModal: React.FC<AddModalProps> = ({
   onDeleteTemplate,
   onAddBatch,
 }) => {
+  const { toast } = useToast();
   const [manualData, setManualData] = useState({ name: '', serial: '', expiry: '' });
   const [manualTags, setManualTags] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [originalImage, setOriginalImage] = useState('');
+  const [barcodeFormat, setBarcodeFormat] = useState<string | undefined>(undefined);
+  const [isScanning, setIsScanning] = useState(false);
+  const [showWebSearch, setShowWebSearch] = useState(false);
 
   const applyTemplate = (tpl: Template) => {
     setManualData((prev) => ({ ...prev, name: tpl.productName }));
     if (tpl.image) setImages([tpl.image]);
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
+  };
+
+  const handleOriginalImageChange = async (base64: string) => {
+    setOriginalImage(base64);
+    
+    // Scan for barcode in the background
+    if (base64) {
+      setIsScanning(true);
+      try {
+        const result = await scanBarcodeFromImage(base64);
+        if (result) {
+          setManualData(prev => ({ ...prev, serial: result.content }));
+          setBarcodeFormat(result.format);
+          toast({
+            title: "條碼偵測成功",
+            description: `格式: ${result.format}，內容: ${result.content.substring(0, 20)}${result.content.length > 20 ? '...' : ''}`,
+          });
+        }
+      } catch (error) {
+        console.error('Barcode scan failed:', error);
+      } finally {
+        setIsScanning(false);
+      }
+    }
   };
 
   const handleManualSubmit = () => {
@@ -65,6 +97,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       originalImage: originalImage,
       images: images,
       tags: manualTags,
+      barcodeFormat: barcodeFormat,
       completed: false,
       isDeleted: false,
       createdAt: Date.now(),
@@ -74,6 +107,7 @@ export const AddModal: React.FC<AddModalProps> = ({
     setManualTags([]);
     setImages([]);
     setOriginalImage('');
+    setBarcodeFormat(undefined);
     onClose();
   };
 
@@ -145,23 +179,49 @@ export const AddModal: React.FC<AddModalProps> = ({
           animate="visible"
           className="grid grid-cols-2 gap-3"
         >
-          <ImageUpload
-            value={images[0] || ''}
-            onChange={(base64) => setImages([base64])}
-            onClear={() => setImages([])}
-            type="thumbnail"
-            label="封面縮圖"
-            sublabel="列表顯示 (範本)"
-          />
-          <ImageUpload
-            value={originalImage}
-            onChange={setOriginalImage}
-            onClear={() => setOriginalImage('')}
-            type="original"
-            label="核銷原圖"
-            sublabel="全螢幕 (不存範本)"
-          />
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">封面縮圖</span>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowWebSearch(true)}
+                className="text-[10px] text-primary flex items-center gap-1 hover:underline"
+              >
+                <Search size={10} /> 網路搜尋
+              </motion.button>
+            </div>
+            <ImageUpload
+              value={images[0] || ''}
+              onChange={(base64) => setImages([base64])}
+              onClear={() => setImages([])}
+              type="thumbnail"
+            />
+          </div>
+          <div className="space-y-1 relative">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">核銷原圖</span>
+              {isScanning && (
+                <Loader2 size={10} className="animate-spin text-primary" />
+              )}
+            </div>
+            <ImageUpload
+              value={originalImage}
+              onChange={handleOriginalImageChange}
+              onClear={() => {
+                setOriginalImage('');
+                setBarcodeFormat(undefined);
+              }}
+              type="original"
+            />
+          </div>
         </motion.div>
+
+        {/* Web Image Search Modal */}
+        <WebImageSearch
+          isOpen={showWebSearch}
+          onClose={() => setShowWebSearch(false)}
+          onSelectImage={(base64) => setImages([base64])}
+        />
 
         {/* Name Input */}
         <motion.input

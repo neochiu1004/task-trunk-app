@@ -13,6 +13,8 @@ import {
   LayoutDashboard,
   Image as ImageIcon,
   Sparkles,
+  Search,
+  Loader2,
 } from 'lucide-react';
 import { Ticket, Template } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
@@ -21,6 +23,9 @@ import { QRCodeCanvas } from './QRCodeCanvas';
 import { MomoTemplate } from './MomoTemplate';
 import { TagSelectInput } from './TagSelectInput';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { WebImageSearch } from '@/components/ui/web-image-search';
+import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
+import { useToast } from '@/hooks/use-toast';
 
 interface RedeemModalProps {
   ticket: Ticket | null;
@@ -51,15 +56,19 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   templates,
   onDeleteTemplate,
 }) => {
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editExpiry, setEditExpiry] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editImage, setEditImage] = useState('');
   const [editOriginalImage, setEditOriginalImage] = useState('');
+  const [editBarcodeFormat, setEditBarcodeFormat] = useState<string | undefined>(undefined);
   const [viewMode, setViewMode] = useState<ViewModeType>('standard');
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
+  const [showWebSearch, setShowWebSearch] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const isSpecificView = useMemo(() => {
     if (!ticket) return false;
@@ -83,6 +92,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditTags(ticket.tags || []);
       setEditImage(ticket.image || '');
       setEditOriginalImage(ticket.originalImage || '');
+      setEditBarcodeFormat(ticket.barcodeFormat);
       setViewMode(getInitialViewMode());
       if (ticket.originalImage) {
         setShowFullScreen(true);
@@ -95,6 +105,29 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   }, [ticket]);
 
   if (!ticket) return null;
+
+  const handleOriginalImageChange = async (base64: string) => {
+    setEditOriginalImage(base64);
+    
+    // Scan for barcode in the background
+    if (base64) {
+      setIsScanning(true);
+      try {
+        const result = await scanBarcodeFromImage(base64);
+        if (result) {
+          setEditBarcodeFormat(result.format);
+          toast({
+            title: "條碼偵測成功",
+            description: `格式: ${result.format}`,
+          });
+        }
+      } catch (error) {
+        console.error('Barcode scan failed:', error);
+      } finally {
+        setIsScanning(false);
+      }
+    }
+  };
 
   const applyTemplate = (tpl: Template) => {
     setEditName(tpl.productName);
@@ -117,6 +150,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       image: editImage,
       originalImage: editOriginalImage,
       images: editImage ? [editImage] : [],
+      barcodeFormat: editBarcodeFormat,
     });
     setIsEditing(false);
   };
@@ -281,24 +315,73 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                       {/* Image Uploads */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">封面縮圖</label>
-                          <ImageUpload
-                            value={editImage}
-                            onChange={setEditImage}
-                            onClear={() => setEditImage('')}
-                            type="thumbnail"
-                          />
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase">封面縮圖</label>
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => setShowWebSearch(true)}
+                              className="text-[10px] text-primary flex items-center gap-1 hover:underline"
+                            >
+                              <Search size={10} /> 搜尋
+                            </motion.button>
+                          </div>
+                          <div className="relative">
+                            <ImageUpload
+                              value={editImage}
+                              onChange={setEditImage}
+                              onClear={() => setEditImage('')}
+                              type="thumbnail"
+                            />
+                            {editImage && (
+                              <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setEditImage('')}
+                                className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-md z-10"
+                              >
+                                <X size={12} />
+                              </motion.button>
+                            )}
+                          </div>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">核銷原圖</label>
-                          <ImageUpload
-                            value={editOriginalImage}
-                            onChange={setEditOriginalImage}
-                            onClear={() => setEditOriginalImage('')}
-                            type="original"
-                          />
+                          <div className="flex items-center gap-2">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase">核銷原圖</label>
+                            {isScanning && (
+                              <Loader2 size={10} className="animate-spin text-primary" />
+                            )}
+                          </div>
+                          <div className="relative">
+                            <ImageUpload
+                              value={editOriginalImage}
+                              onChange={handleOriginalImageChange}
+                              onClear={() => {
+                                setEditOriginalImage('');
+                                setEditBarcodeFormat(undefined);
+                              }}
+                              type="original"
+                            />
+                            {editOriginalImage && (
+                              <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => {
+                                  setEditOriginalImage('');
+                                  setEditBarcodeFormat(undefined);
+                                }}
+                                className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-md z-10"
+                              >
+                                <X size={12} />
+                              </motion.button>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Web Image Search Modal */}
+                      <WebImageSearch
+                        isOpen={showWebSearch}
+                        onClose={() => setShowWebSearch(false)}
+                        onSelectImage={(base64) => setEditImage(base64)}
+                      />
 
                       <div className="flex justify-center -my-1 z-10">
                         <motion.button
@@ -448,7 +531,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             {ticket.serial && (
                               <div className="w-full space-y-2 shrink-0 pb-4">
                                 <div className="glass-card p-2 rounded-xl">
-                                  <BarcodeCanvas text={ticket.serial} />
+                                  <BarcodeCanvas text={ticket.serial} format={ticket.barcodeFormat} />
                                 </div>
                                 <div className="flex justify-center p-2 glass-card rounded-xl shrink-0">
                                   <QRCodeCanvas text={ticket.serial} size={100} />
@@ -480,7 +563,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                                 onClick={onClose}
                                 className="w-full glass-card p-3 rounded-xl cursor-pointer"
                               >
-                                <BarcodeCanvas text={ticket.serial} />
+                                <BarcodeCanvas text={ticket.serial} format={ticket.barcodeFormat} />
                               </motion.div>
                             )}
                             <motion.div
