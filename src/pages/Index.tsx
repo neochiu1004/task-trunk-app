@@ -132,7 +132,7 @@ const Index = () => {
       sendTelegramMessage(settings.tgToken, settings.tgChatId, msg).catch(console.error);
     }
   };
-  const handleDelete = (id: string, forceNotify = false) => {
+  const handleDelete = (id: string, forceNotify = false, skipConfirm = false) => {
     const now = Date.now();
     if (forceNotify && settings.tgToken && settings.tgChatId) {
       const target = tasks.find((t) => t.id === id);
@@ -141,8 +141,13 @@ const Index = () => {
         sendTelegramMessage(settings.tgToken, settings.tgChatId, msg).catch(console.error);
       }
     }
-    if (view === 'deleted') { if (confirm('確定永久刪除？')) setTasks((prev) => prev.filter((t) => t.id !== id)); }
-    else { setTasks((prev) => prev.map((t) => (id === t.id ? { ...t, isDeleted: true, deletedAt: now } : t))); }
+    if (view === 'deleted') {
+      if (skipConfirm || confirm('確定永久刪除？')) {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+      }
+    } else {
+      setTasks((prev) => prev.map((t) => (id === t.id ? { ...t, isDeleted: true, deletedAt: now } : t)));
+    }
   };
   const handleRestore = (ticket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, isDeleted: false, deletedAt: undefined } : t)));
   const handleBackup = () => {
