@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2 } from 'lucide-react';
+import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine } from 'lucide-react';
 import { Template } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -52,6 +52,8 @@ export const AddModal: React.FC<AddModalProps> = ({
   const [barcodeFormat, setBarcodeFormat] = useState<string | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
+  const [isScanningSerial, setIsScanningSerial] = useState(false);
+  const scanInputRef = useRef<HTMLInputElement>(null);
 
   const applyTemplate = (tpl: Template) => {
     setManualData((prev) => ({ ...prev, name: tpl.productName }));
@@ -80,6 +82,55 @@ export const AddModal: React.FC<AddModalProps> = ({
       } finally {
         setIsScanning(false);
       }
+    }
+  };
+
+  // Standalone scan - only extracts data, doesn't save image
+  const handleStandaloneScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsScanningSerial(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        if (base64) {
+          const result = await scanBarcodeFromImage(base64);
+          if (result) {
+            setManualData(prev => ({ ...prev, serial: result.content }));
+            setBarcodeFormat(result.format);
+            toast({
+              title: "條碼偵測成功",
+              description: `格式: ${result.format}，內容: ${result.content.substring(0, 20)}${result.content.length > 20 ? '...' : ''}`,
+            });
+          } else {
+            toast({
+              title: "未偵測到條碼",
+              description: "請確保圖片中有清晰的條碼或QR碼",
+              variant: "destructive",
+            });
+          }
+        }
+        setIsScanningSerial(false);
+      };
+      reader.onerror = () => {
+        setIsScanningSerial(false);
+        toast({
+          title: "讀取失敗",
+          description: "無法讀取選擇的圖片",
+          variant: "destructive",
+        });
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Standalone scan failed:', error);
+      setIsScanningSerial(false);
+    }
+    
+    // Reset input so same file can be selected again
+    if (scanInputRef.current) {
+      scanInputRef.current.value = '';
     }
   };
 
@@ -250,17 +301,43 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </motion.div>
 
-        {/* Serial Input */}
-        <motion.input
+        {/* Serial Input with Scan Button */}
+        <motion.div
           custom={4}
           variants={sectionVariants}
           initial="hidden"
           animate="visible"
-          className="w-full p-3.5 glass-card rounded-xl outline-none font-mono text-sm focus:ring-2 focus:ring-primary/30 transition-all"
-          placeholder="序號/代碼"
-          value={manualData.serial}
-          onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
-        />
+          className="w-full max-w-full overflow-x-hidden"
+        >
+          <div className="flex items-center gap-2 w-full max-w-full">
+            <input
+              className="flex-1 min-w-0 p-3.5 glass-card rounded-xl outline-none font-mono text-sm focus:ring-2 focus:ring-primary/30 transition-all"
+              placeholder="序號/代碼"
+              value={manualData.serial}
+              onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
+            />
+            <input
+              ref={scanInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleStandaloneScan}
+            />
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => scanInputRef.current?.click()}
+              disabled={isScanningSerial}
+              className="shrink-0 p-3.5 glass-card rounded-xl text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+              title="掃描條碼圖片"
+            >
+              {isScanningSerial ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <ScanLine size={18} />
+              )}
+            </motion.button>
+          </div>
+        </motion.div>
 
         {/* Expiry Input */}
         <motion.div
