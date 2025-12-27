@@ -370,7 +370,8 @@ const Index = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   if (confirm(`確定刪除 ${selectedIds.size} 張票券？`)) {
-                    selectedIds.forEach((id) => handleDelete(id));
+                    const skipConfirm = view === 'deleted';
+                    selectedIds.forEach((id) => handleDelete(id, false, skipConfirm));
                     setSelectedIds(new Set());
                     setIsSelectionMode(false);
                   }
