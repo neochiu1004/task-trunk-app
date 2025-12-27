@@ -35,6 +35,10 @@ export interface ViewConfig {
   cardBorderColor: string;
   compactHeight: number;
   compactShowImage: boolean;
+  headerBgSize: number;
+  headerBgPosY: number;
+  headerBgOpacity: number;
+  headerOpacity: number;
 }
 
 export interface Settings {

@@ -236,7 +236,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="space-y-4 animate-fade-in">
-              <div className="bg-muted p-3 rounded-xl space-y-2">
+              <div className="bg-muted p-3 rounded-xl space-y-3">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
                     <PanelTop size={12} /> 頂部功能區背景
@@ -272,6 +272,154 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={handleHeaderBgUpload}
                     className="hidden"
                   />
+                </div>
+
+                {currentViewConfig.headerBackgroundImage && (
+                  <>
+                    <div className="w-full h-16 rounded-lg bg-muted/50 border border-border relative overflow-hidden">
+                      <div
+                        className="absolute inset-0 w-full h-full pointer-events-none transition-all duration-75"
+                        style={{
+                          backgroundImage: `url(${currentViewConfig.headerBackgroundImage})`,
+                          backgroundSize: `${currentViewConfig.headerBgSize || 100}% auto`,
+                          backgroundPosition: `center ${currentViewConfig.headerBgPosY || 50}%`,
+                          backgroundRepeat: 'no-repeat',
+                          opacity: currentViewConfig.headerBgOpacity || 1,
+                        }}
+                      />
+                      <div className="absolute top-1 right-1 bg-black/40 backdrop-blur-sm text-white text-[9px] px-1.5 py-0.5 rounded-lg font-bold flex items-center gap-1 shadow-sm">
+                        預覽
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                          <Maximize size={12} /> 背景縮放 (寬度 %)
+                        </label>
+                        <span className="text-xs font-bold text-primary">{currentViewConfig.headerBgSize || 100}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStep('headerBgSize', -1, 50, 300, true, 5)}
+                          className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <input
+                          type="range"
+                          min="50"
+                          max="300"
+                          step="5"
+                          value={currentViewConfig.headerBgSize || 100}
+                          onChange={(e) => handleViewConfigChange('headerBgSize', parseInt(e.target.value))}
+                          className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                        <button
+                          onClick={() => handleStep('headerBgSize', 1, 50, 300, true, 5)}
+                          className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                          <Move size={12} /> 背景垂直位置
+                        </label>
+                        <span className="text-xs font-bold text-primary">{currentViewConfig.headerBgPosY || 50}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStep('headerBgPosY', -1, 0, 100, true, 1)}
+                          className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={currentViewConfig.headerBgPosY || 50}
+                          onChange={(e) => handleViewConfigChange('headerBgPosY', parseInt(e.target.value))}
+                          className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                        <button
+                          onClick={() => handleStep('headerBgPosY', 1, 0, 100, true, 1)}
+                          className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                          <Droplets size={12} /> 背景透明度
+                        </label>
+                        <span className="text-xs font-bold text-primary">{Math.round((currentViewConfig.headerBgOpacity || 1) * 100)}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStep('headerBgOpacity', -1, 0, 1, true, 0.05)}
+                          className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="5"
+                          value={Math.round((currentViewConfig.headerBgOpacity || 1) * 100)}
+                          onChange={(e) => handleViewConfigChange('headerBgOpacity', parseInt(e.target.value) / 100)}
+                          className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                        <button
+                          onClick={() => handleStep('headerBgOpacity', 1, 0, 1, true, 0.05)}
+                          className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                      <Droplets size={12} /> 頂部功能區透明度
+                    </label>
+                    <span className="text-xs font-bold text-primary">{Math.round((currentViewConfig.headerOpacity || 1) * 100)}%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleStep('headerOpacity', -1, 0.3, 1, true, 0.05)}
+                      className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <input
+                      type="range"
+                      min="30"
+                      max="100"
+                      step="5"
+                      value={Math.round((currentViewConfig.headerOpacity || 1) * 100)}
+                      onChange={(e) => handleViewConfigChange('headerOpacity', parseInt(e.target.value) / 100)}
+                      className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
+                    />
+                    <button
+                      onClick={() => handleStep('headerOpacity', 1, 0.3, 1, true, 0.05)}
+                      className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
