@@ -42,6 +42,7 @@ export interface Settings {
   tgChatId: string;
   notifyDays: number;
   appTitle: string;
+  brandLogo?: string;
   specificViewKeywords: string[];
   bgConfigMap: Record<string, { bgSize?: number; bgPosY?: number }>;
   viewConfigs: {

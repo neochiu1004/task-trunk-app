@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings2,
@@ -15,7 +15,9 @@ import {
   CheckSquare,
   BoxSelect,
   Palette,
+  Ticket,
 } from 'lucide-react';
+import { compressImage } from '@/lib/helpers';
 import { ViewType, SortType } from '@/types/ticket';
 
 interface HeaderProps {
@@ -40,6 +42,8 @@ interface HeaderProps {
   allTags: string[];
   onQuickBgChange: () => void;
   headerBackgroundImage?: string;
+  brandLogo?: string;
+  onBrandLogoChange: (logo: string) => void;
 }
 
 const viewTabs = [
@@ -70,10 +74,27 @@ export const Header: React.FC<HeaderProps> = ({
   allTags,
   onQuickBgChange,
   headerBackgroundImage,
+  brandLogo,
+  onBrandLogoChange,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const iconButtonClass = "w-8 h-8 flex items-center justify-center glass-button rounded-xl text-muted-foreground hover:text-foreground transition-all";
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await compressImage(file, 'thumbnail');
+      onBrandLogoChange(base64);
+    } catch (err) {
+      console.error('Logo upload failed:', err);
+    }
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
 
   return (
     <motion.div
@@ -90,25 +111,46 @@ export const Header: React.FC<HeaderProps> = ({
       <div className={headerBackgroundImage ? 'glass -mx-3 -mt-8 px-3 pt-8 pb-3 rounded-b-[20px]' : ''}>
         {/* Title Row */}
         <div className="flex justify-between items-center mb-2.5">
-          {isEditingTitle ? (
-            <input
-              autoFocus
-              className="text-lg font-bold bg-transparent outline-none border-b-2 border-primary w-36 tracking-tight"
-              value={appTitle}
-              onChange={(e) => onTitleChange(e.target.value)}
-              onBlur={() => setIsEditingTitle(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
-            />
-          ) : (
-            <motion.h1
-              whileTap={{ scale: 0.98 }}
-              className="text-lg font-bold cursor-pointer flex items-center gap-2 tracking-tight"
-              onClick={() => setIsEditingTitle(true)}
+          <div className="flex items-center gap-2">
+            {/* Brand Logo */}
+            <motion.div
+              whileTap={{ scale: 0.95 }}
+              onClick={() => logoInputRef.current?.click()}
+              className="w-8 h-8 rounded-full glass-button flex items-center justify-center overflow-hidden cursor-pointer shrink-0"
             >
-              <span className="text-lg">🎫</span>
-              <span>{appTitle}</span>
-            </motion.h1>
-          )}
+              {brandLogo ? (
+                <img src={brandLogo} alt="Brand" className="w-full h-full object-cover" />
+              ) : (
+                <Ticket size={16} className="text-primary" />
+              )}
+            </motion.div>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+            
+            {isEditingTitle ? (
+              <input
+                autoFocus
+                className="text-lg font-bold bg-transparent outline-none border-b-2 border-primary w-36 tracking-tight"
+                value={appTitle}
+                onChange={(e) => onTitleChange(e.target.value)}
+                onBlur={() => setIsEditingTitle(false)}
+                onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
+              />
+            ) : (
+              <motion.h1
+                whileTap={{ scale: 0.98 }}
+                className="text-lg font-bold cursor-pointer flex items-center gap-1.5 tracking-tight"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                <span>{appTitle}</span>
+              </motion.h1>
+            )}
+          </div>
           <div className="flex gap-1.5">
             <motion.button whileTap={{ scale: 0.95 }} onClick={onQuickBgChange} className={iconButtonClass}>
               <Palette size={15} />
