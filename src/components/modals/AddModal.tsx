@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, ImagePlus, Pencil, Tag, Calendar, LayoutDashboard, Image as ImageIcon, Maximize2, Eraser } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2 } from 'lucide-react';
 import { Template } from '@/types/ticket';
-import { compressImage, generateId } from '@/lib/helpers';
+import { generateId } from '@/lib/helpers';
+import { ResponsiveModal } from '@/components/ui/responsive-modal';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { TagSelectInput } from '../ticket/TagSelectInput';
 
 interface AddModalProps {
@@ -42,32 +45,6 @@ export const AddModal: React.FC<AddModalProps> = ({
   const [images, setImages] = useState<string[]>([]);
   const [originalImage, setOriginalImage] = useState('');
 
-  if (!isOpen) return null;
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const base64 = await compressImage(file, 'thumbnail');
-        setImages([base64]);
-      } catch (err) {
-        alert('處理圖片時發生錯誤');
-      }
-    }
-  };
-
-  const handleOriginalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const base64 = await compressImage(file, 'original');
-        setOriginalImage(base64);
-      } catch (err) {
-        alert('處理圖片時發生錯誤');
-      }
-    }
-  };
-
   const applyTemplate = (tpl: Template) => {
     setManualData((prev) => ({ ...prev, name: tpl.productName }));
     if (tpl.image) setImages([tpl.image]);
@@ -100,134 +77,161 @@ export const AddModal: React.FC<AddModalProps> = ({
     onClose();
   };
 
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.04, duration: 0.2 }
+    }),
+  };
+
   return (
-    <div
-      className="fixed inset-0 bg-foreground/60 z-50 flex items-end sm:items-center justify-center animate-fade-in"
-      onClick={onClose}
+    <ResponsiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="新增票券"
     >
-      <div
-        className="bg-card w-full sm:w-[420px] sm:rounded-3xl rounded-t-[32px] p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-start mb-4">
-          <h2 className="text-xl font-black text-foreground">新增票券</h2>
-          <button onClick={onClose} className="p-2 bg-muted rounded-full text-muted-foreground">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {templates && templates.length > 0 && (
-            <div className="mb-2">
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 flex items-center gap-1">
-                <LayoutDashboard size={12} /> 快速套用範本
-              </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                {templates.map((tpl) => (
-                  <div
-                    key={tpl.id}
-                    onClick={() => applyTemplate(tpl)}
-                    className="shrink-0 flex items-center gap-2 bg-muted border border-border rounded-xl p-1 pr-2 cursor-pointer hover:bg-muted/80 transition-colors group"
+      <div className="space-y-4">
+        {/* Templates */}
+        {templates && templates.length > 0 && (
+          <motion.div
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            className="mb-2"
+          >
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <LayoutDashboard size={12} /> 快速套用範本
+            </div>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+              {templates.map((tpl) => (
+                <motion.div
+                  key={tpl.id}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => applyTemplate(tpl)}
+                  className="shrink-0 flex items-center gap-2 glass-card rounded-xl p-1.5 pr-3 cursor-pointer hover:bg-muted/80 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden">
+                    {tpl.image ? (
+                      <img src={tpl.image} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <ImageIcon size={12} className="text-primary/30" />
+                    )}
+                  </div>
+                  <span className="text-xs font-semibold text-foreground max-w-[80px] truncate">{tpl.label}</span>
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteTemplate(tpl.id);
+                    }}
+                    className="text-muted-foreground/50 hover:text-ticket-warning p-0.5"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center overflow-hidden">
-                      {tpl.image ? (
-                        <img src={tpl.image} className="w-full h-full object-cover" />
-                      ) : (
-                        <ImageIcon size={12} className="text-primary/30" />
-                      )}
-                    </div>
-                    <span className="text-xs font-bold text-foreground max-w-[80px] truncate">{tpl.label}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteTemplate(tpl.id);
-                      }}
-                      className="text-primary/20 hover:text-ticket-warning p-0.5"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    <X size={12} />
+                  </motion.button>
+                </motion.div>
+              ))}
             </div>
-          )}
+          </motion.div>
+        )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <div className="w-full aspect-square bg-muted border border-dashed border-border rounded-2xl flex items-center justify-center relative overflow-hidden group">
-                {images.length > 0 ? (
-                  <img src={images[0]} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex flex-col items-center text-muted-foreground gap-1">
-                    <ImageIcon size={24} />
-                    <span className="text-[9px] font-bold">封面縮圖</span>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-              </div>
-              <div className="text-[10px] font-bold text-center text-muted-foreground">列表顯示 (範本)</div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="w-full aspect-square bg-muted border border-dashed border-border rounded-2xl flex items-center justify-center relative overflow-hidden group">
-                {originalImage ? (
-                  <img src={originalImage} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex flex-col items-center text-muted-foreground gap-1">
-                    <Maximize2 size={24} />
-                    <span className="text-[9px] font-bold">核銷原圖</span>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  accept="image/*"
-                  onChange={handleOriginalImageUpload}
-                />
-              </div>
-              <div className="text-[10px] font-bold text-center text-muted-foreground">全螢幕 (不存範本)</div>
-            </div>
-          </div>
-
-          <input
-            className="w-full p-3.5 bg-muted rounded-xl outline-none font-bold"
-            placeholder="票券名稱 (必填)"
-            value={manualData.name}
-            onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
+        {/* Image Uploads */}
+        <motion.div
+          custom={1}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-2 gap-3"
+        >
+          <ImageUpload
+            value={images[0] || ''}
+            onChange={(base64) => setImages([base64])}
+            onClear={() => setImages([])}
+            type="thumbnail"
+            label="封面縮圖"
+            sublabel="列表顯示 (範本)"
           />
+          <ImageUpload
+            value={originalImage}
+            onChange={setOriginalImage}
+            onClear={() => setOriginalImage('')}
+            type="original"
+            label="核銷原圖"
+            sublabel="全螢幕 (不存範本)"
+          />
+        </motion.div>
+
+        {/* Name Input */}
+        <motion.input
+          custom={2}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full p-3.5 glass-card rounded-xl outline-none font-medium focus:ring-2 focus:ring-primary/30 transition-all"
+          placeholder="票券名稱 (必填)"
+          value={manualData.name}
+          onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
+        />
+
+        {/* Tags */}
+        <motion.div
+          custom={3}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+        >
           <TagSelectInput
             allTags={allTags}
             selectedTags={manualTags}
             onTagsChange={setManualTags}
             extraSuggestions={specificViewKeywords}
           />
+        </motion.div>
+
+        {/* Serial Input */}
+        <motion.input
+          custom={4}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full p-3.5 glass-card rounded-xl outline-none font-mono text-sm focus:ring-2 focus:ring-primary/30 transition-all"
+          placeholder="序號/代碼"
+          value={manualData.serial}
+          onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
+        />
+
+        {/* Expiry Input */}
+        <motion.div
+          custom={5}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-1"
+        >
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">兌換期限</label>
           <input
-            className="w-full p-3.5 bg-muted rounded-xl outline-none font-mono text-sm"
-            placeholder="序號/代碼"
-            value={manualData.serial}
-            onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
+            type="date"
+            className="w-full p-3.5 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+            value={manualData.expiry}
+            onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
           />
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">兌換期限</label>
-            <input
-              type="date"
-              className="w-full p-3.5 bg-muted rounded-xl outline-none text-sm font-bold text-foreground"
-              value={manualData.expiry}
-              onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
-            />
-          </div>
-          <button
-            onClick={handleManualSubmit}
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all"
-          >
-            確認新增
-          </button>
-        </div>
+        </motion.div>
+
+        {/* Submit Button */}
+        <motion.button
+          custom={6}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          whileTap={{ scale: 0.98 }}
+          onClick={handleManualSubmit}
+          className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all"
+        >
+          確認新增
+        </motion.button>
       </div>
-    </div>
+    </ResponsiveModal>
   );
 };
