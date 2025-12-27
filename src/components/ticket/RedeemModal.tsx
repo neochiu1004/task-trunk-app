@@ -631,9 +631,10 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-[60] flex items-center justify-center"
+            className="fixed inset-0 bg-black z-[60] flex flex-col"
             onClick={() => setShowFullScreen(false)}
           >
+            {/* Close button - top right */}
             <motion.button
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -643,13 +644,65 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             >
               <X size={24} />
             </motion.button>
-            <motion.img
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              src={ticket.originalImage || ticket.image}
-              className="max-w-full max-h-full object-contain"
-              alt=""
-            />
+            
+            {/* Image container - takes remaining space */}
+            <div className="flex-1 flex items-center justify-center p-4 pb-32">
+              <motion.img
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                src={ticket.originalImage || ticket.image}
+                className="max-w-full max-h-full object-contain"
+                alt=""
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+            
+            {/* Fixed bottom floating buttons */}
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring" as const, stiffness: 300, damping: 25 }}
+              className="fixed bottom-0 left-0 right-0 p-4 pb-8 flex gap-3 z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Back button - semi-transparent blur */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => setShowFullScreen(false)}
+                className="flex-1 py-4 rounded-2xl font-semibold text-white bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
+              >
+                返回
+              </motion.button>
+              
+              {/* Quick Redeem button - emerald green */}
+              {!ticket.isDeleted && (
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => {
+                    setShowFullScreen(false);
+                    setTimeout(() => handleToggleCompleteWithAnimation(), 300);
+                  }}
+                  className="flex-[2] py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg"
+                  style={{ 
+                    background: ticket.completed 
+                      ? 'linear-gradient(135deg, #f59e0b, #d97706)' 
+                      : 'linear-gradient(135deg, #10b981, #059669)' 
+                  }}
+                >
+                  {ticket.completed ? (
+                    <>
+                      <RotateCcw size={18} /> 標記未用
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={18} /> 快速核銷
+                    </>
+                  )}
+                </motion.button>
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
