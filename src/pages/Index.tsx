@@ -1,13 +1,257 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
+import { dbHelper } from '@/lib/db';
+import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
+import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
+import { Header } from '@/components/layout/Header';
+import { TicketCard } from '@/components/ticket/TicketCard';
+import { RedeemModal } from '@/components/ticket/RedeemModal';
+import { AddModal } from '@/components/modals/AddModal';
+import { SettingsModal } from '@/components/modals/SettingsModal';
+import { DataActionsModal } from '@/components/modals/DataActionsModal';
+import { ImportConfirmModal } from '@/components/modals/ImportConfirmModal';
+import { BatchEditModal } from '@/components/modals/BatchEditModal';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+  const [tasks, setTasks] = useState<Ticket[]>([]);
+  const [view, setView] = useState<ViewType>('active');
+  const [activeTag, setActiveTag] = useState('all');
+  const [sortType, setSortType] = useState<SortType>('expiring');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [isCompact, setIsCompact] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [showDataModal, setShowDataModal] = useState(false);
+  const [importPendingData, setImportPendingData] = useState<any>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [bgHistory, setBgHistory] = useState<string[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  const migrateConfig = (config: any) => ({
+    ...defaultViewConfig,
+    ...config,
+    bgSize: typeof config?.bgSize === 'number' ? config.bgSize : 100,
+    bgPosY: typeof config?.bgPosY === 'number' ? config.bgPosY : 50,
+    bgOpacity: typeof config?.bgOpacity === 'number' ? config.bgOpacity : 1,
+  });
+
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        await dbHelper.init();
+        const dbTasks = await dbHelper.getItem<Ticket[]>(DB_KEYS.TASKS);
+        const dbSettings = await dbHelper.getItem<any>(DB_KEYS.SETTINGS);
+        const dbBgHistory = await dbHelper.getItem<string[]>(DB_KEYS.BG_HISTORY);
+        const dbTemplates = await dbHelper.getItem<Template[]>(DB_KEYS.TEMPLATES);
+
+        if (dbTasks) setTasks(dbTasks);
+        if (dbSettings) {
+          const mergedSettings = {
+            ...settings,
+            ...dbSettings,
+            bgConfigMap: dbSettings.bgConfigMap || {},
+            specificViewKeywords: dbSettings.specificViewKeywords || ['MOMO', '85度C'],
+            viewConfigs: {
+              active: migrateConfig(dbSettings.viewConfigs?.active),
+              completed: migrateConfig(dbSettings.viewConfigs?.completed),
+              deleted: migrateConfig(dbSettings.viewConfigs?.deleted),
+            },
+          };
+          setSettings(mergedSettings);
+        }
+        if (dbBgHistory) setBgHistory(dbBgHistory);
+        if (dbTemplates) setTemplates(dbTemplates);
+        setIsDataLoaded(true);
+      } catch (err) {
+        console.error('Database initialization failed:', err);
+      }
+    };
+    initData();
+  }, []);
+
+  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.TASKS, tasks); }, [tasks, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.SETTINGS, settings); }, [settings, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.BG_HISTORY, bgHistory); }, [bgHistory, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.TEMPLATES, templates); }, [templates, isDataLoaded]);
+
+  const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))], [tasks]);
+  const duplicateSerials = useMemo(() => {
+    const counts: Record<string, number> = {};
+    tasks.forEach((t) => { if (!t.isDeleted && t.serial) counts[t.serial] = (counts[t.serial] || 0) + 1; });
+    return new Set(Object.keys(counts).filter((s) => counts[s] > 1));
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    let result = tasks.filter((t) => {
+      if (view === 'active' && (t.completed || t.isDeleted)) return false;
+      if (view === 'completed' && (!t.completed || t.isDeleted)) return false;
+      if (view === 'deleted' && !t.isDeleted) return false;
+      if (activeTag === 'special_expiring') return checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
+      if (activeTag === 'special_duplicate') return duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
+      if (activeTag !== 'all' && (!t.tags || !t.tags.includes(activeTag))) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return t.productName.toLowerCase().includes(q) || (t.note && t.note.toLowerCase().includes(q)) || (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(q)));
+      }
+      return true;
+    });
+    result.sort((a, b) => {
+      const isExpiringA = !a.completed && !a.isDeleted && checkIsExpiringSoon(a.expiry, settings.notifyDays);
+      const isExpiringB = !b.completed && !b.isDeleted && checkIsExpiringSoon(b.expiry, settings.notifyDays);
+      if (isExpiringA !== isExpiringB) return isExpiringA ? -1 : 1;
+      if (sortType === 'newest') return b.createdAt - a.createdAt;
+      if (sortType === 'oldest') return a.createdAt - b.createdAt;
+      if (sortType === 'expiring') {
+        const dateA = a.expiry ? new Date(a.expiry.replace(/\//g, '-')) : new Date(9999, 11, 31);
+        const dateB = b.expiry ? new Date(b.expiry.replace(/\//g, '-')) : new Date(9999, 11, 31);
+        return dateA.getTime() - dateB.getTime();
+      }
+      return 0;
+    });
+    return result;
+  }, [tasks, view, activeTag, searchQuery, sortType, duplicateSerials, settings.notifyDays]);
+
+  const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
+  const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
+  const handleToggleComplete = async (ticket: Ticket) => {
+    const newStatus = !ticket.completed;
+    const completedAt = newStatus ? Date.now() : undefined;
+    setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, completed: newStatus, completedAt } : t)));
+    if (newStatus && settings.tgToken && settings.tgChatId) {
+      const msg = `✅ *[已核銷]* ${ticket.productName}\n🔢 序號: ${ticket.serial || '無'}\n⏰ 時間: ${formatDateTime(completedAt)}`;
+      sendTelegramMessage(settings.tgToken, settings.tgChatId, msg).catch(console.error);
+    }
+  };
+  const handleDelete = (id: string, forceNotify = false) => {
+    const now = Date.now();
+    if (forceNotify && settings.tgToken && settings.tgChatId) {
+      const target = tasks.find((t) => t.id === id);
+      if (target) {
+        const msg = `🗑️ *[已刪除]*\n方案: ${target.productName}\n序號: \`${target.serial || '無'}\`\n時間: ${formatDateTime(now)}`;
+        sendTelegramMessage(settings.tgToken, settings.tgChatId, msg).catch(console.error);
+      }
+    }
+    if (view === 'deleted') { if (confirm('確定永久刪除？')) setTasks((prev) => prev.filter((t) => t.id !== id)); }
+    else { setTasks((prev) => prev.map((t) => (id === t.id ? { ...t, isDeleted: true, deletedAt: now } : t))); }
+  };
+  const handleRestore = (ticket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, isDeleted: false, deletedAt: undefined } : t)));
+  const handleBackup = () => {
+    const backupData = { version: 3, timestamp: Date.now(), settings, tasks, templates };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ticket_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
+  };
+  const handleImportClick = () => {
+    const input = document.createElement('input'); input.type = 'file';
+    input.onchange = (e: any) => {
+      const r = new FileReader();
+      r.onload = (ev) => { try { setImportPendingData(JSON.parse(ev.target?.result as string)); setShowDataModal(false); } catch { alert('格式錯誤'); } };
+      r.readAsText(e.target.files[0]);
+    }; input.click();
+  };
+  const executeImport = (mode: 'append' | 'overwrite', restoreSettings: boolean) => {
+    if (!importPendingData) return;
+    const importedTasks = Array.isArray(importPendingData) ? importPendingData : (importPendingData.tasks || []);
+    if (restoreSettings && importPendingData.settings) {
+      const impSet = importPendingData.settings;
+      setSettings((prev) => ({ ...prev, ...impSet, specificViewKeywords: impSet.specificViewKeywords || ['MOMO', '85度C'], viewConfigs: { active: migrateConfig(impSet.viewConfigs?.active), completed: migrateConfig(impSet.viewConfigs?.completed), deleted: migrateConfig(impSet.viewConfigs?.deleted) } }));
+    }
+    if (importPendingData.templates && Array.isArray(importPendingData.templates)) {
+      if (mode === 'append') setTemplates((prev) => [...prev, ...importPendingData.templates]);
+      else setTemplates(importPendingData.templates);
+    }
+    if (mode === 'append') setTasks((prev) => [...prev, ...importedTasks]);
+    else setTasks(importedTasks);
+    setImportPendingData(null);
+    alert(`匯入成功！共 ${importedTasks.length} 筆票券。`);
+  };
+  const handleFullReset = async () => {
+    if (window.confirm('⚠️ 確定要清空所有資料嗎？')) {
+      await dbHelper.removeItem(DB_KEYS.TASKS); await dbHelper.removeItem(DB_KEYS.SETTINGS); await dbHelper.removeItem(DB_KEYS.BG_HISTORY); await dbHelper.removeItem(DB_KEYS.TEMPLATES);
+      window.location.reload();
+    }
+  };
+  const handleSelect = (id: string) => { const s = new Set(selectedIds); if (s.has(id)) s.delete(id); else s.add(id); setSelectedIds(s); };
+  const handleSelectAll = () => setSelectedIds(selectedIds.size === filteredTasks.length ? new Set() : new Set(filteredTasks.map((t) => t.id)));
+  const handleBatchEdit = (payload: any) => {
+    setTasks((prev) => prev.map((t) => {
+      if (!selectedIds.has(t.id)) return t;
+      let newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
+      return { ...t, tags: newTags, productName: payload.name || t.productName, image: payload.image || t.image, expiry: payload.expiry ? payload.expiry.replace(/-/g, '/') : t.expiry };
+    }));
+    setSelectedIds(new Set()); setIsSelectionMode(false);
+  };
+  const handleSaveSettings = (newSettings: Settings) => {
+    setSettings(newSettings);
+    const imagesToAdd = [newSettings.viewConfigs.active.backgroundImage, newSettings.viewConfigs.completed.backgroundImage, newSettings.viewConfigs.deleted.backgroundImage].filter(Boolean);
+    if (imagesToAdd.length > 0) setBgHistory((prev) => [...new Set([...imagesToAdd, ...prev])].slice(0, 20));
+  };
+  const handleQuickBgChange = () => {
+    const history = [''].concat(bgHistory);
+    const currentBg = settings.viewConfigs[view].backgroundImage || '';
+    const nextBg = history[(history.indexOf(currentBg) + 1) % history.length] || '';
+    setSettings((prev) => {
+      const next = { ...prev };
+      const currentView = { ...next.viewConfigs[view], backgroundImage: nextBg };
+      next.viewConfigs = { ...next.viewConfigs, [view]: currentView };
+      return next;
+    });
+  };
+  const handleSaveTemplate = (data: { label: string; productName: string; image?: string; tags?: string[] }) => {
+    setTemplates((prev) => [...prev, { id: 'tpl_' + Date.now(), ...data }]);
+    alert(`已儲存範本：${data.label}`);
+  };
+  const handleDeleteTemplate = (id: string) => { if (window.confirm('確定刪除此範本？')) setTemplates((prev) => prev.filter((t) => t.id !== id)); };
+
+  if (!isDataLoaded) return (
+    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4">
+      <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      <p className="text-muted-foreground font-bold animate-pulse">正在載入資料庫...</p>
     </div>
+  );
+
+  const currentConfig = settings.viewConfigs[view] || defaultViewConfig;
+
+  return (
+    <>
+      {currentConfig.backgroundImage && (
+        <div className="fixed inset-0 z-0 mx-auto max-w-md transition-all duration-500" style={{ top: '150px', backgroundImage: `url(${currentConfig.backgroundImage})`, backgroundSize: `${currentConfig.bgSize || 100}% auto`, backgroundPosition: `center ${currentConfig.bgPosY || 50}%`, backgroundRepeat: 'no-repeat', opacity: currentConfig.bgOpacity || 1 }} />
+      )}
+      <div className="max-w-md mx-auto min-h-screen relative shadow-2xl sm:border-x border-border transition-all duration-500 z-10" style={{ backgroundColor: currentConfig.backgroundImage ? 'transparent' : undefined }}>
+        <Header appTitle={settings.appTitle} onTitleChange={(t) => setSettings((s) => ({ ...s, appTitle: t }))} onOpenSettings={() => setShowSettings(true)} onOpenMenu={() => setShowDataModal(true)} sortType={sortType} setSortType={setSortType} searchQuery={searchQuery} setSearchQuery={setSearchQuery} isSelectionMode={isSelectionMode} setIsSelectionMode={setIsSelectionMode} selectedCount={selectedIds.size} onSelectAll={handleSelectAll} isCompact={isCompact} setIsCompact={setIsCompact} view={view} setView={setView} activeTag={activeTag} setActiveTag={setActiveTag} allTags={allTags} onQuickBgChange={handleQuickBgChange} headerBackgroundImage={currentConfig.headerBackgroundImage} />
+        <div className="pt-2 min-h-[50vh] transition-colors pb-24">
+          {filteredTasks.length > 0 ? filteredTasks.map((t) => (
+            <TicketCard key={t.id} ticket={t} onClick={setSelectedTicket} notifyDays={settings.notifyDays} isSelectionMode={isSelectionMode} isSelected={selectedIds.has(t.id)} onSelect={handleSelect} isDuplicate={duplicateSerials.has(t.serial)} opacity={currentConfig.cardOpacity} cardBgColor={currentConfig.cardBgColor} cardBorderColor={currentConfig.cardBorderColor} isCompact={isCompact} compactHeight={currentConfig.compactHeight} compactShowImage={currentConfig.compactShowImage} />
+          )) : (
+            <div className="text-center py-24 text-muted-foreground">
+              <span className="text-5xl mb-4 block opacity-30">🎫</span>
+              <p className="font-bold">暫無票券</p>
+            </div>
+          )}
+        </div>
+        {isSelectionMode ? (
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-40 animate-slide-up">
+            <button onClick={() => { setIsSelectionMode(false); setSelectedIds(new Set()); }} className="px-6 py-4 bg-card text-foreground rounded-full font-bold shadow-xl border border-border">取消</button>
+            <button onClick={() => setShowBatchModal(true)} disabled={selectedIds.size === 0} className="px-6 py-4 bg-primary text-primary-foreground rounded-full font-bold shadow-xl flex items-center gap-2 disabled:opacity-50"><Pencil size={18} /> 編輯 {selectedIds.size} 張</button>
+            <button onClick={() => { if (confirm(`確定刪除 ${selectedIds.size} 張票券？`)) { selectedIds.forEach((id) => handleDelete(id)); setSelectedIds(new Set()); setIsSelectionMode(false); } }} disabled={selectedIds.size === 0} className="px-6 py-4 bg-ticket-warning text-white rounded-full font-bold shadow-xl flex items-center gap-2 disabled:opacity-50"><Trash2 size={18} /></button>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddModal(true)} className="fixed bottom-6 right-6 w-16 h-16 bg-primary text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-40 hover:scale-110 transition-transform active:scale-95"><Plus size={28} /></button>
+        )}
+      </div>
+
+      <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} />
+      <AddModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} templates={templates} onDeleteTemplate={handleDeleteTemplate} onAddBatch={handleAddBatch} />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} bgHistory={bgHistory} onSave={handleSaveSettings} onRemoveHistory={(url) => { if (confirm('移除此背景？')) setBgHistory((prev) => prev.filter((i) => i !== url)); }} onAddToHistory={(bg) => { if (bg) setBgHistory((prev) => [bg, ...prev.filter((b) => b !== bg)].slice(0, 20)); }} />
+      <DataActionsModal isOpen={showDataModal} onClose={() => setShowDataModal(false)} onBackup={handleBackup} onImportClick={handleImportClick} onReset={handleFullReset} />
+      <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
+      <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} />
+    </>
   );
 };
 
