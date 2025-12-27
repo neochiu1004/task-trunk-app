@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
 import { dbHelper } from '@/lib/db';
@@ -210,39 +211,180 @@ const Index = () => {
 
   if (!isDataLoaded) return (
     <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4">
-      <Loader2 className="w-12 h-12 text-primary animate-spin" />
-      <p className="text-muted-foreground font-bold animate-pulse">正在載入資料庫...</p>
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+      >
+        <Loader2 className="w-10 h-10 text-primary" />
+      </motion.div>
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-muted-foreground font-medium text-sm"
+      >
+        正在載入資料庫...
+      </motion.p>
     </div>
   );
 
   const currentConfig = settings.viewConfigs[view] || defaultViewConfig;
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.02,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        staggerChildren: 0.01,
+        staggerDirection: -1,
+      },
+    },
+  };
+
   return (
     <>
       {currentConfig.backgroundImage && (
-        <div className="fixed inset-0 z-0 mx-auto max-w-md transition-all duration-500" style={{ top: '150px', backgroundImage: `url(${currentConfig.backgroundImage})`, backgroundSize: `${currentConfig.bgSize || 100}% auto`, backgroundPosition: `center ${currentConfig.bgPosY || 50}%`, backgroundRepeat: 'no-repeat', opacity: currentConfig.bgOpacity || 1 }} />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: currentConfig.bgOpacity || 1 }}
+          transition={{ duration: 0.5 }}
+          className="fixed inset-0 z-0 mx-auto max-w-md"
+          style={{
+            top: '160px',
+            backgroundImage: `url(${currentConfig.backgroundImage})`,
+            backgroundSize: `${currentConfig.bgSize || 100}% auto`,
+            backgroundPosition: `center ${currentConfig.bgPosY || 50}%`,
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
       )}
-      <div className="max-w-md mx-auto min-h-screen relative shadow-2xl sm:border-x border-border transition-all duration-500 z-10" style={{ backgroundColor: currentConfig.backgroundImage ? 'transparent' : undefined }}>
-        <Header appTitle={settings.appTitle} onTitleChange={(t) => setSettings((s) => ({ ...s, appTitle: t }))} onOpenSettings={() => setShowSettings(true)} onOpenMenu={() => setShowDataModal(true)} sortType={sortType} setSortType={setSortType} searchQuery={searchQuery} setSearchQuery={setSearchQuery} isSelectionMode={isSelectionMode} setIsSelectionMode={setIsSelectionMode} selectedCount={selectedIds.size} onSelectAll={handleSelectAll} isCompact={isCompact} setIsCompact={setIsCompact} view={view} setView={setView} activeTag={activeTag} setActiveTag={setActiveTag} allTags={allTags} onQuickBgChange={handleQuickBgChange} headerBackgroundImage={currentConfig.headerBackgroundImage} />
-        <div className="pt-2 min-h-[50vh] transition-colors pb-24">
-          {filteredTasks.length > 0 ? filteredTasks.map((t) => (
-            <TicketCard key={t.id} ticket={t} onClick={setSelectedTicket} notifyDays={settings.notifyDays} isSelectionMode={isSelectionMode} isSelected={selectedIds.has(t.id)} onSelect={handleSelect} isDuplicate={duplicateSerials.has(t.serial)} opacity={currentConfig.cardOpacity} cardBgColor={currentConfig.cardBgColor} cardBorderColor={currentConfig.cardBorderColor} isCompact={isCompact} compactHeight={currentConfig.compactHeight} compactShowImage={currentConfig.compactShowImage} />
-          )) : (
-            <div className="text-center py-24 text-muted-foreground">
-              <span className="text-5xl mb-4 block opacity-30">🎫</span>
-              <p className="font-bold">暫無票券</p>
-            </div>
-          )}
+      
+      <div className="max-w-md mx-auto min-h-screen relative z-10" style={{ backgroundColor: currentConfig.backgroundImage ? 'transparent' : undefined }}>
+        <Header
+          appTitle={settings.appTitle}
+          onTitleChange={(t) => setSettings((s) => ({ ...s, appTitle: t }))}
+          onOpenSettings={() => setShowSettings(true)}
+          onOpenMenu={() => setShowDataModal(true)}
+          sortType={sortType}
+          setSortType={setSortType}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          isSelectionMode={isSelectionMode}
+          setIsSelectionMode={setIsSelectionMode}
+          selectedCount={selectedIds.size}
+          onSelectAll={handleSelectAll}
+          isCompact={isCompact}
+          setIsCompact={setIsCompact}
+          view={view}
+          setView={setView}
+          activeTag={activeTag}
+          setActiveTag={setActiveTag}
+          allTags={allTags}
+          onQuickBgChange={handleQuickBgChange}
+          headerBackgroundImage={currentConfig.headerBackgroundImage}
+        />
+        
+        <div className="pt-3 min-h-[50vh] pb-28">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={view + activeTag + sortType}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              {filteredTasks.length > 0 ? (
+                filteredTasks.map((t, index) => (
+                  <TicketCard
+                    key={t.id}
+                    ticket={t}
+                    onClick={setSelectedTicket}
+                    notifyDays={settings.notifyDays}
+                    isSelectionMode={isSelectionMode}
+                    isSelected={selectedIds.has(t.id)}
+                    onSelect={handleSelect}
+                    isDuplicate={duplicateSerials.has(t.serial)}
+                    opacity={currentConfig.cardOpacity}
+                    cardBgColor={currentConfig.cardBgColor}
+                    cardBorderColor={currentConfig.cardBorderColor}
+                    isCompact={isCompact}
+                    compactHeight={currentConfig.compactHeight}
+                    compactShowImage={currentConfig.compactShowImage}
+                    index={index}
+                  />
+                ))
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center py-24 text-muted-foreground"
+                >
+                  <span className="text-6xl mb-6 block opacity-20">🎫</span>
+                  <p className="font-medium text-sm">暫無票券</p>
+                </motion.div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
-        {isSelectionMode ? (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-40 animate-slide-up">
-            <button onClick={() => { setIsSelectionMode(false); setSelectedIds(new Set()); }} className="px-6 py-4 bg-card text-foreground rounded-full font-bold shadow-xl border border-border">取消</button>
-            <button onClick={() => setShowBatchModal(true)} disabled={selectedIds.size === 0} className="px-6 py-4 bg-primary text-primary-foreground rounded-full font-bold shadow-xl flex items-center gap-2 disabled:opacity-50"><Pencil size={18} /> 編輯 {selectedIds.size} 張</button>
-            <button onClick={() => { if (confirm(`確定刪除 ${selectedIds.size} 張票券？`)) { selectedIds.forEach((id) => handleDelete(id)); setSelectedIds(new Set()); setIsSelectionMode(false); } }} disabled={selectedIds.size === 0} className="px-6 py-4 bg-ticket-warning text-white rounded-full font-bold shadow-xl flex items-center gap-2 disabled:opacity-50"><Trash2 size={18} /></button>
-          </div>
-        ) : (
-          <button onClick={() => setShowAddModal(true)} className="fixed bottom-6 right-6 w-16 h-16 bg-primary text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-40 hover:scale-110 transition-transform active:scale-95"><Plus size={28} /></button>
-        )}
+        
+        <AnimatePresence>
+          {isSelectionMode ? (
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-2.5 z-40"
+            >
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setIsSelectionMode(false); setSelectedIds(new Set()); }}
+                className="px-5 py-3.5 glass-card text-foreground rounded-2xl font-semibold text-sm shadow-glass-lg"
+              >
+                取消
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowBatchModal(true)}
+                disabled={selectedIds.size === 0}
+                className="px-5 py-3.5 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Pencil size={16} /> 編輯 {selectedIds.size} 張
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (confirm(`確定刪除 ${selectedIds.size} 張票券？`)) {
+                    selectedIds.forEach((id) => handleDelete(id));
+                    setSelectedIds(new Set());
+                    setIsSelectionMode(false);
+                  }
+                }}
+                disabled={selectedIds.size === 0}
+                className="px-5 py-3.5 bg-ticket-warning text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={16} />
+              </motion.button>
+            </motion.div>
+          ) : (
+            <motion.button
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowAddModal(true)}
+              className="fixed bottom-8 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-2xl shadow-premium flex items-center justify-center z-40"
+            >
+              <Plus size={26} strokeWidth={2.5} />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} />
