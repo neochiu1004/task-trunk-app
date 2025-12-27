@@ -73,27 +73,27 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  const iconButtonClass = "w-10 h-10 flex items-center justify-center glass-button rounded-2xl text-muted-foreground hover:text-foreground transition-all";
+  const iconButtonClass = "w-8 h-8 flex items-center justify-center glass-button rounded-xl text-muted-foreground hover:text-foreground transition-all";
 
   return (
     <motion.div
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="px-4 pt-10 pb-4 sticky top-0 z-40 glass-header rounded-b-[28px]"
+      className="px-3 pt-8 pb-3 sticky top-0 z-40 glass-header rounded-b-[20px]"
       style={
         headerBackgroundImage
           ? { backgroundImage: `url(${headerBackgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
           : {}
       }
     >
-      <div className={headerBackgroundImage ? 'glass -mx-4 -mt-10 px-4 pt-10 pb-4 rounded-b-[28px]' : ''}>
+      <div className={headerBackgroundImage ? 'glass -mx-3 -mt-8 px-3 pt-8 pb-3 rounded-b-[20px]' : ''}>
         {/* Title Row */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-2.5">
           {isEditingTitle ? (
             <input
               autoFocus
-              className="text-2xl font-bold bg-transparent outline-none border-b-2 border-primary w-44 tracking-tight"
+              className="text-lg font-bold bg-transparent outline-none border-b-2 border-primary w-36 tracking-tight"
               value={appTitle}
               onChange={(e) => onTitleChange(e.target.value)}
               onBlur={() => setIsEditingTitle(false)}
@@ -102,46 +102,46 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <motion.h1
               whileTap={{ scale: 0.98 }}
-              className="text-2xl font-bold cursor-pointer flex items-center gap-2.5 tracking-tight"
+              className="text-lg font-bold cursor-pointer flex items-center gap-2 tracking-tight"
               onClick={() => setIsEditingTitle(true)}
             >
-              <span className="text-2xl">🎫</span>
+              <span className="text-lg">🎫</span>
               <span>{appTitle}</span>
             </motion.h1>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <motion.button whileTap={{ scale: 0.95 }} onClick={onQuickBgChange} className={iconButtonClass}>
-              <Palette size={18} />
+              <Palette size={15} />
             </motion.button>
             <motion.button whileTap={{ scale: 0.95 }} onClick={onOpenSettings} className={iconButtonClass}>
-              <Settings2 size={18} />
+              <Settings2 size={15} />
             </motion.button>
             <motion.button whileTap={{ scale: 0.95 }} onClick={onOpenMenu} className={iconButtonClass}>
-              <MoreVertical size={18} />
+              <MoreVertical size={15} />
             </motion.button>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="relative mb-4">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative mb-2.5">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜尋票券或標籤..."
-            className="w-full py-3.5 pl-12 pr-4 glass-card rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
+            className="w-full py-2.5 pl-9 pr-3 glass-card rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
           />
         </div>
 
         {/* Tags Row */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 -mx-4 px-4">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 -mx-3 px-3">
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setActiveTag('all')}
-            className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-semibold whitespace-nowrap transition-all ${
               activeTag === 'all' 
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
+                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25' 
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -150,43 +150,43 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setActiveTag('special_expiring')}
-            className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-semibold whitespace-nowrap transition-all flex items-center gap-1 ${
               activeTag === 'special_expiring' 
-                ? 'bg-ticket-warning text-primary-foreground shadow-lg shadow-ticket-warning/25' 
+                ? 'bg-ticket-warning text-primary-foreground shadow-md shadow-ticket-warning/25' 
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
           >
-            <AlertCircle size={12} /> 快到期
+            <AlertCircle size={10} /> 快到期
           </motion.button>
           {allTags.map((tag) => (
             <motion.button
               key={tag}
               whileTap={{ scale: 0.95 }}
               onClick={() => setActiveTag(tag)}
-              className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-semibold whitespace-nowrap transition-all flex items-center gap-1 ${
                 activeTag === tag 
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
+                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25' 
                   : 'glass-button text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Tag size={10} /> {tag}
+              <Tag size={9} /> {tag}
             </motion.button>
           ))}
         </div>
 
         {/* View Tabs & Controls */}
-        <div className="flex justify-between items-center mt-1">
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto no-scrollbar">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsSelectionMode(!isSelectionMode)}
-              className={`px-3 py-2 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-2 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 transition-all flex-shrink-0 ${
                 isSelectionMode 
                   ? 'bg-primary text-primary-foreground' 
                   : 'glass-button text-muted-foreground hover:text-foreground'
               }`}
             >
-              <BoxSelect size={12} /> {isSelectionMode ? `已選 ${selectedCount}` : '多選'}
+              <BoxSelect size={10} /> {isSelectionMode ? `${selectedCount}` : '選'}
             </motion.button>
             
             <AnimatePresence>
@@ -197,21 +197,21 @@ export const Header: React.FC<HeaderProps> = ({
                   exit={{ scale: 0, opacity: 0 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={onSelectAll}
-                  className="px-3 py-2 glass-button rounded-xl text-[11px] font-semibold flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                  className="px-2 py-1.5 glass-button rounded-lg text-[10px] font-semibold flex items-center gap-1 text-muted-foreground hover:text-foreground flex-shrink-0"
                 >
-                  <CheckSquare size={12} /> 全選
+                  <CheckSquare size={10} /> 全選
                 </motion.button>
               )}
             </AnimatePresence>
             
-            {/* View Tabs - Premium Pill Design */}
-            <div className="flex glass-card p-1 rounded-2xl">
+            {/* View Tabs - Compact Pill Design */}
+            <div className="flex glass-card p-0.5 rounded-xl flex-shrink-0">
               {viewTabs.map((tab) => (
                 <motion.button
                   key={tab.id}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setView(tab.id)}
-                  className={`relative px-3 py-2 rounded-xl flex items-center gap-1.5 text-[11px] font-semibold transition-colors ${
+                  className={`relative px-2 py-1.5 rounded-lg flex items-center gap-1 text-[10px] font-semibold transition-colors ${
                     view === tab.id 
                       ? 'text-primary' 
                       : 'text-muted-foreground hover:text-foreground'
@@ -220,19 +220,19 @@ export const Header: React.FC<HeaderProps> = ({
                   {view === tab.id && (
                     <motion.div
                       layoutId="activeViewTab"
-                      className="absolute inset-0 bg-card shadow-sm rounded-xl"
+                      className="absolute inset-0 bg-card shadow-sm rounded-lg"
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
                   )}
-                  <span className="relative z-10 flex items-center gap-1.5">
-                    <tab.icon size={12} /> {tab.label}
+                  <span className="relative z-10 flex items-center gap-1">
+                    <tab.icon size={10} /> {tab.label}
                   </span>
                 </motion.button>
               ))}
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 flex-shrink-0">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => {
@@ -240,23 +240,23 @@ export const Header: React.FC<HeaderProps> = ({
                 const nextIdx = (types.indexOf(sortType) + 1) % types.length;
                 setSortType(types[nextIdx]);
               }}
-              className="px-3 h-10 glass-card rounded-2xl flex items-center justify-center text-foreground transition-all gap-1.5"
+              className="px-2 h-7 glass-card rounded-lg flex items-center justify-center text-foreground transition-all gap-1"
             >
-              <ArrowUpDown size={14} className="text-primary" />
-              <span className="text-[11px] font-semibold">
-                {sortType === 'expiring' ? '快到期' : sortType === 'newest' ? '最新' : '最舊'}
+              <ArrowUpDown size={11} className="text-primary" />
+              <span className="text-[10px] font-semibold">
+                {sortType === 'expiring' ? '期限' : sortType === 'newest' ? '新' : '舊'}
               </span>
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsCompact(!isCompact)}
-              className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
                 isCompact 
                   ? 'bg-primary text-primary-foreground' 
                   : 'glass-card text-muted-foreground hover:text-foreground'
               }`}
             >
-              {isCompact ? <Rows size={16} /> : <LayoutGrid size={16} />}
+              {isCompact ? <Rows size={12} /> : <LayoutGrid size={12} />}
             </motion.button>
           </div>
         </div>

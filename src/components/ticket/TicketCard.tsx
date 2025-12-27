@@ -87,8 +87,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           if (isSelectionMode) onSelect(ticket.id);
           else onClick(ticket);
         }}
-        style={{ height: `${compactHeight}px` }}
-        className={`glass-card mx-3 mb-2 px-3 rounded-2xl flex items-center gap-3 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
+        style={{ height: `${Math.max(compactHeight - 8, 56)}px` }}
+        className={`glass-card mx-2 mb-1.5 px-2.5 rounded-xl flex items-center gap-2 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
       >
         {isSelectionMode && (
           <motion.div
@@ -169,7 +169,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         if (isSelectionMode) onSelect(ticket.id);
         else onClick(ticket);
       }}
-      className={`glass-card mx-4 mt-3 p-4 rounded-3xl flex gap-4 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
+      className={`glass-card mx-2 mt-2 p-3 rounded-2xl flex gap-3 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
     >
       {isSelectionMode && (
         <motion.div
@@ -189,7 +189,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         </div>
       )}
       
-      <div className="w-20 h-20 flex-shrink-0 rounded-2xl flex items-center justify-center overflow-hidden relative bg-muted/30">
+      <div className="w-16 h-16 flex-shrink-0 rounded-xl flex items-center justify-center overflow-hidden relative bg-muted/30">
         {ticket.image ? (
           <motion.img 
             src={ticket.image} 
@@ -200,24 +200,24 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           />
         ) : (
           <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-            <span className="text-muted-foreground text-2xl">🎫</span>
+            <span className="text-muted-foreground text-xl">🎫</span>
           </div>
         )}
         {ticket.originalImage && (
-          <div className="absolute bottom-1 left-1 bg-foreground/60 text-background p-1 rounded-lg backdrop-blur-sm z-20">
-            <Maximize2 size={10} />
+          <div className="absolute bottom-0.5 left-0.5 bg-foreground/60 text-background p-0.5 rounded-md backdrop-blur-sm z-20">
+            <Maximize2 size={8} />
           </div>
         )}
       </div>
       
-      <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
+      <div className="flex-1 flex flex-col justify-between py-0 min-w-0">
         <div>
-          <div className="flex justify-between items-start pr-8">
-            <h3 className={`font-semibold text-foreground line-clamp-1 text-[15px] tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
+          <div className="flex justify-between items-start pr-6">
+            <h3 className={`font-semibold text-foreground line-clamp-1 text-[13px] tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
               {ticket.productName}
             </h3>
             {ticket.completed && (
-              <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded-lg font-medium">已使用</span>
+              <span className="bg-muted text-muted-foreground text-[9px] px-1.5 py-0.5 rounded-md font-medium">已用</span>
             )}
           </div>
           
@@ -225,30 +225,30 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-[11px] font-semibold text-ticket-warning mt-1.5 flex items-center gap-1"
+              className="text-[10px] font-semibold text-ticket-warning mt-1 flex items-center gap-0.5"
             >
-              <AlertCircle size={12} /> 快到期
+              <AlertCircle size={10} /> 快到期
             </motion.div>
           )}
           
-          <div className="flex gap-1.5 mt-2.5 overflow-x-auto no-scrollbar">
+          <div className="flex gap-1 mt-1.5 overflow-x-auto no-scrollbar">
             {ticket.tags && ticket.tags.map((t) => (
-              <span key={t} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-lg font-medium whitespace-nowrap">
+              <span key={t} className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-medium whitespace-nowrap">
                 {t}
               </span>
             ))}
-            {!ticket.tags?.length && <span className="text-[10px] text-muted-foreground/50">#</span>}
+            {!ticket.tags?.length && <span className="text-[9px] text-muted-foreground/50">#</span>}
           </div>
         </div>
         
-        <div className="flex justify-between items-end mt-3">
+        <div className="flex justify-between items-end mt-2">
           {ticket.completed && ticket.completedAt ? (
-            <div className="text-[11px] font-medium text-ticket-success flex items-center gap-1.5 bg-ticket-success/10 px-2.5 py-1 rounded-xl">
-              <CheckCircle2 size={12} /> <span>核銷於 {formatDateTime(ticket.completedAt)}</span>
+            <div className="text-[9px] font-medium text-ticket-success flex items-center gap-1 bg-ticket-success/10 px-2 py-0.5 rounded-lg">
+              <CheckCircle2 size={10} /> <span>{formatDateTime(ticket.completedAt)}</span>
             </div>
           ) : (
-            <div className={`text-[12px] font-medium flex items-center gap-1.5 ${isExpiring ? 'text-ticket-warning' : 'text-ticket-success'}`}>
-              <Clock size={14} /> <span>{ticket.expiry || '無期限'}</span>
+            <div className={`text-[10px] font-medium flex items-center gap-1 ${isExpiring ? 'text-ticket-warning' : 'text-ticket-success'}`}>
+              <Clock size={11} /> <span>{ticket.expiry || '無期限'}</span>
             </div>
           )}
           
@@ -256,7 +256,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className={`text-[13px] font-semibold px-5 py-2.5 rounded-2xl transition-all ${
+              className={`text-[11px] font-semibold px-3.5 py-1.5 rounded-xl transition-all ${
                 ticket.completed
                   ? 'bg-muted text-muted-foreground'
                   : 'bg-ticket-success/15 text-ticket-success hover:bg-ticket-success hover:text-primary-foreground shadow-sm'
