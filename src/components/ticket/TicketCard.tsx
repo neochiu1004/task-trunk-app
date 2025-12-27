@@ -30,6 +30,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   onSelect,
   isDuplicate,
   opacity = 0.85,
+  cardBgColor,
+  cardBorderColor,
   isCompact,
   compactHeight = 72,
   compactShowImage = false,
@@ -74,6 +76,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     return '';
   };
 
+  // Build custom card styles based on settings
+  const cardStyle: React.CSSProperties = {
+    ...(cardBgColor && { backgroundColor: cardBgColor }),
+    ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
+    opacity: opacity,
+  };
+
   if (isCompact) {
     return (
       <motion.div
@@ -87,7 +96,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           if (isSelectionMode) onSelect(ticket.id);
           else onClick(ticket);
         }}
-        style={{ height: `${Math.max(compactHeight - 8, 56)}px` }}
+        style={{ height: `${Math.max(compactHeight - 8, 56)}px`, ...cardStyle }}
         className={`glass-card mx-2 mb-1.5 px-2.5 rounded-xl flex items-center gap-2 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
       >
         {isSelectionMode && (
@@ -169,6 +178,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         if (isSelectionMode) onSelect(ticket.id);
         else onClick(ticket);
       }}
+      style={cardStyle}
       className={`glass-card mx-2 mt-2 p-3 rounded-2xl flex gap-3 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
     >
       {isSelectionMode && (
