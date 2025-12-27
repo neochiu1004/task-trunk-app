@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Trash2,
@@ -11,6 +12,7 @@ import {
   RefreshCcw,
   LayoutDashboard,
   Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 import { Ticket, Template } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
@@ -18,6 +20,7 @@ import { BarcodeCanvas } from './BarcodeCanvas';
 import { QRCodeCanvas } from './QRCodeCanvas';
 import { MomoTemplate } from './MomoTemplate';
 import { TagSelectInput } from './TagSelectInput';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 interface RedeemModalProps {
   ticket: Ticket | null;
@@ -56,6 +59,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [editOriginalImage, setEditOriginalImage] = useState('');
   const [viewMode, setViewMode] = useState<ViewModeType>('standard');
   const [showFullScreen, setShowFullScreen] = useState(false);
+  const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
 
   const isSpecificView = useMemo(() => {
     if (!ticket) return false;
@@ -117,387 +121,538 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setIsEditing(false);
   };
 
+  const handleToggleCompleteWithAnimation = () => {
+    if (ticket.completed || window.confirm('確定核銷？')) {
+      setIsRedeemAnimating(true);
+      setTimeout(() => {
+        onToggleComplete(ticket);
+        setIsRedeemAnimating(false);
+        onClose();
+      }, 600);
+    }
+  };
+
   const hasAnyImage = !!ticket.image || !!ticket.originalImage;
   const isMomoMode = viewMode === 'momo';
 
+  const modalVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 20 },
+    visible: { 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      transition: { type: "spring" as const, stiffness: 400, damping: 30 }
+    },
+    exit: { 
+      opacity: 0, 
+      scale: 0.95, 
+      y: 20,
+      transition: { duration: 0.2 }
+    },
+  };
+
+  const buttonVariants = {
+    tap: { scale: 0.95 },
+    hover: { scale: 1.02 },
+  };
+
   return (
     <>
-      <div
-        className="fixed inset-0 bg-foreground/70 z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in backdrop-blur-md"
-        onClick={onClose}
-      >
-        <div
-          className={`bg-card w-full max-w-sm rounded-[28px] overflow-hidden relative shadow-2xl flex flex-col border border-border transition-all ${
-            isMomoMode ? 'h-[85vh] sm:h-auto' : 'max-h-[90vh]'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-4 sm:p-5 flex flex-col h-full">
-            <div className="text-center shrink-0">
-              {isEditing ? (
-                <input
-                  className="text-lg font-black text-center w-full border-b border-primary/30 pb-2 mb-2 text-foreground focus:outline-none bg-transparent"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                />
-              ) : (
-                !isMomoMode && (
-                  <h3 className="text-base font-black text-foreground break-words leading-tight px-4 mb-2">
-                    {ticket.productName}
-                  </h3>
-                )
-              )}
-              {isEditing && (
-                <div className="mt-2 text-left space-y-3 bg-muted p-4 rounded-2xl relative max-h-[55vh] overflow-y-auto no-scrollbar pr-2">
-                  {templates && templates.length > 0 && (
-                    <div className="mb-4 bg-primary/5 p-3 rounded-2xl border border-primary/10">
-                      <div className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 flex items-center gap-1">
-                        <LayoutDashboard size={12} /> 套用範本
+      <AnimatePresence>
+        {ticket && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-foreground/70 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
+            onClick={onClose}
+          >
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className={`glass-card w-full max-w-sm rounded-[28px] overflow-hidden relative flex flex-col border border-border/50 ${
+                isMomoMode ? 'h-[85vh] sm:h-auto' : 'max-h-[90vh]'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Redeem Animation Overlay */}
+              <AnimatePresence>
+                {isRedeemAnimating && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-50 flex items-center justify-center bg-ticket-success/90 backdrop-blur-md"
+                  >
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      className="flex flex-col items-center"
+                    >
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.2, 1],
+                          rotate: [0, 10, -10, 0],
+                        }}
+                        transition={{ repeat: 1, duration: 0.4 }}
+                      >
+                        <Sparkles className="w-16 h-16 text-primary-foreground" />
+                      </motion.div>
+                      <motion.span
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-xl font-bold text-primary-foreground mt-2"
+                      >
+                        {ticket.completed ? '已標記未用' : '核銷成功！'}
+                      </motion.span>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="p-4 sm:p-5 flex flex-col h-full">
+                <div className="text-center shrink-0">
+                  {isEditing ? (
+                    <input
+                      className="text-lg font-bold text-center w-full border-b-2 border-primary/30 pb-2 mb-2 text-foreground focus:outline-none bg-transparent focus:border-primary transition-colors"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  ) : (
+                    !isMomoMode && (
+                      <motion.h3
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-base font-bold text-foreground break-words leading-tight px-4 mb-2"
+                      >
+                        {ticket.productName}
+                      </motion.h3>
+                    )
+                  )}
+                  
+                  {isEditing && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-2 text-left space-y-3 glass-card p-4 rounded-2xl relative max-h-[55vh] overflow-y-auto no-scrollbar pr-2"
+                    >
+                      {templates && templates.length > 0 && (
+                        <div className="mb-4 bg-primary/5 p-3 rounded-2xl border border-primary/10">
+                          <div className="text-[10px] font-semibold text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <LayoutDashboard size={12} /> 套用範本
+                          </div>
+                          <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                            {templates.map((tpl) => (
+                              <motion.div
+                                key={tpl.id}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => applyTemplate(tpl)}
+                                className="shrink-0 flex items-center gap-2 bg-card border border-primary/20 rounded-xl p-1.5 pr-2 cursor-pointer hover:bg-primary/10 transition-colors"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center overflow-hidden">
+                                  {tpl.image ? (
+                                    <img src={tpl.image} className="w-full h-full object-cover" alt="" />
+                                  ) : (
+                                    <ImageIcon size={12} className="text-primary/30" />
+                                  )}
+                                </div>
+                                <span className="text-xs font-semibold text-primary max-w-[80px] truncate">{tpl.label}</span>
+                                <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteTemplate(tpl.id);
+                                  }}
+                                  className="text-primary/30 hover:text-ticket-warning p-0.5"
+                                >
+                                  <X size={12} />
+                                </motion.button>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Image Uploads */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">封面縮圖</label>
+                          <ImageUpload
+                            value={editImage}
+                            onChange={setEditImage}
+                            onClear={() => setEditImage('')}
+                            type="thumbnail"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">核銷原圖</label>
+                          <ImageUpload
+                            value={editOriginalImage}
+                            onChange={setEditOriginalImage}
+                            onClear={() => setEditOriginalImage('')}
+                            type="original"
+                          />
+                        </div>
                       </div>
-                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                        {templates.map((tpl) => (
-                          <div
-                            key={tpl.id}
-                            onClick={() => applyTemplate(tpl)}
-                            className="shrink-0 flex items-center gap-2 bg-card border border-primary/20 rounded-xl p-1 pr-2 cursor-pointer hover:bg-primary/10 transition-colors group"
+
+                      <div className="flex justify-center -my-1 z-10">
+                        <motion.button
+                          whileTap={{ scale: 0.9, rotate: 180 }}
+                          onClick={handleSwapImages}
+                          className="w-8 h-8 glass-button rounded-full flex items-center justify-center text-muted-foreground hover:text-primary transition-all"
+                        >
+                          <ArrowUpDown size={14} />
+                        </motion.button>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">兌換期限</label>
+                        <input
+                          type="date"
+                          className="w-full p-3 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+                          value={editExpiry ? editExpiry.replace(/\//g, '-') : ''}
+                          onChange={(e) => setEditExpiry(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase">標籤</label>
+                        <TagSelectInput
+                          allTags={allTags}
+                          selectedTags={editTags}
+                          onTagsChange={setEditTags}
+                          extraSuggestions={specificViewKeywords}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+                
+                {!isEditing && (
+                  <div className="flex-1 flex flex-col min-h-0">
+                    {!isMomoMode && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex justify-center shrink-0"
+                      >
+                        <div className="flex glass-card p-1 rounded-xl mb-3">
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setViewMode('standard')}
+                            className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+                              viewMode === 'standard' ? 'text-primary' : 'text-muted-foreground'
+                            }`}
                           >
-                            <div className="w-8 h-8 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center overflow-hidden">
-                              {tpl.image ? (
-                                <img src={tpl.image} className="w-full h-full object-cover" />
-                              ) : (
-                                <ImageIcon size={12} className="text-primary/30" />
+                            {viewMode === 'standard' && (
+                              <motion.div
+                                layoutId="viewModeTab"
+                                className="absolute inset-0 bg-card shadow-sm rounded-lg"
+                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                              />
+                            )}
+                            <span className="relative z-10">條碼</span>
+                          </motion.button>
+                          {hasAnyImage && (
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => {
+                                setViewMode('image');
+                                if (ticket.originalImage) setShowFullScreen(true);
+                              }}
+                              className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all flex items-center gap-1 ${
+                                viewMode === 'image' ? 'text-primary' : 'text-muted-foreground'
+                              }`}
+                            >
+                              {viewMode === 'image' && (
+                                <motion.div
+                                  layoutId="viewModeTab"
+                                  className="absolute inset-0 bg-card shadow-sm rounded-lg"
+                                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                />
+                              )}
+                              <span className="relative z-10 flex items-center gap-1">
+                                {ticket.originalImage && <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>}
+                                原圖
+                              </span>
+                            </motion.button>
+                          )}
+                          {isSpecificView && (
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => setViewMode('momo')}
+                            className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+                                viewMode === 'momo' ? 'text-ticket-momo' : 'text-ticket-momo/60'
+                              }`}
+                            >
+                              {viewMode === 'momo' && (
+                                <motion.div
+                                  layoutId="viewModeTab"
+                                  className="absolute inset-0 bg-ticket-momo/20 shadow-sm rounded-lg"
+                                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                />
+                              )}
+                              <span className="relative z-10">專屬</span>
+                            </motion.button>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                    
+                    <div className="flex-1 min-h-0 relative overflow-y-auto no-scrollbar pb-4">
+                      <AnimatePresence mode="wait">
+                        {viewMode === 'image' ? (
+                          <motion.div
+                            key="image"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="h-full flex flex-col items-center gap-3 relative group"
+                          >
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
+                              onClick={onClose}
+                              className="absolute top-2 right-2 z-10 w-8 h-8 glass-button text-muted-foreground rounded-full flex items-center justify-center"
+                            >
+                              <X size={18} />
+                            </motion.button>
+
+                            <div
+                              className="relative w-full flex-1 min-h-0 flex items-center justify-center cursor-zoom-in group"
+                              onClick={() => setShowFullScreen(true)}
+                            >
+                              <img
+                                src={ticket.originalImage || ticket.image}
+                                className={`max-h-full w-auto rounded-xl shadow-md border border-border transition-opacity ${
+                                  !ticket.originalImage ? 'opacity-70 grayscale-[0.3]' : 'opacity-100'
+                                }`}
+                                alt=""
+                              />
+
+                              {!ticket.originalImage && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur-md text-primary-foreground px-4 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 shadow-lg"
+                                >
+                                  <AlertCircle size={12} /> 預覽模式 (建議上傳原圖)
+                                </motion.div>
                               )}
                             </div>
-                            <span className="text-xs font-bold text-primary max-w-[80px] truncate">{tpl.label}</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteTemplate(tpl.id);
-                              }}
-                              className="text-primary/30 hover:text-ticket-warning p-0.5"
+
+                            {ticket.serial && (
+                              <div className="w-full space-y-2 shrink-0 pb-4">
+                                <div className="glass-card p-2 rounded-xl">
+                                  <BarcodeCanvas text={ticket.serial} />
+                                </div>
+                                <div className="flex justify-center p-2 glass-card rounded-xl shrink-0">
+                                  <QRCodeCanvas text={ticket.serial} size={100} />
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        ) : isMomoMode ? (
+                          <motion.div
+                            key="momo"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="h-full py-1"
+                          >
+                            <MomoTemplate ticket={ticket} onContentClick={onClose} />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="standard"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="h-full flex flex-col items-center justify-center gap-5 py-4"
+                          >
+                            {ticket.serial && (
+                              <motion.div
+                                whileTap={{ scale: 0.98 }}
+                                onClick={onClose}
+                                className="w-full glass-card p-3 rounded-xl cursor-pointer"
+                              >
+                                <BarcodeCanvas text={ticket.serial} />
+                              </motion.div>
+                            )}
+                            <motion.div
+                              whileTap={{ scale: 0.98 }}
+                              onClick={onClose}
+                              className="p-4 glass-card rounded-[32px] cursor-pointer"
                             >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="relative group">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">封面 (列表/範本用)</label>
-                    <div className="flex items-center gap-3 mt-1">
-                      {editImage ? (
-                        <img src={editImage} className="w-12 h-12 object-cover rounded-lg border border-border" />
-                      ) : (
-                        <div className="w-12 h-12 bg-card border border-dashed border-border rounded-lg flex items-center justify-center">
-                          <ImageIcon size={16} className="text-muted-foreground" />
-                        </div>
-                      )}
-                      <label className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-md cursor-pointer hover:bg-primary/20 transition-colors">
-                        上傳縮圖
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const base64 = await compressImage(file, 'thumbnail');
-                              setEditImage(base64);
-                            }
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center -my-1 z-10">
-                    <button
-                      onClick={handleSwapImages}
-                      className="w-8 h-8 bg-card border border-border rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm active:rotate-180 duration-300"
-                    >
-                      <ArrowUpDown size={14} />
-                    </button>
-                  </div>
-
-                  <div className="relative group">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">核銷原圖 (全螢幕用)</label>
-                    <div className="flex items-center gap-3 mt-1">
-                      {editOriginalImage ? (
-                        <img src={editOriginalImage} className="w-12 h-12 object-cover rounded-lg border border-border" />
-                      ) : (
-                        <div className="w-12 h-12 bg-card border border-dashed border-border rounded-lg flex items-center justify-center">
-                          <Maximize2 size={16} className="text-muted-foreground" />
-                        </div>
-                      )}
-                      <label className="px-3 py-1 bg-ticket-success/10 text-ticket-success text-[10px] font-bold rounded-md cursor-pointer hover:bg-ticket-success/20 transition-colors">
-                        上傳原圖
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const base64 = await compressImage(file, 'original');
-                              setEditOriginalImage(base64);
-                            }
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">兌換期限</label>
-                    <input
-                      type="date"
-                      className="w-full p-3 bg-card border border-border rounded-xl outline-none text-sm font-bold text-foreground"
-                      value={editExpiry ? editExpiry.replace(/\//g, '-') : ''}
-                      onChange={(e) => setEditExpiry(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">標籤</label>
-                    <TagSelectInput
-                      allTags={allTags}
-                      selectedTags={editTags}
-                      onTagsChange={setEditTags}
-                      extraSuggestions={specificViewKeywords}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            {!isEditing && (
-              <div className="flex-1 flex flex-col min-h-0">
-                {!isMomoMode && (
-                  <div className="flex justify-center shrink-0">
-                    <div className="flex bg-muted p-1 rounded-xl mb-3">
-                      <button
-                        onClick={() => setViewMode('standard')}
-                        className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                          viewMode === 'standard' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
-                        }`}
-                      >
-                        條碼
-                      </button>
-                      {hasAnyImage && (
-                        <button
-                          onClick={() => {
-                            setViewMode('image');
-                            if (ticket.originalImage) setShowFullScreen(true);
-                          }}
-                          className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all relative flex items-center gap-1 ${
-                            viewMode === 'image' ? 'bg-card shadow-sm text-foreground font-black' : 'text-muted-foreground font-bold'
-                          }`}
-                        >
-                          {ticket.originalImage && <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>} 原圖
-                        </button>
-                      )}
-                      {isSpecificView && (
-                        <button
-                          onClick={() => setViewMode('momo')}
-                          className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                            (viewMode as string) === 'momo' ? 'bg-ticket-momo text-white shadow-sm' : 'text-ticket-momo'
-                          }`}
-                        >
-                          專屬
-                        </button>
-                      )}
+                              {ticket.serial ? (
+                                <QRCodeCanvas text={ticket.serial} size={180} />
+                              ) : (
+                                <div className="w-40 h-40 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-2xl font-semibold">
+                                  無序號
+                                </div>
+                              )}
+                            </motion.div>
+                            <div className="text-center">
+                              <span className="text-[11px] font-medium text-muted-foreground block mb-1">電子券號</span>
+                              <span className="font-mono text-lg font-bold text-foreground glass-card px-4 py-1 rounded-full">
+                                {ticket.serial || 'N/A'}
+                              </span>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
                 )}
-                <div className="flex-1 min-h-0 relative overflow-y-auto no-scrollbar pb-4">
-                  {viewMode === 'image' ? (
-                    <div className="h-full flex flex-col items-center gap-3 relative group">
-                      <button
-                        onClick={onClose}
-                        className="absolute top-2 right-2 z-10 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-4 shrink-0 flex flex-col gap-2"
+                >
+                  {isEditing ? (
+                    <div className="flex gap-2">
+                      <motion.button
+                        variants={buttonVariants}
+                        whileTap="tap"
+                        onClick={() => setIsEditing(false)}
+                        className="px-5 py-3 glass-card text-muted-foreground rounded-xl font-semibold text-sm"
                       >
-                        <X size={18} />
-                      </button>
-
-                      <div
-                        className="relative w-full flex-1 min-h-0 flex items-center justify-center cursor-zoom-in group"
-                        onClick={() => setShowFullScreen(true)}
+                        取消
+                      </motion.button>
+                      <motion.button
+                        variants={buttonVariants}
+                        whileTap="tap"
+                        onClick={() => {
+                          const name = prompt('請輸入範本名稱');
+                          if (name) onSaveTemplate({ label: name, productName: editName, image: editImage, tags: editTags });
+                        }}
+                        className="px-5 py-3 bg-ticket-success/10 text-ticket-success rounded-xl font-semibold text-sm flex items-center gap-1 hover:bg-ticket-success/20"
                       >
-                        <img
-                          src={ticket.originalImage || ticket.image}
-                          className={`max-h-full w-auto rounded-xl shadow-md border border-border transition-opacity ${
-                            !ticket.originalImage ? 'opacity-70 grayscale-[0.3]' : 'opacity-100'
-                          }`}
-                        />
-
-                        {!ticket.originalImage && (
-                          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/80 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 shadow-lg border border-amber-400/50 animate-bounce">
-                            <AlertCircle size={12} /> 預覽模式 (建議上傳原圖核銷)
-                          </div>
-                        )}
-
-                        {ticket.originalImage && (
-                          <div className="absolute top-4 right-4 bg-primary text-primary-foreground px-2 py-1 rounded-md text-[9px] font-black shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                            高畫質核銷圖
-                          </div>
-                        )}
-                      </div>
-
-                      {ticket.serial && (
-                        <div className="w-full space-y-2 shrink-0 pb-4">
-                          <div className="bg-card p-2 rounded-xl border border-border">
-                            <BarcodeCanvas text={ticket.serial} />
-                          </div>
-                          <div className="flex justify-center p-2 bg-card rounded-xl border border-border shrink-0">
-                            <QRCodeCanvas text={ticket.serial} size={100} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : isMomoMode ? (
-                    <div className="h-full py-1">
-                      <MomoTemplate ticket={ticket} onContentClick={onClose} />
+                        <LayoutDashboard size={16} /> 存範本
+                      </motion.button>
+                      <motion.button
+                        variants={buttonVariants}
+                        whileTap="tap"
+                        onClick={handleSave}
+                        className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-sm shadow-lg"
+                      >
+                        儲存變更
+                      </motion.button>
                     </div>
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center gap-5 py-4">
-                      {ticket.serial && (
-                        <div onClick={onClose} className="w-full bg-card p-3 rounded-xl border border-border shadow-sm cursor-pointer">
-                          <BarcodeCanvas text={ticket.serial} />
-                        </div>
-                      )}
-                      <div onClick={onClose} className="p-4 bg-card rounded-[32px] shadow-sm border border-border cursor-pointer">
-                        {ticket.serial ? (
-                          <QRCodeCanvas text={ticket.serial} size={180} />
-                        ) : (
-                          <div className="w-40 h-40 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-2xl font-bold">
-                            無序號
-                          </div>
+                    <>
+                      <div className="flex gap-2 mb-1">
+                        <motion.button
+                          variants={buttonVariants}
+                          whileTap="tap"
+                          whileHover="hover"
+                          onClick={() => {
+                            if (window.confirm('確定刪除此票券並視同核銷通知嗎？')) {
+                              onDelete(ticket.id, true);
+                              onClose();
+                            }
+                          }}
+                          className="flex-1 py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground bg-ticket-warning transition-all"
+                        >
+                          <Trash2 size={18} /> 刪除
+                        </motion.button>
+
+                        {!ticket.isDeleted && (
+                          <motion.button
+                            variants={buttonVariants}
+                            whileTap="tap"
+                            whileHover="hover"
+                            onClick={handleToggleCompleteWithAnimation}
+                            className="flex-[2] py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground bg-ticket-success transition-all"
+                          >
+                            {ticket.completed ? (
+                              <>
+                                <RotateCcw size={18} /> 標記未用
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 size={18} /> 立即核銷
+                              </>
+                            )}
+                          </motion.button>
                         )}
                       </div>
-                      <div className="text-center">
-                        <span className="text-[11px] font-bold text-muted-foreground block mb-1">電子券號</span>
-                        <span className="font-mono text-lg font-black text-foreground bg-muted px-4 py-1 rounded-full">
-                          {ticket.serial || 'N/A'}
-                        </span>
+
+                      <div className="flex gap-2 h-11">
+                        {ticket.isDeleted ? (
+                          <motion.button
+                            variants={buttonVariants}
+                            whileTap="tap"
+                            onClick={() => {
+                              onRestore(ticket);
+                              onClose();
+                            }}
+                            className="flex-1 bg-ticket-success/10 text-ticket-success text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
+                          >
+                            <RefreshCcw size={14} /> 還原
+                          </motion.button>
+                        ) : (
+                          <motion.button
+                            variants={buttonVariants}
+                            whileTap="tap"
+                            onClick={() => setIsEditing(true)}
+                            className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
+                          >
+                            <Pencil size={14} /> 編輯
+                          </motion.button>
+                        )}
+                        <motion.button
+                          variants={buttonVariants}
+                          whileTap="tap"
+                          onClick={onClose}
+                          className="flex-1 glass-card text-muted-foreground font-semibold rounded-xl flex items-center justify-center text-xs"
+                        >
+                          關閉
+                        </motion.button>
                       </div>
-                    </div>
+                    </>
                   )}
-                </div>
+                </motion.div>
               </div>
-            )}
-            <div className="mt-4 shrink-0 flex flex-col gap-2">
-              {isEditing ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className="px-5 py-3 bg-muted text-muted-foreground rounded-xl font-bold text-sm"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={() => {
-                      const name = prompt('請輸入範本名稱');
-                      if (name) onSaveTemplate({ label: name, productName: editName, image: editImage, tags: editTags });
-                    }}
-                    className="px-5 py-3 bg-ticket-success/10 text-ticket-success rounded-xl font-bold text-sm flex items-center gap-1 hover:bg-ticket-success/20"
-                  >
-                    <LayoutDashboard size={16} /> 存範本
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-lg shadow-primary/20"
-                  >
-                    儲存變更
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="flex gap-2 mb-1">
-                    <button
-                      onClick={() => {
-                        if (window.confirm('確定刪除此票券並視同核銷通知嗎？')) {
-                          onDelete(ticket.id, true);
-                          onClose();
-                        }
-                      }}
-                      className="flex-1 py-4 text-sm font-black rounded-2xl shadow-xl flex items-center justify-center gap-2 text-white bg-ticket-warning hover:bg-ticket-warning/90 transition-all active:scale-95"
-                    >
-                      <Trash2 size={18} /> 刪除
-                    </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-                    {!ticket.isDeleted && (
-                      <button
-                        onClick={() => {
-                          if (ticket.completed || window.confirm('確定核銷？')) {
-                            onToggleComplete(ticket);
-                            onClose();
-                          }
-                        }}
-                        className="flex-[2] py-4 text-sm font-black rounded-2xl shadow-xl flex items-center justify-center gap-2 text-white bg-ticket-success hover:bg-ticket-success/90 transition-all active:scale-95"
-                      >
-                        {ticket.completed ? (
-                          <>
-                            <RotateCcw size={18} /> 標記未用
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 size={18} /> 立即核銷
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 h-11">
-                    {ticket.isDeleted ? (
-                      <button
-                        onClick={() => {
-                          onRestore(ticket);
-                          onClose();
-                        }}
-                        className="flex-1 bg-ticket-success/10 text-ticket-success text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
-                      >
-                        <RefreshCcw size={14} /> 還原
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex-1 bg-muted text-muted-foreground text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-border"
-                      >
-                        <Pencil size={14} /> 編輯
-                      </button>
-                    )}
-                    <button
-                      onClick={onClose}
-                      className="flex-1 bg-muted text-muted-foreground font-bold rounded-xl flex items-center justify-center text-xs hover:bg-muted/80 transition-colors"
-                    >
-                      關閉
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {showFullScreen && (ticket.originalImage || ticket.image) && (
-        <div
-          className="fixed inset-0 bg-black z-[60] flex items-center justify-center"
-          onClick={() => setShowFullScreen(false)}
-        >
-          <button
+      <AnimatePresence>
+        {showFullScreen && (ticket.originalImage || ticket.image) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black z-[60] flex items-center justify-center"
             onClick={() => setShowFullScreen(false)}
-            className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
           >
-            <X size={24} />
-          </button>
-          <img
-            src={ticket.originalImage || ticket.image}
-            className="max-w-full max-h-full object-contain"
-          />
-        </div>
-      )}
+            <motion.button
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowFullScreen(false)}
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
+            >
+              <X size={24} />
+            </motion.button>
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              src={ticket.originalImage || ticket.image}
+              className="max-w-full max-h-full object-contain"
+              alt=""
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
