@@ -47,6 +47,11 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        ticket: {
+          success: "hsl(var(--ticket-success))",
+          warning: "hsl(var(--ticket-warning))",
+          momo: "hsl(var(--ticket-momo))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
