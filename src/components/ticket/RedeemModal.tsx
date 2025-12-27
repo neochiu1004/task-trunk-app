@@ -632,28 +632,33 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black z-[60] flex flex-col"
-            onClick={() => setShowFullScreen(false)}
+            onClick={onClose}
           >
-            {/* Close button - top right */}
+            {/* Close button - top right (closes entire modal) */}
             <motion.button
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setShowFullScreen(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
             >
               <X size={24} />
             </motion.button>
             
-            {/* Image container - takes remaining space */}
-            <div className="flex-1 flex items-center justify-center p-4 pb-32">
+            {/* Image container - click to close entire modal */}
+            <div 
+              className="flex-1 flex items-center justify-center p-4 pb-32 cursor-pointer"
+              onClick={onClose}
+            >
               <motion.img
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 src={ticket.originalImage || ticket.image}
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full object-contain pointer-events-none"
                 alt=""
-                onClick={(e) => e.stopPropagation()}
               />
             </div>
             
@@ -665,14 +670,14 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               className="fixed bottom-0 left-0 right-0 p-4 pb-8 flex gap-3 z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Back button - semi-transparent blur */}
+              {/* Back button - returns to detail view only */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
                 onClick={() => setShowFullScreen(false)}
                 className="flex-1 py-4 rounded-2xl font-semibold text-white bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
               >
-                返回
+                返回詳情
               </motion.button>
               
               {/* Quick Redeem button - emerald green */}
