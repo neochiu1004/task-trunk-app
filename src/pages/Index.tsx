@@ -98,7 +98,10 @@ const Index = () => {
       if (activeTag !== 'all' && (!t.tags || !t.tags.includes(activeTag))) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        return t.productName.toLowerCase().includes(q) || (t.note && t.note.toLowerCase().includes(q)) || (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(q)));
+        return t.productName.toLowerCase().includes(q) || 
+          (t.note && t.note.toLowerCase().includes(q)) || 
+          (t.serial && t.serial.toLowerCase().includes(q)) ||
+          (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(q)));
       }
       return true;
     });
