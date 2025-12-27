@@ -31,7 +31,7 @@ interface RedeemModalProps {
   ticket: Ticket | null;
   onClose: () => void;
   onToggleComplete: (ticket: Ticket) => void;
-  onDelete: (id: string, forceNotify?: boolean) => void;
+  onDelete: (id: string, forceNotify?: boolean, skipConfirm?: boolean) => void;
   onRestore: (ticket: Ticket) => void;
   onUpdate: (ticket: Ticket) => void;
   allTags: string[];
@@ -635,15 +635,19 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           variants={buttonVariants}
                           whileTap="tap"
                           whileHover="hover"
-                          onClick={() => {
-                            if (window.confirm('確定刪除此票券並視同核銷通知嗎？')) {
-                              onDelete(ticket.id, true);
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const confirmMessage = ticket.isDeleted 
+                              ? '確定永久刪除此票券？此操作無法復原。'
+                              : '確定刪除此票券並視同核銷通知嗎？';
+                            if (window.confirm(confirmMessage)) {
+                              onDelete(ticket.id, !ticket.isDeleted, true);
                               onClose();
                             }
                           }}
                           className="flex-1 py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground bg-ticket-warning transition-all"
                         >
-                          <Trash2 size={18} /> 刪除
+                          <Trash2 size={18} /> {ticket.isDeleted ? '永久刪除' : '刪除'}
                         </motion.button>
 
                         {!ticket.isDeleted && (
