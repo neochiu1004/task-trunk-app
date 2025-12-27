@@ -43,22 +43,22 @@ export const TicketCard: React.FC<TicketCardProps> = ({
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.97 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
+    visible: {
+      opacity,
+      y: 0,
       scale: 1,
-      transition: { 
+      transition: {
         type: "spring" as const,
         stiffness: 400,
         damping: 30,
         delay: index * 0.03,
-      }
+      },
     },
-    exit: { 
-      opacity: 0, 
-      scale: 0.95, 
+    exit: {
+      opacity: 0,
+      scale: 0.95,
       y: -10,
-      transition: { duration: 0.2 }
+      transition: { duration: 0.2 },
     },
     tap: { scale: 0.98 },
   };
@@ -80,7 +80,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   const cardStyle: React.CSSProperties = {
     ...(cardBgColor && { backgroundColor: cardBgColor }),
     ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
-    opacity: opacity,
   };
 
   if (isCompact) {
