@@ -267,7 +267,7 @@ const Index = () => {
         />
       )}
       
-      <div className="max-w-md mx-auto min-h-screen relative z-10" style={{ backgroundColor: currentConfig.backgroundImage ? 'transparent' : undefined }}>
+      <div className="max-w-md mx-auto min-h-screen relative z-10 overflow-x-hidden" style={{ backgroundColor: currentConfig.backgroundImage ? 'transparent' : undefined }}>
         <Header
           appTitle={settings.appTitle}
           onTitleChange={(t) => setSettings((s) => ({ ...s, appTitle: t }))}
@@ -292,7 +292,7 @@ const Index = () => {
           headerBackgroundImage={currentConfig.headerBackgroundImage}
         />
         
-        <div className="pt-3 min-h-[50vh] pb-28">
+        <div className="pt-2 min-h-[50vh] pb-24 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={view + activeTag + sortType}
