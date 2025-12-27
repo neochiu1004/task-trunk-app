@@ -36,6 +36,8 @@ interface RedeemModalProps {
   onDeleteTemplate: (id: string) => void;
 }
 
+type ViewModeType = 'standard' | 'image' | 'momo';
+
 export const RedeemModal: React.FC<RedeemModalProps> = ({
   ticket,
   onClose,
@@ -49,8 +51,6 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   templates,
   onDeleteTemplate,
 }) => {
-  type ViewModeType = 'standard' | 'image' | 'momo';
-  
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editExpiry, setEditExpiry] = useState('');
@@ -68,7 +68,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     return keywords.some((kw) => searchTarget.includes(kw.toUpperCase()));
   }, [ticket, specificViewKeywords]);
 
-  const getInitialViewMode = (): 'standard' | 'image' | 'momo' => {
+  const getInitialViewMode = (): ViewModeType => {
     if (!ticket) return 'standard';
     if (ticket.originalImage) return 'image';
     if (isSpecificView) return 'momo';
@@ -386,15 +386,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             <motion.button
                               whileTap={{ scale: 0.95 }}
                               onClick={() => setViewMode('momo')}
-                            className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
-                                viewMode === 'momo' ? 'text-ticket-momo' : 'text-ticket-momo/60'
+                              className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+                                isMomoMode ? 'text-ticket-momo' : 'text-ticket-momo/60'
                               }`}
                             >
-                              {viewMode === 'momo' && (
+                              {isMomoMode && (
                                 <motion.div
                                   layoutId="viewModeTab"
                                   className="absolute inset-0 bg-ticket-momo/20 shadow-sm rounded-lg"
-                                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                  transition={{ type: "spring" as const, stiffness: 400, damping: 30 }}
                                 />
                               )}
                               <span className="relative z-10">專屬</span>
