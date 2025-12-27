@@ -295,6 +295,10 @@ const Index = () => {
           allTags={allTags}
           onQuickBgChange={handleQuickBgChange}
           headerBackgroundImage={currentConfig.headerBackgroundImage}
+          headerBgSize={currentConfig.headerBgSize}
+          headerBgPosY={currentConfig.headerBgPosY}
+          headerBgOpacity={currentConfig.headerBgOpacity}
+          headerOpacity={currentConfig.headerOpacity}
           brandLogo={settings.brandLogo}
           onBrandLogoChange={(logo) => setSettings((s) => ({ ...s, brandLogo: logo }))}
         />

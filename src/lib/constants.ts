@@ -11,6 +11,10 @@ export const defaultViewConfig: ViewConfig = {
   cardBorderColor: '#e2e8f0',
   compactHeight: 70,
   compactShowImage: false,
+  headerBgSize: 100,
+  headerBgPosY: 50,
+  headerBgOpacity: 1,
+  headerOpacity: 1,
 };
 
 export const defaultSettings: Settings = {

@@ -42,6 +42,10 @@ interface HeaderProps {
   allTags: string[];
   onQuickBgChange: () => void;
   headerBackgroundImage?: string;
+  headerBgSize?: number;
+  headerBgPosY?: number;
+  headerBgOpacity?: number;
+  headerOpacity?: number;
   brandLogo?: string;
   onBrandLogoChange: (logo: string) => void;
 }
@@ -74,6 +78,10 @@ export const Header: React.FC<HeaderProps> = ({
   allTags,
   onQuickBgChange,
   headerBackgroundImage,
+  headerBgSize = 100,
+  headerBgPosY = 50,
+  headerBgOpacity = 1,
+  headerOpacity = 1,
   brandLogo,
   onBrandLogoChange,
 }) => {
@@ -104,11 +112,20 @@ export const Header: React.FC<HeaderProps> = ({
       className="px-3 pt-8 pb-3 sticky top-0 z-40 glass-header rounded-b-[20px]"
       style={
         headerBackgroundImage
-          ? { backgroundImage: `url(${headerBackgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : {}
+          ? {
+              backgroundImage: `url(${headerBackgroundImage})`,
+              backgroundSize: `${headerBgSize}% auto`,
+              backgroundPosition: `center ${headerBgPosY}%`,
+              backgroundRepeat: 'no-repeat',
+              opacity: headerOpacity,
+            }
+          : { opacity: headerOpacity }
       }
     >
-      <div className={headerBackgroundImage ? 'glass -mx-3 -mt-8 px-3 pt-8 pb-3 rounded-b-[20px]' : ''}>
+      <div
+        className={headerBackgroundImage ? 'glass -mx-3 -mt-8 px-3 pt-8 pb-3 rounded-b-[20px]' : ''}
+        style={headerBackgroundImage ? { opacity: headerBgOpacity } : {}}
+      >
         {/* Title Row */}
         <div className="flex justify-between items-center mb-2.5">
           <div className="flex items-center gap-2">
