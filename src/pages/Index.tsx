@@ -290,6 +290,8 @@ const Index = () => {
           allTags={allTags}
           onQuickBgChange={handleQuickBgChange}
           headerBackgroundImage={currentConfig.headerBackgroundImage}
+          brandLogo={settings.brandLogo}
+          onBrandLogoChange={(logo) => setSettings((s) => ({ ...s, brandLogo: logo }))}
         />
         
         <div className="pt-2 min-h-[50vh] pb-24 overflow-x-hidden">

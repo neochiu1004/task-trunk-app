@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Loader2, Check, X, Maximize2 } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Check, X, Maximize2, ClipboardPaste } from 'lucide-react';
 import { compressImage } from '@/lib/helpers';
+import { useToast } from '@/hooks/use-toast';
 
 interface ImageUploadProps {
   value: string;
@@ -11,6 +12,7 @@ interface ImageUploadProps {
   label?: string;
   sublabel?: string;
   className?: string;
+  showPaste?: boolean;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -21,9 +23,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   label,
   sublabel,
   className = '',
+  showPaste = true,
 }) => {
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isPasting, setIsPasting] = useState(false);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,6 +47,38 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       alert('處理圖片時發生錯誤');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePaste = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsPasting(true);
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const base64 = await compressImage(blob as File, type);
+          onChange(base64);
+          setUploadSuccess(true);
+          setTimeout(() => setUploadSuccess(false), 1500);
+          toast({
+            title: "貼上成功",
+            description: "圖片已從剪貼簿載入",
+          });
+          break;
+        }
+      }
+    } catch (err) {
+      console.error('Paste failed:', err);
+      toast({
+        title: "貼上失敗",
+        description: "剪貼簿中沒有圖片或權限不足",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPasting(false);
     }
   };
 
@@ -91,25 +128,50 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
             />
-            {onClear && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClear();
-                }}
-                className="absolute top-2 right-2 w-7 h-7 bg-ticket-warning text-primary-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-              >
-                <X size={14} />
-              </motion.button>
-            )}
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {showPaste && (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handlePaste}
+                  disabled={isPasting}
+                  className="w-6 h-6 glass-button text-foreground rounded-full flex items-center justify-center shadow-lg"
+                >
+                  {isPasting ? <Loader2 size={12} className="animate-spin" /> : <ClipboardPaste size={12} />}
+                </motion.button>
+              )}
+              {onClear && (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClear();
+                  }}
+                  className="w-6 h-6 bg-ticket-warning text-primary-foreground rounded-full flex items-center justify-center shadow-lg"
+                >
+                  <X size={12} />
+                </motion.button>
+              )}
+            </div>
           </>
         ) : (
           <div className="flex flex-col items-center text-muted-foreground gap-1">
             <IconComponent size={24} />
             <span className="text-[9px] font-semibold">{label || (type === 'original' ? '核銷原圖' : '封面縮圖')}</span>
+            {showPaste && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={handlePaste}
+                disabled={isPasting}
+                className="mt-1 px-2 py-1 glass-button rounded-lg text-[8px] font-medium flex items-center gap-1"
+              >
+                {isPasting ? <Loader2 size={10} className="animate-spin" /> : <ClipboardPaste size={10} />}
+                貼上
+              </motion.button>
+            )}
           </div>
         )}
 
