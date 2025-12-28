@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine } from 'lucide-react';
+import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw } from 'lucide-react';
 import { Template } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -53,12 +53,27 @@ export const AddModal: React.FC<AddModalProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanningSerial, setIsScanningSerial] = useState(false);
+  const [hasAppliedTemplate, setHasAppliedTemplate] = useState(false);
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   const applyTemplate = (tpl: Template) => {
     setManualData((prev) => ({ ...prev, name: tpl.productName }));
     if (tpl.image) setImages([tpl.image]);
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
+    setHasAppliedTemplate(true);
+  };
+
+  const clearTemplateData = () => {
+    setManualData({ name: '', serial: '', expiry: '' });
+    setManualTags([]);
+    setImages([]);
+    setOriginalImage('');
+    setBarcodeFormat(undefined);
+    setHasAppliedTemplate(false);
+    toast({
+      title: "已清除",
+      description: "所有範本資料已清除",
+    });
   };
 
   const handleOriginalImageChange = async (base64: string) => {
@@ -187,8 +202,21 @@ export const AddModal: React.FC<AddModalProps> = ({
             animate="visible"
             className="mb-2"
           >
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <LayoutDashboard size={12} /> 快速套用範本
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <LayoutDashboard size={12} /> 快速套用範本
+              </span>
+              {hasAppliedTemplate && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={clearTemplateData}
+                  className="flex items-center gap-1 text-ticket-warning hover:text-ticket-warning/80 transition-colors"
+                >
+                  <RotateCcw size={10} /> 清除資料
+                </motion.button>
+              )}
             </div>
             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
               {templates.map((tpl) => (
