@@ -128,7 +128,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
             />
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
               {showPaste && (
                 <motion.button
                   initial={{ opacity: 0 }}
@@ -148,6 +148,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                   whileTap={{ scale: 0.9 }}
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     onClear();
                   }}
                   className="w-6 h-6 bg-ticket-warning text-primary-foreground rounded-full flex items-center justify-center shadow-lg"
@@ -156,32 +157,40 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 </motion.button>
               )}
             </div>
+            <input
+              type="file"
+              className="absolute inset-0 opacity-0 cursor-pointer z-10"
+              accept="image/*"
+              onChange={handleUpload}
+              disabled={isLoading}
+            />
           </>
         ) : (
-          <div className="flex flex-col items-center text-muted-foreground gap-1">
-            <IconComponent size={24} />
-            <span className="text-[9px] font-semibold">{label || (type === 'original' ? '核銷原圖' : '封面縮圖')}</span>
-            {showPaste && (
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={handlePaste}
-                disabled={isPasting}
-                className="mt-1 px-2 py-1 glass-button rounded-lg text-[8px] font-medium flex items-center gap-1"
-              >
-                {isPasting ? <Loader2 size={10} className="animate-spin" /> : <ClipboardPaste size={10} />}
-                貼上
-              </motion.button>
-            )}
-          </div>
+          <>
+            <div className="flex flex-col items-center text-muted-foreground gap-1">
+              <IconComponent size={24} />
+              <span className="text-[9px] font-semibold">{label || (type === 'original' ? '核銷原圖' : '封面縮圖')}</span>
+              {showPaste && (
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handlePaste}
+                  disabled={isPasting}
+                  className="mt-1 px-2 py-1 glass-button rounded-lg text-[8px] font-medium flex items-center gap-1 z-20 relative"
+                >
+                  {isPasting ? <Loader2 size={10} className="animate-spin" /> : <ClipboardPaste size={10} />}
+                  貼上
+                </motion.button>
+              )}
+            </div>
+            <input
+              type="file"
+              className="absolute inset-0 opacity-0 cursor-pointer z-10"
+              accept="image/*"
+              onChange={handleUpload}
+              disabled={isLoading}
+            />
+          </>
         )}
-
-        <input
-          type="file"
-          className="absolute inset-0 opacity-0 cursor-pointer"
-          accept="image/*"
-          onChange={handleUpload}
-          disabled={isLoading}
-        />
       </div>
       {sublabel && (
         <div className="text-[10px] font-medium text-center text-muted-foreground">{sublabel}</div>
