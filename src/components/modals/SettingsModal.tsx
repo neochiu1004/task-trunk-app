@@ -390,37 +390,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </>
                 )}
 
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                      <Droplets size={12} /> 頂部功能區透明度
-                    </label>
-                    <span className="text-xs font-bold text-primary">{Math.round((currentViewConfig.headerOpacity || 1) * 100)}%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleStep('headerOpacity', -1, 0.3, 1, true, 0.05)}
-                      className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <input
-                      type="range"
-                      min="30"
-                      max="100"
-                      step="5"
-                      value={Math.round((currentViewConfig.headerOpacity || 1) * 100)}
-                      onChange={(e) => handleViewConfigChange('headerOpacity', parseInt(e.target.value) / 100)}
-                      className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
-                    />
-                    <button
-                      onClick={() => handleStep('headerOpacity', 1, 0.3, 1, true, 0.05)}
-                      className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <div>

@@ -38,7 +38,6 @@ export interface ViewConfig {
   headerBgSize: number;
   headerBgPosY: number;
   headerBgOpacity: number;
-  headerOpacity: number;
 }
 
 export interface Settings {

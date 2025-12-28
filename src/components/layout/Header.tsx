@@ -45,7 +45,6 @@ interface HeaderProps {
   headerBgSize?: number;
   headerBgPosY?: number;
   headerBgOpacity?: number;
-  headerOpacity?: number;
   brandLogo?: string;
   onBrandLogoChange: (logo: string) => void;
 }
@@ -81,7 +80,6 @@ export const Header: React.FC<HeaderProps> = ({
   headerBgSize = 100,
   headerBgPosY = 50,
   headerBgOpacity = 1,
-  headerOpacity = 1,
   brandLogo,
   onBrandLogoChange,
 }) => {
@@ -110,7 +108,6 @@ export const Header: React.FC<HeaderProps> = ({
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="px-3 pt-8 pb-3 sticky top-0 z-40 glass-header rounded-b-[20px] relative overflow-hidden"
-      style={{ opacity: headerOpacity }}
     >
       {/* 背景圖層：獨立控制背景圖的透明度 */}
       {headerBackgroundImage && (

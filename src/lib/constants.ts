@@ -14,7 +14,6 @@ export const defaultViewConfig: ViewConfig = {
   headerBgSize: 100,
   headerBgPosY: 50,
   headerBgOpacity: 1,
-  headerOpacity: 1,
 };
 
 export const defaultSettings: Settings = {
