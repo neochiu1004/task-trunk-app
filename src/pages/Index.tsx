@@ -298,7 +298,6 @@ const Index = () => {
           headerBgSize={currentConfig.headerBgSize}
           headerBgPosY={currentConfig.headerBgPosY}
           headerBgOpacity={currentConfig.headerBgOpacity}
-          headerOpacity={currentConfig.headerOpacity}
           brandLogo={settings.brandLogo}
           onBrandLogoChange={(logo) => setSettings((s) => ({ ...s, brandLogo: logo }))}
         />
