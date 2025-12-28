@@ -109,23 +109,25 @@ export const Header: React.FC<HeaderProps> = ({
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="px-3 pt-8 pb-3 sticky top-0 z-40 glass-header rounded-b-[20px]"
-      style={
-        headerBackgroundImage
-          ? {
-              backgroundImage: `url(${headerBackgroundImage})`,
-              backgroundSize: `${headerBgSize}% auto`,
-              backgroundPosition: `center ${headerBgPosY}%`,
-              backgroundRepeat: 'no-repeat',
-              opacity: headerOpacity,
-            }
-          : { opacity: headerOpacity }
-      }
+      className="px-3 pt-8 pb-3 sticky top-0 z-40 glass-header rounded-b-[20px] relative overflow-hidden"
+      style={{ opacity: headerOpacity }}
     >
-      <div
-        className={headerBackgroundImage ? 'glass -mx-3 -mt-8 px-3 pt-8 pb-3 rounded-b-[20px]' : ''}
-        style={headerBackgroundImage ? { opacity: headerBgOpacity } : {}}
-      >
+      {/* 背景圖層：獨立控制背景圖的透明度 */}
+      {headerBackgroundImage && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `url(${headerBackgroundImage})`,
+            backgroundSize: `${headerBgSize}% auto`,
+            backgroundPosition: `center ${headerBgPosY}%`,
+            backgroundRepeat: 'no-repeat',
+            opacity: headerBgOpacity,
+          }}
+        />
+      )}
+      
+      {/* 內容層：保持完全不透明 */}
+      <div className="relative z-10">
         {/* Title Row */}
         <div className="flex justify-between items-center mb-2.5">
           <div className="flex items-center gap-2">
