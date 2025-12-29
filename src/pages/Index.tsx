@@ -151,9 +151,9 @@ const Index = () => {
   };
   const handleRestore = (ticket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, isDeleted: false, deletedAt: undefined } : t)));
   const handleBackup = () => {
-    const backupData = { version: 3, timestamp: Date.now(), settings, tasks, templates };
+    const backupData = { version: 3, timestamp: Date.now(), settings, tasks, templates, bgHistory };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ticket_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `vouchy_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
   };
   const handleImportClick = () => {
     const input = document.createElement('input'); input.type = 'file';
@@ -168,7 +168,27 @@ const Index = () => {
     const importedTasks = Array.isArray(importPendingData) ? importPendingData : (importPendingData.tasks || []);
     if (restoreSettings && importPendingData.settings) {
       const impSet = importPendingData.settings;
-      setSettings((prev) => ({ ...prev, ...impSet, specificViewKeywords: impSet.specificViewKeywords || ['MOMO', '85度C'], viewConfigs: { active: migrateConfig(impSet.viewConfigs?.active), completed: migrateConfig(impSet.viewConfigs?.completed), deleted: migrateConfig(impSet.viewConfigs?.deleted) } }));
+      setSettings((prev) => ({
+        ...prev,
+        ...impSet,
+        tgToken: impSet.tgToken || prev.tgToken,
+        tgChatId: impSet.tgChatId || prev.tgChatId,
+        brandLogo: impSet.brandLogo || prev.brandLogo,
+        specificViewKeywords: impSet.specificViewKeywords || ['MOMO', '85度C'],
+        viewConfigs: {
+          active: migrateConfig(impSet.viewConfigs?.active),
+          completed: migrateConfig(impSet.viewConfigs?.completed),
+          deleted: migrateConfig(impSet.viewConfigs?.deleted),
+        },
+      }));
+    }
+    // 還原背景歷史
+    if (restoreSettings && importPendingData.bgHistory && Array.isArray(importPendingData.bgHistory)) {
+      if (mode === 'append') {
+        setBgHistory((prev) => [...new Set([...importPendingData.bgHistory, ...prev])].slice(0, 20));
+      } else {
+        setBgHistory(importPendingData.bgHistory);
+      }
     }
     if (importPendingData.templates && Array.isArray(importPendingData.templates)) {
       if (mode === 'append') setTemplates((prev) => [...prev, ...importPendingData.templates]);

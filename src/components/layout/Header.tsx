@@ -15,10 +15,10 @@ import {
   CheckSquare,
   BoxSelect,
   Palette,
-  Ticket,
 } from 'lucide-react';
 import { compressImage } from '@/lib/helpers';
 import { ViewType, SortType } from '@/types/ticket';
+import vouchyLogo from '@/assets/vouchy-logo.png';
 
 interface HeaderProps {
   appTitle: string;
@@ -137,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
               {brandLogo ? (
                 <img src={brandLogo} alt="Brand" className="w-full h-full object-cover" />
               ) : (
-                <Ticket size={16} className="text-primary" />
+                <img src={vouchyLogo} alt="Vouchy" className="w-full h-full object-cover" />
               )}
             </motion.div>
             <input
