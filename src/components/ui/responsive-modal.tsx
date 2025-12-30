@@ -38,8 +38,19 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
 
   if (isMobile) {
     return (
-      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} dismissible={false}>
-        <DrawerContent className="max-h-[85vh] rounded-t-[28px] border-border bg-card pb-[env(safe-area-inset-bottom)]">
+      <Drawer 
+        open={isOpen} 
+        onOpenChange={(open) => !open && onClose()} 
+        dismissible={false}
+        modal={true}
+      >
+        <DrawerContent 
+          className="max-h-[85vh] rounded-t-[28px] border-border bg-card"
+          style={{ 
+            paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+          }}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DrawerHeader className="text-left pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -61,7 +72,13 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
               )}
             </div>
           </DrawerHeader>
-          <div className="px-4 pb-6 overflow-y-auto no-scrollbar">
+          <div 
+            className="px-4 pb-6 overflow-y-auto no-scrollbar"
+            style={{ 
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+            }}
+          >
             {children}
           </div>
         </DrawerContent>

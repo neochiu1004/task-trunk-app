@@ -312,10 +312,17 @@ export const AddModal: React.FC<AddModalProps> = ({
           placeholder="票券名稱 (必填)"
           value={manualData.name}
           onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
+          onTouchStart={(e) => e.stopPropagation()}
           onFocus={(e) => {
-            setTimeout(() => {
-              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
+            const target = e.target;
+            // Prevent drawer from intercepting touch events
+            target.style.touchAction = 'manipulation';
+            // Use requestAnimationFrame for smoother scroll on iOS PWA
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }, 350);
+            });
           }}
         />
 
@@ -348,10 +355,15 @@ export const AddModal: React.FC<AddModalProps> = ({
               placeholder="序號/代碼"
               value={manualData.serial}
               onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
+              onTouchStart={(e) => e.stopPropagation()}
               onFocus={(e) => {
-                setTimeout(() => {
-                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
+                const target = e.target;
+                target.style.touchAction = 'manipulation';
+                requestAnimationFrame(() => {
+                  setTimeout(() => {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  }, 350);
+                });
               }}
             />
             <input
@@ -391,10 +403,15 @@ export const AddModal: React.FC<AddModalProps> = ({
             className="w-full p-3.5 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
             value={manualData.expiry}
             onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
+            onTouchStart={(e) => e.stopPropagation()}
             onFocus={(e) => {
-              setTimeout(() => {
-                e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 300);
+              const target = e.target;
+              target.style.touchAction = 'manipulation';
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 350);
+              });
             }}
           />
         </motion.div>
