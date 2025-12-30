@@ -15,6 +15,7 @@ import {
   CheckSquare,
   BoxSelect,
   Palette,
+  ImageIcon,
 } from 'lucide-react';
 import { compressImage } from '@/lib/helpers';
 import { ViewType, SortType } from '@/types/ticket';
@@ -215,6 +216,17 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <AlertCircle size={10} /> 快到期
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setActiveTag('special_has_original')}
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-semibold whitespace-nowrap transition-all flex items-center gap-1 ${
+              activeTag === 'special_has_original' 
+                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25' 
+                : 'glass-button text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ImageIcon size={10} /> 有原圖
           </motion.button>
           {allTags.map((tag) => (
             <motion.button

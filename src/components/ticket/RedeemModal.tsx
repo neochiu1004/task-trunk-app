@@ -15,6 +15,7 @@ import {
   Sparkles,
   Search,
   Loader2,
+  Download,
 } from 'lucide-react';
 import { Ticket, Template } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
@@ -164,6 +165,21 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
         onClose();
       }, 600);
     }
+  };
+
+  const handleDownloadOriginal = () => {
+    const imageData = ticket.originalImage || ticket.image;
+    if (!imageData) return;
+    
+    const link = document.createElement('a');
+    link.href = imageData;
+    const ext = imageData.includes('image/png') ? 'png' : imageData.includes('image/webp') ? 'webp' : 'jpg';
+    const safeName = ticket.productName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_').slice(0, 30);
+    link.download = `${safeName}_原圖.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "下載成功", description: "原圖已儲存" });
   };
 
   const hasAnyImage = !!ticket.image || !!ticket.originalImage;
@@ -765,6 +781,16 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 className="flex-1 py-4 rounded-2xl font-semibold text-white bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
               >
                 返回詳情
+              </motion.button>
+              
+              {/* Download button */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={handleDownloadOriginal}
+                className="w-14 py-4 rounded-2xl font-semibold text-white bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
+              >
+                <Download size={18} />
               </motion.button>
               
               {/* Quick Redeem button - emerald green */}
