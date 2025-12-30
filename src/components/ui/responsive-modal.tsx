@@ -38,8 +38,8 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
 
   if (isMobile) {
     return (
-      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DrawerContent className="max-h-[90vh] rounded-t-[28px] border-border bg-card">
+      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} dismissible={false}>
+        <DrawerContent className="max-h-[85vh] rounded-t-[28px] border-border bg-card pb-[env(safe-area-inset-bottom)]">
           <DrawerHeader className="text-left pb-2">
             <div className="flex items-center justify-between">
               <div>

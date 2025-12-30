@@ -271,6 +271,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                       className="text-lg font-bold text-center w-full border-b-2 border-primary/30 pb-2 mb-2 text-foreground focus:outline-none bg-transparent focus:border-primary transition-colors"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
+                      placeholder="請輸入票券名稱"
+                      onFocus={(e) => {
+                        setTimeout(() => {
+                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                      }}
                     />
                   ) : (
                     !isMomoMode && (
@@ -416,6 +422,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           className="w-full p-3 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
                           value={editExpiry ? editExpiry.replace(/\//g, '-') : ''}
                           onChange={(e) => setEditExpiry(e.target.value)}
+                          onFocus={(e) => {
+                            setTimeout(() => {
+                              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 300);
+                          }}
                         />
                       </div>
                       <div>
