@@ -95,6 +95,7 @@ const Index = () => {
       if (view === 'deleted' && !t.isDeleted) return false;
       if (activeTag === 'special_expiring') return checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
       if (activeTag === 'special_duplicate') return duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
+      if (activeTag === 'special_has_original') return !!t.originalImage && !t.completed && !t.isDeleted;
       if (activeTag !== 'all' && (!t.tags || !t.tags.includes(activeTag))) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
