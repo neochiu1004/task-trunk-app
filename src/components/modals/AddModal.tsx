@@ -312,6 +312,11 @@ export const AddModal: React.FC<AddModalProps> = ({
           placeholder="票券名稱 (必填)"
           value={manualData.name}
           onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
+          onFocus={(e) => {
+            setTimeout(() => {
+              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+          }}
         />
 
         {/* Tags */}
@@ -343,6 +348,11 @@ export const AddModal: React.FC<AddModalProps> = ({
               placeholder="序號/代碼"
               value={manualData.serial}
               onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
+              onFocus={(e) => {
+                setTimeout(() => {
+                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+              }}
             />
             <input
               ref={scanInputRef}
@@ -381,6 +391,11 @@ export const AddModal: React.FC<AddModalProps> = ({
             className="w-full p-3.5 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
             value={manualData.expiry}
             onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
+            onFocus={(e) => {
+              setTimeout(() => {
+                e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 300);
+            }}
           />
         </motion.div>
 
