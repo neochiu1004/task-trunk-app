@@ -192,7 +192,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       onClose={onClose}
       title="新增票券"
     >
-      <div className="space-y-4">
+      <div className="space-y-4 pb-32">
         {/* Templates */}
         {templates && templates.length > 0 && (
           <motion.div
