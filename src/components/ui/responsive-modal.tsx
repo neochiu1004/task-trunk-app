@@ -45,13 +45,13 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
         modal={true}
       >
         <DrawerContent 
-          className="max-h-[85vh] rounded-t-[28px] border-border bg-card"
+          className="max-h-[85vh] rounded-t-[28px] border-border bg-card flex flex-col"
           style={{ 
             paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
           }}
           onPointerDownOutside={(e) => e.preventDefault()}
         >
-          <DrawerHeader className="text-left pb-2">
+          <DrawerHeader className="text-left pb-2 flex-none">
             <div className="flex items-center justify-between">
               <div>
                 <DrawerTitle className="text-xl font-bold text-foreground">{title}</DrawerTitle>
@@ -73,7 +73,7 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
             </div>
           </DrawerHeader>
           <div 
-            className="px-4 pb-6 overflow-y-auto no-scrollbar"
+            className="px-4 pb-6 overflow-y-auto no-scrollbar flex-1"
             style={{ 
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
