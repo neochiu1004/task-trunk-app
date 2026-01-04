@@ -42,6 +42,7 @@ interface HeaderProps {
   setActiveTag: (tag: string) => void;
   allTags: string[];
   onQuickBgChange: () => void;
+  onOpenTagManager: () => void;
   headerBackgroundImage?: string;
   headerBgSize?: number;
   headerBgPosY?: number;
@@ -77,6 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTag,
   allTags,
   onQuickBgChange,
+  onOpenTagManager,
   headerBackgroundImage,
   headerBgSize = 100,
   headerBgPosY = 50,
@@ -242,6 +244,15 @@ export const Header: React.FC<HeaderProps> = ({
               <Tag size={9} /> {tag}
             </motion.button>
           ))}
+          {allTags.length > 0 && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={onOpenTagManager}
+              className="px-3 py-1.5 rounded-xl text-[10px] font-semibold whitespace-nowrap glass-button text-muted-foreground hover:text-foreground flex items-center gap-1 border border-dashed border-muted-foreground/30"
+            >
+              ⚙️ 管理
+            </motion.button>
+          )}
         </div>
 
         {/* View Tabs & Controls */}
