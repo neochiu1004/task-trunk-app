@@ -13,6 +13,7 @@ import { SettingsModal } from '@/components/modals/SettingsModal';
 import { DataActionsModal } from '@/components/modals/DataActionsModal';
 import { ImportConfirmModal } from '@/components/modals/ImportConfirmModal';
 import { BatchEditModal } from '@/components/modals/BatchEditModal';
+import { TagManagerModal } from '@/components/modals/TagManagerModal';
 
 const Index = () => {
   const [tasks, setTasks] = useState<Ticket[]>([]);
@@ -32,6 +33,7 @@ const Index = () => {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [bgHistory, setBgHistory] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showTagManager, setShowTagManager] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const migrateConfig = (config: any) => ({
@@ -237,6 +239,12 @@ const Index = () => {
     alert(`已儲存範本：${data.label}`);
   };
   const handleDeleteTemplate = (id: string) => { if (window.confirm('確定刪除此範本？')) setTemplates((prev) => prev.filter((t) => t.id !== id)); };
+  const handleDeleteTag = (tagToDelete: string) => {
+    if (window.confirm(`確定刪除標籤「${tagToDelete}」？將從所有票券移除此標籤。`)) {
+      setTasks((prev) => prev.map((t) => ({ ...t, tags: (t.tags || []).filter((tag) => tag !== tagToDelete) })));
+      if (activeTag === tagToDelete) setActiveTag('all');
+    }
+  };
 
   if (!isDataLoaded) return (
     <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4">
@@ -315,6 +323,7 @@ const Index = () => {
           setActiveTag={setActiveTag}
           allTags={allTags}
           onQuickBgChange={handleQuickBgChange}
+          onOpenTagManager={() => setShowTagManager(true)}
           headerBackgroundImage={currentConfig.headerBackgroundImage}
           headerBgSize={currentConfig.headerBgSize}
           headerBgPosY={currentConfig.headerBgPosY}
@@ -428,6 +437,7 @@ const Index = () => {
       <DataActionsModal isOpen={showDataModal} onClose={() => setShowDataModal(false)} onBackup={handleBackup} onImportClick={handleImportClick} onReset={handleFullReset} />
       <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
       <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} />
+      <TagManagerModal isOpen={showTagManager} onClose={() => setShowTagManager(false)} tags={allTags} onDeleteTag={handleDeleteTag} />
     </>
   );
 };
