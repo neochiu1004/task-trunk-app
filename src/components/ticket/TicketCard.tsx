@@ -76,10 +76,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     return '';
   };
 
-  // Build custom card styles based on settings
+  // Build custom card styles based on settings - use !important via inline style priority
   const cardStyle: React.CSSProperties = {
     ...(cardBgColor && { backgroundColor: cardBgColor }),
     ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
+    ...(opacity !== undefined && opacity < 1 && { opacity }),
   };
 
   if (isCompact) {
