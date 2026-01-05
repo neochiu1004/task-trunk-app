@@ -60,6 +60,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editSerial, setEditSerial] = useState('');
   const [editExpiry, setEditExpiry] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editImage, setEditImage] = useState('');
@@ -89,6 +90,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   useEffect(() => {
     if (ticket) {
       setEditName(ticket.productName);
+      setEditSerial(ticket.serial || '');
       setEditExpiry(ticket.expiry);
       setEditTags(ticket.tags || []);
       setEditImage(ticket.image || '');
@@ -116,10 +118,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       try {
         const result = await scanBarcodeFromImage(base64);
         if (result) {
+          setEditSerial(result.content);
           setEditBarcodeFormat(result.format);
           toast({
             title: "條碼偵測成功",
-            description: `格式: ${result.format}`,
+            description: `序號: ${result.content} | 格式: ${result.format}`,
           });
         }
       } catch (error) {
@@ -146,6 +149,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     onUpdate({
       ...ticket,
       productName: editName,
+      serial: editSerial,
       expiry: editExpiry.replace(/-/g, '/'),
       tags: editTags,
       image: editImage,
