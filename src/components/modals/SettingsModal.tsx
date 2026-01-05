@@ -87,7 +87,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleStep = (key: keyof ViewConfig | keyof Settings, delta: number, min: number, max: number, isViewConfig = true, stepVal = 1) => {
     const currentVal = isViewConfig ? (currentViewConfig as any)[key] : (localSettings as any)[key];
     let nextVal = parseFloat(currentVal || 0) + delta * stepVal;
-    nextVal = Math.min(max, Math.max(min, nextVal));
+    // Wrap around: if exceeds max, go to min; if below min, go to max
+    if (nextVal > max) {
+      nextVal = min;
+    } else if (nextVal < min) {
+      nextVal = max;
+    }
     nextVal = Math.round(nextVal * 100) / 100;
 
     if (isViewConfig) {
