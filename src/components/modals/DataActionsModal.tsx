@@ -1,5 +1,5 @@
 import React from 'react';
-import { DatabaseBackup, ArchiveRestore, Eraser } from 'lucide-react';
+import { DatabaseBackup, ArchiveRestore, Eraser, Activity } from 'lucide-react';
 
 interface DataActionsModalProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface DataActionsModalProps {
   onBackup: () => void;
   onImportClick: () => void;
   onReset: () => void;
+  onHealthCheck: () => void;
 }
 
 export const DataActionsModal: React.FC<DataActionsModalProps> = ({
@@ -15,6 +16,7 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   onBackup,
   onImportClick,
   onReset,
+  onHealthCheck,
 }) => {
   if (!isOpen) return null;
   
@@ -28,6 +30,12 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-black text-foreground text-center mb-2">資料管理</h2>
+        <button
+          onClick={onHealthCheck}
+          className="w-full py-4 bg-blue-500/10 text-blue-500 rounded-2xl font-bold flex flex-col items-center gap-1 hover:bg-blue-500/20 transition-colors"
+        >
+          <Activity size={24} /> 資料健檢
+        </button>
         <button
           onClick={onBackup}
           className="w-full py-4 bg-primary/10 text-primary rounded-2xl font-bold flex flex-col items-center gap-1 hover:bg-primary/20 transition-colors"
