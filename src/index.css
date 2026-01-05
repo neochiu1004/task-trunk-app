@@ -160,6 +160,55 @@
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid hsl(var(--glass-border));
   }
+  
+  /* Realistic ticket styles */
+  .ticket-card {
+    position: relative;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.95) 100%);
+    border: none;
+    box-shadow: 
+      0 4px 20px -4px hsl(220 20% 20% / 0.12),
+      0 2px 8px -2px hsl(220 20% 20% / 0.08);
+  }
+  
+  .ticket-card::before,
+  .ticket-card::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    background: hsl(var(--background));
+    border-radius: 50%;
+    z-index: 10;
+  }
+  
+  .ticket-card::before {
+    left: -8px;
+    box-shadow: inset 3px 0 6px hsl(220 20% 20% / 0.1);
+  }
+  
+  .ticket-card::after {
+    right: -8px;
+    box-shadow: inset -3px 0 6px hsl(220 20% 20% / 0.1);
+  }
+  
+  .ticket-divider {
+    position: relative;
+    width: 1px;
+    background: repeating-linear-gradient(
+      to bottom,
+      hsl(var(--border)) 0px,
+      hsl(var(--border)) 6px,
+      transparent 6px,
+      transparent 10px
+    );
+  }
+  
+  .ticket-stub {
+    background: linear-gradient(180deg, hsl(var(--muted) / 0.3) 0%, hsl(var(--muted) / 0.5) 100%);
+  }
 }
 
 @layer components {
