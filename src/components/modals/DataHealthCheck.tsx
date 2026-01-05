@@ -12,9 +12,15 @@ import {
   Download,
   Loader2,
   Lock,
+  ScanBarcode,
+  CircleCheck,
+  CircleX,
 } from 'lucide-react';
 import { dbHelper, DataHealthStatus } from '@/lib/db';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
+import { Ticket } from '@/types/ticket';
+import { DB_KEYS } from '@/lib/constants';
+import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
 
 interface DataHealthCheckProps {
   isOpen: boolean;
@@ -30,6 +36,13 @@ export const DataHealthCheck: React.FC<DataHealthCheckProps> = ({
   const [status, setStatus] = useState<DataHealthStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPersisting, setIsPersisting] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<{
+    total: number;
+    matched: number;
+    mismatched: { name: string; serial: string; scannedSerial: string }[];
+    noBarcode: string[];
+  } | null>(null);
 
   const runHealthCheck = async () => {
     setIsLoading(true);
@@ -65,9 +78,53 @@ export const DataHealthCheck: React.FC<DataHealthCheckProps> = ({
     await runHealthCheck();
   };
 
+  const scanBarcodes = async () => {
+    setIsScanning(true);
+    setScanResults(null);
+    try {
+      const tickets = await dbHelper.getItem<Ticket[]>(DB_KEYS.TASKS) || [];
+      const ticketsWithImage = tickets.filter(t => t.originalImage && t.serial);
+      
+      const results = {
+        total: ticketsWithImage.length,
+        matched: 0,
+        mismatched: [] as { name: string; serial: string; scannedSerial: string }[],
+        noBarcode: [] as string[],
+      };
+
+      for (const ticket of ticketsWithImage) {
+        try {
+          const scanResult = await scanBarcodeFromImage(ticket.originalImage!);
+          if (scanResult) {
+            if (scanResult.content === ticket.serial) {
+              results.matched++;
+            } else {
+              results.mismatched.push({
+                name: ticket.productName,
+                serial: ticket.serial!,
+                scannedSerial: scanResult.content,
+              });
+            }
+          } else {
+            results.noBarcode.push(ticket.productName);
+          }
+        } catch (error) {
+          results.noBarcode.push(ticket.productName);
+        }
+      }
+
+      setScanResults(results);
+    } catch (error) {
+      console.error('Barcode scan failed:', error);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       runHealthCheck();
+      setScanResults(null);
     }
   }, [isOpen]);
 
@@ -222,6 +279,85 @@ export const DataHealthCheck: React.FC<DataHealthCheckProps> = ({
                 ))}
               </motion.div>
             )}
+
+            {/* Barcode Scan Check */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 }}
+              className="space-y-3"
+            >
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={scanBarcodes}
+                disabled={isScanning}
+                className="w-full py-3 glass-card rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                {isScanning ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <ScanBarcode size={16} />
+                )}
+                {isScanning ? '掃描中...' : '掃描條碼比對序號'}
+              </motion.button>
+
+              <AnimatePresence>
+                {scanResults && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <CircleCheck size={16} className="text-ticket-success" />
+                        <span className="text-sm font-medium">{scanResults.matched} 符合</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CircleX size={16} className="text-ticket-danger" />
+                        <span className="text-sm font-medium">{scanResults.mismatched.length} 不符</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span className="text-sm">共 {scanResults.total} 張</span>
+                      </div>
+                    </div>
+
+                    {scanResults.mismatched.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <AlertTriangle size={14} className="text-ticket-warning" /> 序號不符
+                        </h4>
+                        {scanResults.mismatched.map((item, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.05 * index }}
+                            className="bg-ticket-warning/10 border border-ticket-warning/20 text-sm p-3 rounded-xl"
+                          >
+                            <p className="font-medium text-foreground">{item.name}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              輸入: <span className="font-mono">{item.serial}</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              掃描: <span className="font-mono text-ticket-warning">{item.scannedSerial}</span>
+                            </p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+
+                    {scanResults.noBarcode.length > 0 && (
+                      <div className="text-xs text-muted-foreground p-2 rounded-lg bg-muted/30">
+                        無法掃描: {scanResults.noBarcode.slice(0, 3).join('、')}
+                        {scanResults.noBarcode.length > 3 && ` 等 ${scanResults.noBarcode.length} 張`}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">
