@@ -419,6 +419,23 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                         </motion.button>
                       </div>
 
+                      {/* Serial Number */}
+                      <div>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">電子券號</label>
+                        <input
+                          type="text"
+                          className="w-full p-3 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all font-mono"
+                          value={editSerial}
+                          onChange={(e) => setEditSerial(e.target.value)}
+                          placeholder="掃描或手動輸入序號"
+                        />
+                        {editBarcodeFormat && (
+                          <div className="text-[10px] text-muted-foreground mt-1 pl-1">
+                            條碼格式: {editBarcodeFormat}
+                          </div>
+                        )}
+                      </div>
+
                       <div>
                         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">兌換期限</label>
                         <input
