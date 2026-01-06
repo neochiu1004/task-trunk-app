@@ -26,12 +26,14 @@ interface DataHealthCheckProps {
   isOpen: boolean;
   onClose: () => void;
   onBackup: () => void;
+  onMismatchedSerials?: (serials: Set<string>) => void;
 }
 
 export const DataHealthCheck: React.FC<DataHealthCheckProps> = ({
   isOpen,
   onClose,
   onBackup,
+  onMismatchedSerials,
 }) => {
   const [status, setStatus] = useState<DataHealthStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +85,8 @@ export const DataHealthCheck: React.FC<DataHealthCheckProps> = ({
     setScanResults(null);
     try {
       const tickets = await dbHelper.getItem<Ticket[]>(DB_KEYS.TASKS) || [];
-      const ticketsWithImage = tickets.filter(t => t.originalImage && t.serial);
+      // 排除回收區票券
+      const ticketsWithImage = tickets.filter(t => t.originalImage && t.serial && !t.isDeleted);
       
       const results = {
         total: ticketsWithImage.length,
@@ -114,6 +117,12 @@ export const DataHealthCheck: React.FC<DataHealthCheckProps> = ({
       }
 
       setScanResults(results);
+      
+      // 通知父組件不符的序號
+      if (onMismatchedSerials) {
+        const mismatchedSerials = new Set(results.mismatched.map(m => m.serial));
+        onMismatchedSerials(mismatchedSerials);
+      }
     } catch (error) {
       console.error('Barcode scan failed:', error);
     } finally {

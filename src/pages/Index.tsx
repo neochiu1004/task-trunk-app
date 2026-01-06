@@ -36,6 +36,7 @@ const Index = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
   const [showHealthCheck, setShowHealthCheck] = useState(false);
+  const [healthIssueSerials, setHealthIssueSerials] = useState<Set<string>>(new Set());
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const migrateConfig = (config: any) => ({
@@ -111,6 +112,11 @@ const Index = () => {
       return true;
     });
     result.sort((a, b) => {
+      // 健檢有問題的票券最優先
+      const hasHealthIssueA = !a.completed && !a.isDeleted && healthIssueSerials.has(a.serial || '');
+      const hasHealthIssueB = !b.completed && !b.isDeleted && healthIssueSerials.has(b.serial || '');
+      if (hasHealthIssueA !== hasHealthIssueB) return hasHealthIssueA ? -1 : 1;
+      
       const isExpiringA = !a.completed && !a.isDeleted && checkIsExpiringSoon(a.expiry, settings.notifyDays);
       const isExpiringB = !b.completed && !b.isDeleted && checkIsExpiringSoon(b.expiry, settings.notifyDays);
       if (isExpiringA !== isExpiringB) return isExpiringA ? -1 : 1;
@@ -124,7 +130,7 @@ const Index = () => {
       return 0;
     });
     return result;
-  }, [tasks, view, activeTag, searchQuery, sortType, duplicateSerials, settings.notifyDays]);
+  }, [tasks, view, activeTag, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials]);
 
   const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
   const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
@@ -361,6 +367,7 @@ const Index = () => {
                     compactHeight={currentConfig.compactHeight}
                     compactShowImage={currentConfig.compactShowImage}
                     index={index}
+                    hasHealthIssue={healthIssueSerials.has(t.serial || '')}
                   />
                 ))
               ) : (
@@ -440,7 +447,7 @@ const Index = () => {
       <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
       <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} />
       <TagManagerModal isOpen={showTagManager} onClose={() => setShowTagManager(false)} tags={allTags} onDeleteTag={handleDeleteTag} />
-      <DataHealthCheck isOpen={showHealthCheck} onClose={() => setShowHealthCheck(false)} onBackup={handleBackup} />
+      <DataHealthCheck isOpen={showHealthCheck} onClose={() => setShowHealthCheck(false)} onBackup={handleBackup} onMismatchedSerials={setHealthIssueSerials} />
     </>
   );
 };
