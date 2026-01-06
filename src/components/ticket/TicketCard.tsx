@@ -82,14 +82,20 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     return '';
   };
 
-  // Build custom card styles based on settings - opacity only affects card background, not content
-  const cardStyle: React.CSSProperties = {
-    ...(cardBgColor && { backgroundColor: cardBgColor }),
+  // Build background style with opacity applied to background color only
+  const getBackgroundWithOpacity = () => {
+    if (cardBgColor) {
+      // If custom color, apply opacity to it
+      return cardBgColor.replace(/rgba?\(([^)]+)\)/, (_, rgb) => `rgba(${rgb.split(',').slice(0, 3).join(',')}, ${opacity})`);
+    }
+    // Use CSS variable with opacity
+    return `hsl(var(--card) / ${opacity})`;
+  };
+
+  const cardBgStyle: React.CSSProperties = {
+    backgroundColor: getBackgroundWithOpacity(),
     ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
   };
-  
-  // Calculate background opacity for card (content stays at full opacity)
-  const cardBgOpacity = opacity !== undefined && opacity < 1 ? opacity : 1;
 
   if (isCompact) {
     return (
@@ -104,20 +110,9 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           if (isSelectionMode) onSelect(ticket.id);
           else onClick(ticket);
         }}
-        style={{ height: `${Math.max(compactHeight - 8, 56)}px` }}
-        className={`mx-2 mb-1.5 px-2.5 rounded-xl flex items-center gap-2 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
+        style={{ height: `${Math.max(compactHeight - 8, 56)}px`, ...cardBgStyle }}
+        className={`mx-2 mb-1.5 px-2.5 rounded-xl flex items-center gap-2 cursor-pointer relative overflow-hidden backdrop-blur-xl border border-white/20 shadow-lg ${getStatusStyles()}`}
       >
-        {/* Background layer with opacity */}
-        <div 
-          className="absolute inset-0 glass-card rounded-xl"
-          style={{ 
-            opacity: cardBgOpacity,
-            ...(cardBgColor && { backgroundColor: cardBgColor }),
-            ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
-          }} 
-        />
-        {/* Content layer - always full opacity */}
-        <div className="relative z-10 flex items-center gap-2 w-full h-full">
         {isSelectionMode && (
           <motion.div
             initial={{ scale: 0 }}
@@ -184,7 +179,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             {ticket.completed ? '查看' : '兌換'}
           </motion.button>
         )}
-        </div>
       </motion.div>
     );
   }
@@ -201,17 +195,9 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         if (isSelectionMode) onSelect(ticket.id);
         else onClick(ticket);
       }}
-      className={`mx-3 mt-3 rounded-xl flex cursor-pointer relative overflow-visible ${getStatusStyles()}`}
+      style={cardBgStyle}
+      className={`mx-3 mt-3 rounded-xl flex cursor-pointer relative overflow-visible backdrop-blur-xl border border-white/20 shadow-lg ${getStatusStyles()}`}
     >
-      {/* Background layer with opacity */}
-      <div 
-        className="absolute inset-0 ticket-card rounded-xl"
-        style={{ 
-          opacity: cardBgOpacity,
-          ...(cardBgColor && { backgroundColor: cardBgColor }),
-          ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
-        }} 
-      />
       
       {isSelectionMode && (
         <motion.div
