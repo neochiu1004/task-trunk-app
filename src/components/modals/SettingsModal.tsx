@@ -260,6 +260,85 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div className="border-t border-border pt-4">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+              <HardDrive size={14} /> Google 雲端硬碟備份
+            </label>
+            
+            <div className="space-y-3 bg-muted p-3 rounded-xl">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">
+                  Service Account JSON
+                </label>
+                <textarea
+                  value={localSettings.googleDrive?.serviceAccountJson || ''}
+                  onChange={(e) => handleGoogleDriveChange('serviceAccountJson', e.target.value)}
+                  placeholder='{"type": "service_account", "project_id": "...", ...}'
+                  className="w-full p-2.5 bg-card rounded-lg text-xs font-mono text-foreground outline-none focus:ring-2 focus:ring-primary min-h-[80px] resize-none"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  從 Google Cloud Console 建立 Service Account 並下載 JSON 金鑰
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">
+                  備份檔案名稱
+                </label>
+                <input
+                  type="text"
+                  value={localSettings.googleDrive?.backupFileName || 'vouchy-backup.json'}
+                  onChange={(e) => handleGoogleDriveChange('backupFileName', e.target.value)}
+                  placeholder="vouchy-backup.json"
+                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 flex items-center gap-1">
+                  <FolderOpen size={12} /> 資料夾 ID（選填）
+                </label>
+                <input
+                  type="text"
+                  value={localSettings.googleDrive?.folderId || ''}
+                  onChange={(e) => handleGoogleDriveChange('folderId', e.target.value)}
+                  placeholder="從雲端硬碟資料夾網址取得 ID"
+                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  留空則儲存至根目錄
+                </p>
+              </div>
+
+              <button
+                onClick={handleTestGoogleDrive}
+                disabled={!localSettings.googleDrive?.serviceAccountJson || driveTestStatus === 'testing'}
+                className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  driveTestStatus === 'success'
+                    ? 'bg-ticket-success/10 text-ticket-success'
+                    : driveTestStatus === 'error'
+                    ? 'bg-ticket-warning/10 text-ticket-warning'
+                    : 'bg-card text-muted-foreground hover:bg-card/80 border border-border'
+                }`}
+              >
+                {driveTestStatus === 'testing' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : driveTestStatus === 'success' ? (
+                  <Check size={14} />
+                ) : (
+                  <HardDrive size={14} />
+                )}
+                {driveTestStatus === 'testing'
+                  ? '測試中...'
+                  : driveTestStatus === 'success'
+                  ? '連線成功'
+                  : driveTestStatus === 'error'
+                  ? '連線失敗'
+                  : '測試連線'}
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">外觀設定</label>
 
             <div className="flex bg-muted p-1 rounded-xl mb-4">
@@ -723,85 +802,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-4">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-              <HardDrive size={14} /> Google 雲端硬碟備份
-            </label>
-            
-            <div className="space-y-3 bg-muted p-3 rounded-xl">
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">
-                  Service Account JSON
-                </label>
-                <textarea
-                  value={localSettings.googleDrive?.serviceAccountJson || ''}
-                  onChange={(e) => handleGoogleDriveChange('serviceAccountJson', e.target.value)}
-                  placeholder='{"type": "service_account", "project_id": "...", ...}'
-                  className="w-full p-2.5 bg-card rounded-lg text-xs font-mono text-foreground outline-none focus:ring-2 focus:ring-primary min-h-[80px] resize-none"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  從 Google Cloud Console 建立 Service Account 並下載 JSON 金鑰
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">
-                  備份檔案名稱
-                </label>
-                <input
-                  type="text"
-                  value={localSettings.googleDrive?.backupFileName || 'vouchy-backup.json'}
-                  onChange={(e) => handleGoogleDriveChange('backupFileName', e.target.value)}
-                  placeholder="vouchy-backup.json"
-                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 flex items-center gap-1">
-                  <FolderOpen size={12} /> 資料夾 ID（選填）
-                </label>
-                <input
-                  type="text"
-                  value={localSettings.googleDrive?.folderId || ''}
-                  onChange={(e) => handleGoogleDriveChange('folderId', e.target.value)}
-                  placeholder="從雲端硬碟資料夾網址取得 ID"
-                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  留空則儲存至根目錄
-                </p>
-              </div>
-
-              <button
-                onClick={handleTestGoogleDrive}
-                disabled={!localSettings.googleDrive?.serviceAccountJson || driveTestStatus === 'testing'}
-                className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  driveTestStatus === 'success'
-                    ? 'bg-ticket-success/10 text-ticket-success'
-                    : driveTestStatus === 'error'
-                    ? 'bg-ticket-warning/10 text-ticket-warning'
-                    : 'bg-card text-muted-foreground hover:bg-card/80 border border-border'
-                }`}
-              >
-                {driveTestStatus === 'testing' ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : driveTestStatus === 'success' ? (
-                  <Check size={14} />
-                ) : (
-                  <HardDrive size={14} />
-                )}
-                {driveTestStatus === 'testing'
-                  ? '測試中...'
-                  : driveTestStatus === 'success'
-                  ? '連線成功'
-                  : driveTestStatus === 'error'
-                  ? '連線失敗'
-                  : '測試連線'}
-              </button>
             </div>
           </div>
 
