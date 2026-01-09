@@ -1,5 +1,8 @@
-import React from 'react';
-import { DatabaseBackup, ArchiveRestore, Eraser, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload, Loader2 } from 'lucide-react';
+import { Settings } from '@/types/ticket';
+import { supabase } from '@/integrations/supabase/client';
+import { dbHelper } from '@/lib/db';
 
 interface DataActionsModalProps {
   isOpen: boolean;
@@ -8,6 +11,8 @@ interface DataActionsModalProps {
   onImportClick: () => void;
   onReset: () => void;
   onHealthCheck: () => void;
+  settings: Settings;
+  onImportData?: (data: Record<string, unknown>) => void;
 }
 
 export const DataActionsModal: React.FC<DataActionsModalProps> = ({
@@ -17,8 +22,95 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   onImportClick,
   onReset,
   onHealthCheck,
+  settings,
+  onImportData,
 }) => {
+  const [cloudBackupStatus, setCloudBackupStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [cloudRestoreStatus, setCloudRestoreStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
   if (!isOpen) return null;
+
+  const hasGoogleDriveConfig = !!settings.googleDrive?.serviceAccountJson;
+
+  const handleCloudBackup = async () => {
+    if (!settings.googleDrive?.serviceAccountJson) {
+      alert('請先在設定中配置 Google Drive 憑證');
+      return;
+    }
+
+    setCloudBackupStatus('loading');
+    try {
+      const allData = await dbHelper.exportAllData();
+      const content = JSON.stringify(allData, null, 2);
+
+      const { data, error } = await supabase.functions.invoke('google-drive-backup', {
+        body: {
+          action: 'backup',
+          serviceAccountJson: settings.googleDrive.serviceAccountJson,
+          fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
+          folderId: settings.googleDrive.folderId || undefined,
+          content,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await dbHelper.recordBackup();
+      setCloudBackupStatus('success');
+      setTimeout(() => setCloudBackupStatus('idle'), 3000);
+    } catch (err) {
+      setCloudBackupStatus('error');
+      alert(`備份失敗: ${(err as Error).message}`);
+      setTimeout(() => setCloudBackupStatus('idle'), 3000);
+    }
+  };
+
+  const handleCloudRestore = async () => {
+    if (!settings.googleDrive?.serviceAccountJson) {
+      alert('請先在設定中配置 Google Drive 憑證');
+      return;
+    }
+
+    if (!confirm('確定要從雲端還原嗎？這將覆蓋目前的所有資料。')) {
+      return;
+    }
+
+    setCloudRestoreStatus('loading');
+    try {
+      const { data, error } = await supabase.functions.invoke('google-drive-backup', {
+        body: {
+          action: 'restore',
+          serviceAccountJson: settings.googleDrive.serviceAccountJson,
+          fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
+          folderId: settings.googleDrive.folderId || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.notFound) {
+        alert('找不到備份檔案');
+        setCloudRestoreStatus('idle');
+        return;
+      }
+      if (data?.error) throw new Error(data.error);
+
+      const restoredData = JSON.parse(data.data);
+      if (onImportData) {
+        onImportData(restoredData);
+      }
+
+      setCloudRestoreStatus('success');
+      setTimeout(() => {
+        setCloudRestoreStatus('idle');
+        onClose();
+      }, 1500);
+    } catch (err) {
+      setCloudRestoreStatus('error');
+      alert(`還原失敗: ${(err as Error).message}`);
+      setTimeout(() => setCloudRestoreStatus('idle'), 3000);
+    }
+  };
   
   return (
     <div
@@ -36,6 +128,52 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
         >
           <Activity size={24} /> 資料健檢
         </button>
+        
+        {hasGoogleDriveConfig && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleCloudBackup}
+              disabled={cloudBackupStatus === 'loading'}
+              className={`flex-1 py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-colors ${
+                cloudBackupStatus === 'success'
+                  ? 'bg-ticket-success/20 text-ticket-success'
+                  : cloudBackupStatus === 'error'
+                  ? 'bg-ticket-warning/20 text-ticket-warning'
+                  : 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20'
+              }`}
+            >
+              {cloudBackupStatus === 'loading' ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <Cloud size={24} />
+              )}
+              <span className="text-xs">
+                {cloudBackupStatus === 'loading' ? '備份中...' : cloudBackupStatus === 'success' ? '備份成功' : '雲端備份'}
+              </span>
+            </button>
+            <button
+              onClick={handleCloudRestore}
+              disabled={cloudRestoreStatus === 'loading'}
+              className={`flex-1 py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-colors ${
+                cloudRestoreStatus === 'success'
+                  ? 'bg-ticket-success/20 text-ticket-success'
+                  : cloudRestoreStatus === 'error'
+                  ? 'bg-ticket-warning/20 text-ticket-warning'
+                  : 'bg-violet-500/10 text-violet-500 hover:bg-violet-500/20'
+              }`}
+            >
+              {cloudRestoreStatus === 'loading' ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <CloudDownload size={24} />
+              )}
+              <span className="text-xs">
+                {cloudRestoreStatus === 'loading' ? '還原中...' : cloudRestoreStatus === 'success' ? '還原成功' : '雲端還原'}
+              </span>
+            </button>
+          </div>
+        )}
+
         <button
           onClick={onBackup}
           className="w-full py-4 bg-primary/10 text-primary rounded-2xl font-bold flex flex-col items-center gap-1 hover:bg-primary/20 transition-colors"
