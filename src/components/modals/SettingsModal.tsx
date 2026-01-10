@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen } from 'lucide-react';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen, Upload, FileJson } from 'lucide-react';
 import { Settings, ViewConfig, GoogleDriveConfig } from '@/types/ticket';
 import { defaultViewConfig } from '@/lib/constants';
 import { compressImage, sendTelegramMessage } from '@/lib/helpers';
@@ -32,6 +32,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newKw, setNewKw] = useState('');
   const headerFileInputRef = React.useRef<HTMLInputElement>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
+  const serviceAccountFileRef = React.useRef<HTMLInputElement>(null);
+
+  const handleServiceAccountUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      // Validate it's valid JSON with expected structure
+      const parsed = JSON.parse(text);
+      if (!parsed.type || !parsed.project_id || !parsed.private_key) {
+        alert('無效的 Service Account JSON 格式');
+        return;
+      }
+      handleGoogleDriveChange('serviceAccountJson', text);
+    } catch (err) {
+      alert('無法讀取 JSON 檔案，請確認格式正確');
+    }
+    // Reset input
+    if (e.target) e.target.value = '';
+  };
 
   const handleGoogleDriveChange = (key: keyof GoogleDriveConfig, value: string) => {
     setLocalSettings((prev) => ({
@@ -269,14 +290,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <label className="text-xs font-bold text-muted-foreground mb-1 block">
                   Service Account JSON
                 </label>
-                <textarea
-                  value={localSettings.googleDrive?.serviceAccountJson || ''}
-                  onChange={(e) => handleGoogleDriveChange('serviceAccountJson', e.target.value)}
-                  placeholder='{"type": "service_account", "project_id": "...", ...}'
-                  className="w-full p-2.5 bg-card rounded-lg text-xs font-mono text-foreground outline-none focus:ring-2 focus:ring-primary min-h-[80px] resize-none"
+                <div className="flex gap-2 items-center">
+                  <div className={`flex-1 p-2.5 bg-card rounded-lg text-xs font-mono flex items-center gap-2 ${
+                    localSettings.googleDrive?.serviceAccountJson 
+                      ? 'text-ticket-success' 
+                      : 'text-muted-foreground'
+                  }`}>
+                    <FileJson size={14} />
+                    {localSettings.googleDrive?.serviceAccountJson ? (
+                      <span className="truncate">
+                        {(() => {
+                          try {
+                            const parsed = JSON.parse(localSettings.googleDrive.serviceAccountJson);
+                            return parsed.client_email || '已匯入 JSON';
+                          } catch {
+                            return '已匯入 JSON';
+                          }
+                        })()}
+                      </span>
+                    ) : (
+                      <span>尚未匯入</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => serviceAccountFileRef.current?.click()}
+                    className="px-3 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-colors shrink-0"
+                  >
+                    <Upload size={12} />
+                    上傳
+                  </button>
+                  {localSettings.googleDrive?.serviceAccountJson && (
+                    <button
+                      onClick={() => handleGoogleDriveChange('serviceAccountJson', '')}
+                      className="p-2.5 bg-ticket-warning/10 text-ticket-warning rounded-lg hover:bg-ticket-warning/20 transition-colors shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={serviceAccountFileRef}
+                  accept=".json,application/json"
+                  onChange={handleServiceAccountUpload}
+                  className="hidden"
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  從 Google Cloud Console 建立 Service Account 並下載 JSON 金鑰
+                  從 Google Cloud Console 下載 Service Account JSON 金鑰後上傳
                 </p>
               </div>
 
