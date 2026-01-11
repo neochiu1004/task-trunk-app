@@ -3,8 +3,9 @@ import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload,
 import { Settings } from '@/types/ticket';
 import { supabase } from '@/integrations/supabase/client';
 import { dbHelper } from '@/lib/db';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
 
 interface CloudFileInfo {
   id: string;
@@ -91,6 +92,7 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
     try {
       const allData = await dbHelper.exportAllData();
       const content = JSON.stringify(allData, null, 2);
+      const contentSize = new Blob([content]).size;
 
       const { data, error } = await supabase.functions.invoke('google-drive-backup', {
         body: {
@@ -107,11 +109,23 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
 
       await dbHelper.recordBackup();
       setCloudBackupStatus('success');
-      fetchCloudFileInfo(); // Refresh cloud file info
+      fetchCloudFileInfo();
+      
+      const now = new Date();
+      const fileSizeKB = (contentSize / 1024).toFixed(1);
+      toast({
+        title: "☁️ 雲端備份成功",
+        description: `備份時間：${format(now, 'yyyy/MM/dd HH:mm:ss', { locale: zhTW })}\n檔案大小：${fileSizeKB} KB`,
+      });
+      
       setTimeout(() => setCloudBackupStatus('idle'), 3000);
     } catch (err) {
       setCloudBackupStatus('error');
-      alert(`備份失敗: ${(err as Error).message}`);
+      toast({
+        title: "備份失敗",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
       setTimeout(() => setCloudBackupStatus('idle'), 3000);
     }
   };
