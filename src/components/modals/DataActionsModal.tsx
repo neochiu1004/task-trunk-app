@@ -1,8 +1,18 @@
-import React, { useState } from 'react';
-import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload, Loader2, ExternalLink, FileJson, RefreshCw } from 'lucide-react';
 import { Settings } from '@/types/ticket';
 import { supabase } from '@/integrations/supabase/client';
 import { dbHelper } from '@/lib/db';
+import { formatDistanceToNow } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
+
+interface CloudFileInfo {
+  id: string;
+  name: string;
+  size: string;
+  modifiedTime: string;
+  webViewLink: string;
+}
 
 interface DataActionsModalProps {
   isOpen: boolean;
@@ -27,10 +37,49 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
 }) => {
   const [cloudBackupStatus, setCloudBackupStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [cloudRestoreStatus, setCloudRestoreStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-
-  if (!isOpen) return null;
+  const [cloudFileInfo, setCloudFileInfo] = useState<CloudFileInfo | null>(null);
+  const [cloudFileLoading, setCloudFileLoading] = useState(false);
+  const [cloudFileError, setCloudFileError] = useState<string | null>(null);
 
   const hasGoogleDriveConfig = !!settings.googleDrive?.serviceAccountJson;
+
+  const fetchCloudFileInfo = async () => {
+    if (!settings.googleDrive?.serviceAccountJson) return;
+
+    setCloudFileLoading(true);
+    setCloudFileError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-drive-backup', {
+        body: {
+          action: 'getFileInfo',
+          serviceAccountJson: settings.googleDrive.serviceAccountJson,
+          fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
+          folderId: settings.googleDrive.folderId || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.notFound) {
+        setCloudFileInfo(null);
+      } else if (data?.fileInfo) {
+        setCloudFileInfo(data.fileInfo);
+      }
+    } catch (err) {
+      setCloudFileError((err as Error).message);
+    } finally {
+      setCloudFileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && hasGoogleDriveConfig) {
+      fetchCloudFileInfo();
+    }
+  }, [isOpen, hasGoogleDriveConfig]);
+
+  if (!isOpen) return null;
 
   const handleCloudBackup = async () => {
     if (!settings.googleDrive?.serviceAccountJson) {
@@ -58,6 +107,7 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
 
       await dbHelper.recordBackup();
       setCloudBackupStatus('success');
+      fetchCloudFileInfo(); // Refresh cloud file info
       setTimeout(() => setCloudBackupStatus('idle'), 3000);
     } catch (err) {
       setCloudBackupStatus('error');
@@ -130,47 +180,112 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
         </button>
         
         {hasGoogleDriveConfig && (
-          <div className="flex gap-2">
-            <button
-              onClick={handleCloudBackup}
-              disabled={cloudBackupStatus === 'loading'}
-              className={`flex-1 py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-colors ${
-                cloudBackupStatus === 'success'
-                  ? 'bg-ticket-success/20 text-ticket-success'
-                  : cloudBackupStatus === 'error'
-                  ? 'bg-ticket-warning/20 text-ticket-warning'
-                  : 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20'
-              }`}
-            >
-              {cloudBackupStatus === 'loading' ? (
-                <Loader2 size={24} className="animate-spin" />
+          <div className="space-y-3">
+            {/* Cloud File Info Section */}
+            <div className="bg-muted/50 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <FileJson size={16} className="text-indigo-500" />
+                  雲端備份資訊
+                </div>
+                <button
+                  onClick={fetchCloudFileInfo}
+                  disabled={cloudFileLoading}
+                  className="p-1 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <RefreshCw size={14} className={`text-muted-foreground ${cloudFileLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              
+              {cloudFileLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 size={12} className="animate-spin" />
+                  載入中...
+                </div>
+              ) : cloudFileError ? (
+                <div className="text-xs text-ticket-warning">
+                  {cloudFileError}
+                </div>
+              ) : cloudFileInfo ? (
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">檔案名稱</span>
+                    <span className="text-foreground font-medium">{cloudFileInfo.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">上次備份</span>
+                    <span className="text-foreground font-medium">
+                      {formatDistanceToNow(new Date(cloudFileInfo.modifiedTime), { addSuffix: true, locale: zhTW })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">檔案大小</span>
+                    <span className="text-foreground font-medium">
+                      {(parseInt(cloudFileInfo.size) / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+                  {cloudFileInfo.webViewLink && (
+                    <a
+                      href={cloudFileInfo.webViewLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-indigo-500 hover:underline mt-1"
+                    >
+                      <ExternalLink size={12} />
+                      在 Google Drive 中查看
+                    </a>
+                  )}
+                </div>
               ) : (
-                <Cloud size={24} />
+                <div className="text-xs text-muted-foreground">
+                  尚無雲端備份檔案
+                </div>
               )}
-              <span className="text-xs">
-                {cloudBackupStatus === 'loading' ? '備份中...' : cloudBackupStatus === 'success' ? '備份成功' : '雲端備份'}
-              </span>
-            </button>
-            <button
-              onClick={handleCloudRestore}
-              disabled={cloudRestoreStatus === 'loading'}
-              className={`flex-1 py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-colors ${
-                cloudRestoreStatus === 'success'
-                  ? 'bg-ticket-success/20 text-ticket-success'
-                  : cloudRestoreStatus === 'error'
-                  ? 'bg-ticket-warning/20 text-ticket-warning'
-                  : 'bg-violet-500/10 text-violet-500 hover:bg-violet-500/20'
-              }`}
-            >
-              {cloudRestoreStatus === 'loading' ? (
-                <Loader2 size={24} className="animate-spin" />
-              ) : (
-                <CloudDownload size={24} />
-              )}
-              <span className="text-xs">
-                {cloudRestoreStatus === 'loading' ? '還原中...' : cloudRestoreStatus === 'success' ? '還原成功' : '雲端還原'}
-              </span>
-            </button>
+            </div>
+
+            {/* Cloud Backup/Restore Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleCloudBackup}
+                disabled={cloudBackupStatus === 'loading'}
+                className={`flex-1 py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-colors ${
+                  cloudBackupStatus === 'success'
+                    ? 'bg-ticket-success/20 text-ticket-success'
+                    : cloudBackupStatus === 'error'
+                    ? 'bg-ticket-warning/20 text-ticket-warning'
+                    : 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20'
+                }`}
+              >
+                {cloudBackupStatus === 'loading' ? (
+                  <Loader2 size={24} className="animate-spin" />
+                ) : (
+                  <Cloud size={24} />
+                )}
+                <span className="text-xs">
+                  {cloudBackupStatus === 'loading' ? '備份中...' : cloudBackupStatus === 'success' ? '備份成功' : '雲端備份'}
+                </span>
+              </button>
+              <button
+                onClick={handleCloudRestore}
+                disabled={cloudRestoreStatus === 'loading'}
+                className={`flex-1 py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-colors ${
+                  cloudRestoreStatus === 'success'
+                    ? 'bg-ticket-success/20 text-ticket-success'
+                    : cloudRestoreStatus === 'error'
+                    ? 'bg-ticket-warning/20 text-ticket-warning'
+                    : 'bg-violet-500/10 text-violet-500 hover:bg-violet-500/20'
+                }`}
+              >
+                {cloudRestoreStatus === 'loading' ? (
+                  <Loader2 size={24} className="animate-spin" />
+                ) : (
+                  <CloudDownload size={24} />
+                )}
+                <span className="text-xs">
+                  {cloudRestoreStatus === 'loading' ? '還原中...' : cloudRestoreStatus === 'success' ? '還原成功' : '雲端還原'}
+                </span>
+              </button>
+            </div>
           </div>
         )}
 
