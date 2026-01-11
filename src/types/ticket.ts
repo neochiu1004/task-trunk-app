@@ -14,6 +14,7 @@ export interface Ticket {
   isDeleted: boolean;
   deletedAt?: number;
   createdAt: number;
+  redeemUrl?: string;
 }
 
 export interface Template {
@@ -22,6 +23,9 @@ export interface Template {
   productName: string;
   image?: string;
   tags?: string[];
+  serial?: string;
+  expiry?: string;
+  redeemUrl?: string;
 }
 
 export interface ViewConfig {
@@ -60,6 +64,7 @@ export interface Settings {
     deleted: ViewConfig;
   };
   googleDrive?: GoogleDriveConfig;
+  localBackupFileName?: string;
 }
 
 export type ViewType = 'active' | 'completed' | 'deleted';

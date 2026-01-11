@@ -399,6 +399,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div className="border-t border-border pt-4">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+              <FileJson size={14} /> 本地備份設定
+            </label>
+            
+            <div className="space-y-3 bg-muted p-3 rounded-xl">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">
+                  備份檔案名稱前綴
+                </label>
+                <input
+                  type="text"
+                  value={localSettings.localBackupFileName || ''}
+                  onChange={(e) => handleGlobalChange('localBackupFileName', e.target.value)}
+                  placeholder="vouchy_backup"
+                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  檔名格式：<span className="font-mono">{localSettings.localBackupFileName?.trim() || 'vouchy_backup'}_日期_時間.json</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">外觀設定</label>
 
             <div className="flex bg-muted p-1 rounded-xl mb-4">

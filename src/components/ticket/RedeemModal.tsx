@@ -37,7 +37,7 @@ interface RedeemModalProps {
   onUpdate: (ticket: Ticket) => void;
   allTags: string[];
   specificViewKeywords: string[];
-  onSaveTemplate: (data: { label: string; productName: string; image?: string; tags?: string[] }) => void;
+  onSaveTemplate: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrl?: string }) => void;
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
 }
@@ -66,6 +66,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [editImage, setEditImage] = useState('');
   const [editOriginalImage, setEditOriginalImage] = useState('');
   const [editBarcodeFormat, setEditBarcodeFormat] = useState<string | undefined>(undefined);
+  const [editRedeemUrl, setEditRedeemUrl] = useState('');
   const [viewMode, setViewMode] = useState<ViewModeType>('standard');
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
@@ -96,6 +97,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditImage(ticket.image || '');
       setEditOriginalImage(ticket.originalImage || '');
       setEditBarcodeFormat(ticket.barcodeFormat);
+      setEditRedeemUrl(ticket.redeemUrl || '');
       setViewMode(getInitialViewMode());
       if (ticket.originalImage) {
         setShowFullScreen(true);
@@ -137,6 +139,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setEditName(tpl.productName);
     if (tpl.image) setEditImage(tpl.image);
     if (tpl.tags && tpl.tags.length > 0) setEditTags(tpl.tags);
+    if (tpl.serial) setEditSerial(tpl.serial);
+    if (tpl.expiry) setEditExpiry(tpl.expiry);
+    if (tpl.redeemUrl) setEditRedeemUrl(tpl.redeemUrl);
   };
 
   const handleSwapImages = () => {
@@ -156,6 +161,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       originalImage: editOriginalImage,
       images: editImage ? [editImage] : [],
       barcodeFormat: editBarcodeFormat,
+      redeemUrl: editRedeemUrl,
     });
     setIsEditing(false);
   };
@@ -167,6 +173,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
         onToggleComplete(ticket);
         setIsRedeemAnimating(false);
         onClose();
+        // 核銷後自動跳轉網址
+        if (!ticket.completed && ticket.redeemUrl) {
+          setTimeout(() => {
+            window.open(ticket.redeemUrl, '_blank');
+          }, 300);
+        }
       }, 600);
     }
   };
@@ -459,6 +471,21 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           extraSuggestions={specificViewKeywords}
                         />
                       </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">核銷後跳轉網址</label>
+                        <input
+                          type="url"
+                          className="w-full p-3 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+                          value={editRedeemUrl}
+                          onChange={(e) => setEditRedeemUrl(e.target.value)}
+                          placeholder="留空則不跳轉"
+                          onFocus={(e) => {
+                            setTimeout(() => {
+                              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 300);
+                          }}
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </div>
@@ -661,7 +688,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                         whileTap="tap"
                         onClick={() => {
                           const name = prompt('請輸入範本名稱');
-                          if (name) onSaveTemplate({ label: name, productName: editName, image: editImage, tags: editTags });
+                          if (name) onSaveTemplate({ 
+                            label: name, 
+                            productName: editName, 
+                            image: editImage, 
+                            tags: editTags, 
+                            serial: editSerial, 
+                            expiry: editExpiry, 
+                            redeemUrl: editRedeemUrl 
+                          });
                         }}
                         className="px-5 py-3 bg-ticket-success/10 text-ticket-success rounded-xl font-semibold text-sm flex items-center gap-1 hover:bg-ticket-success/20"
                       >

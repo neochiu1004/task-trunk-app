@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, AlertCircle, Clock, CheckCircle2, Maximize2 } from 'lucide-react';
+import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink } from 'lucide-react';
 import { Ticket } from '@/types/ticket';
 import { checkIsExpiringSoon, formatTime, formatDateTime } from '@/lib/helpers';
 
@@ -157,6 +157,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             <h3 className={`font-semibold text-foreground line-clamp-1 text-sm tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
               {ticket.productName}
               {ticket.originalImage && <Maximize2 size={10} className="inline ml-1 text-primary" />}
+              {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
             </h3>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
@@ -270,6 +271,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             <div className="flex justify-between items-start">
               <h3 className={`font-bold text-foreground line-clamp-1 text-sm tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
                 {ticket.productName}
+                {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
               </h3>
               {ticket.completed && (
                 <span className="bg-muted text-muted-foreground text-[9px] px-1.5 py-0.5 rounded-md font-medium ml-1 flex-shrink-0">已用</span>
