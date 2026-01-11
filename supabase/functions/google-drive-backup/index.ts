@@ -196,6 +196,46 @@ async function downloadFromDrive(
   return await downloadResponse.text();
 }
 
+interface FileInfo {
+  id: string;
+  name: string;
+  size: string;
+  modifiedTime: string;
+  webViewLink: string;
+}
+
+async function getFileInfo(
+  accessToken: string,
+  fileName: string,
+  folderId?: string
+): Promise<FileInfo | null> {
+  const searchQuery = folderId 
+    ? `name='${fileName}' and '${folderId}' in parents and trashed=false`
+    : `name='${fileName}' and trashed=false`;
+  
+  const searchResponse = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,size,modifiedTime,webViewLink)`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  const searchData = await searchResponse.json();
+  const file = searchData.files?.[0];
+
+  if (!file) {
+    return null;
+  }
+
+  return {
+    id: file.id,
+    name: file.name,
+    size: file.size,
+    modifiedTime: file.modifiedTime,
+    webViewLink: file.webViewLink,
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -275,10 +315,30 @@ serve(async (req) => {
         JSON.stringify({ success: true, message: "Connection successful" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    } else if (action === "getFileInfo") {
+      if (!fileName) {
+        return new Response(
+          JSON.stringify({ error: "Missing fileName for getFileInfo" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const fileInfo = await getFileInfo(accessToken, fileName, folderId);
+      if (fileInfo === null) {
+        return new Response(
+          JSON.stringify({ success: true, notFound: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, fileInfo }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
-      JSON.stringify({ error: "Invalid action. Use 'backup', 'restore', or 'test'" }),
+      JSON.stringify({ error: "Invalid action. Use 'backup', 'restore', 'test', or 'getFileInfo'" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
