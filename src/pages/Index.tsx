@@ -162,9 +162,15 @@ const Index = () => {
   };
   const handleRestore = (ticket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, isDeleted: false, deletedAt: undefined } : t)));
   const handleBackup = () => {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '');
+    const baseName = settings.localBackupFileName?.trim() || 'vouchy_backup';
+    const fileName = `${baseName}_${dateStr}_${timeStr}.json`;
+    
     const backupData = { version: 3, timestamp: Date.now(), settings, tasks, templates, bgHistory };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `vouchy_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
   };
   const handleImportClick = () => {
     const input = document.createElement('input'); input.type = 'file';
@@ -242,7 +248,7 @@ const Index = () => {
       return next;
     });
   };
-  const handleSaveTemplate = (data: { label: string; productName: string; image?: string; tags?: string[] }) => {
+  const handleSaveTemplate = (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrl?: string }) => {
     setTemplates((prev) => [...prev, { id: 'tpl_' + Date.now(), ...data }]);
     alert(`已儲存範本：${data.label}`);
   };

@@ -27,6 +27,7 @@ interface AddModalProps {
     images: string[];
     tags: string[];
     barcodeFormat?: string;
+    redeemUrl?: string;
     completed: boolean;
     completedAt?: number;
     isDeleted: boolean;
@@ -45,7 +46,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   onAddBatch,
 }) => {
   const { toast } = useToast();
-  const [manualData, setManualData] = useState({ name: '', serial: '', expiry: '' });
+  const [manualData, setManualData] = useState({ name: '', serial: '', expiry: '', redeemUrl: '' });
   const [manualTags, setManualTags] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [originalImage, setOriginalImage] = useState('');
@@ -57,14 +58,20 @@ export const AddModal: React.FC<AddModalProps> = ({
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   const applyTemplate = (tpl: Template) => {
-    setManualData((prev) => ({ ...prev, name: tpl.productName }));
+    setManualData((prev) => ({ 
+      ...prev, 
+      name: tpl.productName,
+      serial: tpl.serial || prev.serial,
+      expiry: tpl.expiry || prev.expiry,
+      redeemUrl: tpl.redeemUrl || prev.redeemUrl
+    }));
     if (tpl.image) setImages([tpl.image]);
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
     setHasAppliedTemplate(true);
   };
 
   const clearTemplateData = () => {
-    setManualData({ name: '', serial: '', expiry: '' });
+    setManualData({ name: '', serial: '', expiry: '', redeemUrl: '' });
     setManualTags([]);
     setImages([]);
     setOriginalImage('');
@@ -164,12 +171,13 @@ export const AddModal: React.FC<AddModalProps> = ({
       images: images,
       tags: manualTags,
       barcodeFormat: barcodeFormat,
+      redeemUrl: manualData.redeemUrl.trim() || undefined,
       completed: false,
       isDeleted: false,
       createdAt: Date.now(),
     };
     onAddBatch([newTicket]);
-    setManualData({ name: '', serial: '', expiry: '' });
+    setManualData({ name: '', serial: '', expiry: '', redeemUrl: '' });
     setManualTags([]);
     setImages([]);
     setOriginalImage('');
@@ -416,9 +424,37 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </motion.div>
 
+        {/* Redeem URL */}
+        <motion.div
+          custom={6}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-1"
+        >
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">核銷後跳轉網址</label>
+          <input
+            type="url"
+            className="w-full p-3.5 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+            placeholder="留空則不跳轉 (可用於行動支付連結)"
+            value={manualData.redeemUrl}
+            onChange={(e) => setManualData({ ...manualData, redeemUrl: e.target.value })}
+            onTouchStart={(e) => e.stopPropagation()}
+            onFocus={(e) => {
+              const target = e.target;
+              target.style.touchAction = 'manipulation';
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 350);
+              });
+            }}
+          />
+        </motion.div>
+
         {/* Submit Button */}
         <motion.button
-          custom={6}
+          custom={7}
           variants={sectionVariants}
           initial="hidden"
           animate="visible"
