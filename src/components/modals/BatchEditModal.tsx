@@ -10,6 +10,7 @@ import {
   Eraser,
   Trash2,
   Check,
+  Link,
 } from 'lucide-react';
 import { Template } from '@/types/ticket';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -26,6 +27,7 @@ interface BatchEditModalProps {
     name: string;
     expiry: string;
     image: string;
+    redeemUrl: string;
   }) => void;
   allTags: string[];
   templates: Template[];
@@ -46,6 +48,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   const [newName, setNewName] = useState('');
   const [newExpiry, setNewExpiry] = useState('');
   const [newImage, setNewImage] = useState('');
+  const [newRedeemUrl, setNewRedeemUrl] = useState('');
 
   const handleConfirm = () => {
     onBatchEdit({
@@ -54,6 +57,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       name: newName,
       expiry: newExpiry,
       image: newImage,
+      redeemUrl: newRedeemUrl,
     });
     // Reset state
     setTagsToAdd([]);
@@ -61,6 +65,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
     setNewName('');
     setNewExpiry('');
     setNewImage('');
+    setNewRedeemUrl('');
     onClose();
   };
 
@@ -71,6 +76,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       setTagsToAdd(tpl.tags);
       setClearTags(true);
     }
+    if (tpl.redeemUrl) setNewRedeemUrl(tpl.redeemUrl);
   };
 
   const sectionVariants = {
@@ -247,9 +253,29 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
           <TagSelectInput allTags={allTags} selectedTags={tagsToAdd} onTagsChange={setTagsToAdd} />
         </motion.div>
 
-        {/* Actions */}
+        {/* Redeem URL */}
         <motion.div
           custom={5}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="glass-card p-3 rounded-2xl"
+        >
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Link size={12} /> 核銷後跳轉網址
+          </label>
+          <input
+            type="url"
+            className="w-full p-3 bg-background border border-border rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-primary/30 transition-all"
+            placeholder="留空則保持不變 (可用於行動支付連結)"
+            value={newRedeemUrl}
+            onChange={(e) => setNewRedeemUrl(e.target.value)}
+          />
+        </motion.div>
+
+        {/* Actions */}
+        <motion.div
+          custom={6}
           variants={sectionVariants}
           initial="hidden"
           animate="visible"

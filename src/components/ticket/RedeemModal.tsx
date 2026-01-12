@@ -173,10 +173,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
         onToggleComplete(ticket);
         setIsRedeemAnimating(false);
         onClose();
-        // 核銷後自動跳轉網址
+        // 核銷後詢問是否跳轉網址
         if (!ticket.completed && ticket.redeemUrl) {
           setTimeout(() => {
-            window.open(ticket.redeemUrl, '_blank');
+            if (window.confirm('是否開啟跳轉連結？')) {
+              window.open(ticket.redeemUrl, '_blank');
+            }
           }, 300);
         }
       }, 600);
