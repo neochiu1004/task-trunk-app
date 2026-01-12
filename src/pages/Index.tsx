@@ -228,13 +228,14 @@ const Index = () => {
     setTasks((prev) => prev.map((t) => {
       if (!selectedIds.has(t.id)) return t;
       let newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
+      let newRedeemUrl = payload.clearRedeemUrl ? undefined : (payload.redeemUrl || t.redeemUrl);
       return { 
         ...t, 
         tags: newTags, 
         productName: payload.name || t.productName, 
         image: payload.image || t.image, 
         expiry: payload.expiry ? payload.expiry.replace(/-/g, '/') : t.expiry,
-        redeemUrl: payload.redeemUrl || t.redeemUrl,
+        redeemUrl: newRedeemUrl,
       };
     }));
     setSelectedIds(new Set()); setIsSelectionMode(false);

@@ -28,6 +28,7 @@ interface BatchEditModalProps {
     expiry: string;
     image: string;
     redeemUrl: string;
+    clearRedeemUrl: boolean;
   }) => void;
   allTags: string[];
   templates: Template[];
@@ -49,6 +50,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   const [newExpiry, setNewExpiry] = useState('');
   const [newImage, setNewImage] = useState('');
   const [newRedeemUrl, setNewRedeemUrl] = useState('');
+  const [clearRedeemUrl, setClearRedeemUrl] = useState(false);
 
   const handleConfirm = () => {
     onBatchEdit({
@@ -58,6 +60,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       expiry: newExpiry,
       image: newImage,
       redeemUrl: newRedeemUrl,
+      clearRedeemUrl,
     });
     // Reset state
     setTagsToAdd([]);
@@ -66,6 +69,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
     setNewExpiry('');
     setNewImage('');
     setNewRedeemUrl('');
+    setClearRedeemUrl(false);
     onClose();
   };
 
@@ -259,17 +263,52 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
           variants={sectionVariants}
           initial="hidden"
           animate="visible"
-          className="glass-card p-3 rounded-2xl"
+          className="glass-card p-3 rounded-2xl space-y-2"
         >
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Link size={12} /> 核銷後跳轉網址
-          </label>
+          <div className="flex justify-between items-center">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Link size={12} /> 核銷後跳轉網址
+            </label>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setClearRedeemUrl(!clearRedeemUrl)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all ${
+                clearRedeemUrl 
+                  ? 'bg-ticket-warning text-primary-foreground' 
+                  : 'glass-button text-muted-foreground'
+              }`}
+            >
+              <AnimatePresence mode="wait">
+                {clearRedeemUrl ? (
+                  <motion.div
+                    key="check"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                  >
+                    <Check size={12} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="eraser"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                  >
+                    <Eraser size={12} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {clearRedeemUrl ? '清除網址' : '保留網址'}
+            </motion.button>
+          </div>
           <input
             type="url"
-            className="w-full p-3 bg-background border border-border rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-primary/30 transition-all"
-            placeholder="留空則保持不變 (可用於行動支付連結)"
+            className="w-full p-3 bg-background border border-border rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-50"
+            placeholder={clearRedeemUrl ? "將清除所有選取票券的網址" : "留空則保持不變 (可用於行動支付連結)"}
             value={newRedeemUrl}
             onChange={(e) => setNewRedeemUrl(e.target.value)}
+            disabled={clearRedeemUrl}
           />
         </motion.div>
 
