@@ -228,7 +228,14 @@ const Index = () => {
     setTasks((prev) => prev.map((t) => {
       if (!selectedIds.has(t.id)) return t;
       let newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
-      return { ...t, tags: newTags, productName: payload.name || t.productName, image: payload.image || t.image, expiry: payload.expiry ? payload.expiry.replace(/-/g, '/') : t.expiry };
+      return { 
+        ...t, 
+        tags: newTags, 
+        productName: payload.name || t.productName, 
+        image: payload.image || t.image, 
+        expiry: payload.expiry ? payload.expiry.replace(/-/g, '/') : t.expiry,
+        redeemUrl: payload.redeemUrl || t.redeemUrl,
+      };
     }));
     setSelectedIds(new Set()); setIsSelectionMode(false);
   };
