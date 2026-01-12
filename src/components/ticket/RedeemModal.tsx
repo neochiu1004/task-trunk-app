@@ -169,6 +169,19 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const handleToggleCompleteWithAnimation = () => {
     if (ticket.completed || window.confirm('確定核銷？')) {
       setIsRedeemAnimating(true);
+      
+      // 核銷時自動複製序號到剪貼簿
+      if (!ticket.completed && ticket.serial) {
+        navigator.clipboard.writeText(ticket.serial).then(() => {
+          toast({
+            title: "已複製序號",
+            description: ticket.serial.length > 30 ? ticket.serial.substring(0, 30) + '...' : ticket.serial,
+          });
+        }).catch(() => {
+          // 複製失敗時不阻斷流程
+        });
+      }
+      
       setTimeout(() => {
         onToggleComplete(ticket);
         setIsRedeemAnimating(false);
