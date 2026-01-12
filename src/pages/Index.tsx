@@ -454,7 +454,7 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} />
+      <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} settings={settings} />
       <AddModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} templates={templates} onDeleteTemplate={handleDeleteTemplate} onAddBatch={handleAddBatch} />
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} bgHistory={bgHistory} onSave={handleSaveSettings} onRemoveHistory={(url) => { if (confirm('移除此背景？')) setBgHistory((prev) => prev.filter((i) => i !== url)); }} onAddToHistory={(bg) => { if (bg) setBgHistory((prev) => [bg, ...prev.filter((b) => b !== bg)].slice(0, 20)); }} />
       <DataActionsModal 

@@ -17,7 +17,7 @@ import {
   Loader2,
   Download,
 } from 'lucide-react';
-import { Ticket, Template } from '@/types/ticket';
+import { Ticket, Template, Settings } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
 import { BarcodeCanvas } from './BarcodeCanvas';
 import { QRCodeCanvas } from './QRCodeCanvas';
@@ -40,6 +40,7 @@ interface RedeemModalProps {
   onSaveTemplate: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrl?: string }) => void;
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
+  settings?: Settings;
 }
 
 type ViewModeType = 'standard' | 'image' | 'momo';
@@ -56,6 +57,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   onSaveTemplate,
   templates,
   onDeleteTemplate,
+  settings,
 }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -170,8 +172,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     if (ticket.completed || window.confirm('確定核銷？')) {
       setIsRedeemAnimating(true);
       
-      // 核銷時自動複製序號到剪貼簿
-      if (!ticket.completed && ticket.serial) {
+      // 核銷時自動複製序號到剪貼簿（根據設定）
+      const shouldAutoCopy = settings?.autoCopySerialOnRedeem !== false;
+      if (!ticket.completed && ticket.serial && shouldAutoCopy) {
         navigator.clipboard.writeText(ticket.serial).then(() => {
           toast({
             title: "已複製序號",

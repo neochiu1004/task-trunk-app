@@ -65,6 +65,7 @@ export interface Settings {
   };
   googleDrive?: GoogleDriveConfig;
   localBackupFileName?: string;
+  autoCopySerialOnRedeem?: boolean;
 }
 
 export type ViewType = 'active' | 'completed' | 'deleted';
