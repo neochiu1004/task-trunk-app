@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen, Upload, FileJson, Copy } from 'lucide-react';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen, FileJson, Copy, Link } from 'lucide-react';
 import { Settings, ViewConfig, GoogleDriveConfig } from '@/types/ticket';
 import { defaultViewConfig } from '@/lib/constants';
 import { compressImage, sendTelegramMessage } from '@/lib/helpers';
-import { supabase } from '@/integrations/supabase/client';
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,33 +32,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newKw, setNewKw] = useState('');
   const headerFileInputRef = React.useRef<HTMLInputElement>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
-  const serviceAccountFileRef = React.useRef<HTMLInputElement>(null);
-
-  const handleServiceAccountUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    try {
-      const text = await file.text();
-      // Validate it's valid JSON with expected structure
-      const parsed = JSON.parse(text);
-      if (!parsed.type || !parsed.project_id || !parsed.private_key) {
-        alert('無效的 Service Account JSON 格式');
-        return;
-      }
-      handleGoogleDriveChange('serviceAccountJson', text);
-    } catch (err) {
-      alert('無法讀取 JSON 檔案，請確認格式正確');
-    }
-    // Reset input
-    if (e.target) e.target.value = '';
-  };
 
   const handleGoogleDriveChange = (key: keyof GoogleDriveConfig, value: string) => {
     setLocalSettings((prev) => ({
       ...prev,
       googleDrive: {
-        serviceAccountJson: prev.googleDrive?.serviceAccountJson || '',
+        gasWebAppUrl: prev.googleDrive?.gasWebAppUrl || '',
         backupFileName: prev.googleDrive?.backupFileName || 'vouchy-backup.json',
         folderId: prev.googleDrive?.folderId || '',
         [key]: value,
@@ -68,22 +47,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleTestGoogleDrive = async () => {
     const config = localSettings.googleDrive;
-    if (!config?.serviceAccountJson) {
-      alert('請先輸入 Service Account JSON');
+    if (!config?.gasWebAppUrl) {
+      alert('請先輸入 GAS Web App URL');
       return;
     }
     
     setDriveTestStatus('testing');
     try {
-      const { data, error } = await supabase.functions.invoke('google-drive-backup', {
-        body: {
-          action: 'test',
-          serviceAccountJson: config.serviceAccountJson,
-        },
-      });
+      const response = await fetch(`${config.gasWebAppUrl}?action=test`);
+      const data = await response.json();
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data.error) throw new Error(data.error);
 
       setDriveTestStatus('success');
       setTimeout(() => setDriveTestStatus(null), 3000);
@@ -282,61 +256,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className="border-t border-border pt-4">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-              <HardDrive size={14} /> Google 雲端硬碟備份
+              <HardDrive size={14} /> Google 雲端硬碟備份 (GAS)
             </label>
             
             <div className="space-y-3 bg-muted p-3 rounded-xl">
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">
-                  Service Account JSON
+                <label className="text-xs font-bold text-muted-foreground mb-1 flex items-center gap-1">
+                  <Link size={12} /> GAS Web App URL
                 </label>
-                <div className="flex gap-2 items-center">
-                  <div className={`flex-1 p-2.5 bg-card rounded-lg text-xs font-mono flex items-center gap-2 ${
-                    localSettings.googleDrive?.serviceAccountJson 
-                      ? 'text-ticket-success' 
-                      : 'text-muted-foreground'
-                  }`}>
-                    <FileJson size={14} />
-                    {localSettings.googleDrive?.serviceAccountJson ? (
-                      <span className="truncate">
-                        {(() => {
-                          try {
-                            const parsed = JSON.parse(localSettings.googleDrive.serviceAccountJson);
-                            return parsed.client_email || '已匯入 JSON';
-                          } catch {
-                            return '已匯入 JSON';
-                          }
-                        })()}
-                      </span>
-                    ) : (
-                      <span>尚未匯入</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => serviceAccountFileRef.current?.click()}
-                    className="px-3 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-colors shrink-0"
-                  >
-                    <Upload size={12} />
-                    上傳
-                  </button>
-                  {localSettings.googleDrive?.serviceAccountJson && (
-                    <button
-                      onClick={() => handleGoogleDriveChange('serviceAccountJson', '')}
-                      className="p-2.5 bg-ticket-warning/10 text-ticket-warning rounded-lg hover:bg-ticket-warning/20 transition-colors shrink-0"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
                 <input
-                  type="file"
-                  ref={serviceAccountFileRef}
-                  accept=".json,application/json"
-                  onChange={handleServiceAccountUpload}
-                  className="hidden"
+                  type="text"
+                  value={localSettings.googleDrive?.gasWebAppUrl || ''}
+                  onChange={(e) => handleGoogleDriveChange('gasWebAppUrl', e.target.value)}
+                  placeholder="https://script.google.com/macros/s/..."
+                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  從 Google Cloud Console 下載 Service Account JSON 金鑰後上傳
+                  部署 GAS 腳本後取得的 Web App URL
                 </p>
               </div>
 
@@ -365,13 +301,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  留空則儲存至根目錄
+                  留空則儲存至根目錄或 GAS 預設位置
                 </p>
               </div>
 
               <button
                 onClick={handleTestGoogleDrive}
-                disabled={!localSettings.googleDrive?.serviceAccountJson || driveTestStatus === 'testing'}
+                disabled={!localSettings.googleDrive?.gasWebAppUrl || driveTestStatus === 'testing'}
                 className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                   driveTestStatus === 'success'
                     ? 'bg-ticket-success/10 text-ticket-success'

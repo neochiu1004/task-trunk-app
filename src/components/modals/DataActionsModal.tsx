@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload, Loader2, ExternalLink, FileJson, RefreshCw } from 'lucide-react';
 import { Settings } from '@/types/ticket';
-import { supabase } from '@/integrations/supabase/client';
 import { dbHelper } from '@/lib/db';
 import { formatDistanceToNow, format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
@@ -42,29 +41,30 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   const [cloudFileLoading, setCloudFileLoading] = useState(false);
   const [cloudFileError, setCloudFileError] = useState<string | null>(null);
 
-  const hasGoogleDriveConfig = !!settings.googleDrive?.serviceAccountJson;
+  const hasGoogleDriveConfig = !!settings.googleDrive?.gasWebAppUrl;
 
   const fetchCloudFileInfo = async () => {
-    if (!settings.googleDrive?.serviceAccountJson) return;
+    if (!settings.googleDrive?.gasWebAppUrl) return;
 
     setCloudFileLoading(true);
     setCloudFileError(null);
     try {
-      const { data, error } = await supabase.functions.invoke('google-drive-backup', {
-        body: {
-          action: 'getFileInfo',
-          serviceAccountJson: settings.googleDrive.serviceAccountJson,
-          fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
-          folderId: settings.googleDrive.folderId || undefined,
-        },
+      const params = new URLSearchParams({
+        action: 'getFileInfo',
+        fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
       });
+      if (settings.googleDrive.folderId) {
+        params.set('folderId', settings.googleDrive.folderId);
+      }
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const response = await fetch(`${settings.googleDrive.gasWebAppUrl}?${params.toString()}`);
+      const data = await response.json();
 
-      if (data?.notFound) {
+      if (data.error) throw new Error(data.error);
+
+      if (data.notFound) {
         setCloudFileInfo(null);
-      } else if (data?.fileInfo) {
+      } else if (data.fileInfo) {
         setCloudFileInfo(data.fileInfo);
       }
     } catch (err) {
@@ -83,8 +83,8 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   if (!isOpen) return null;
 
   const handleCloudBackup = async () => {
-    if (!settings.googleDrive?.serviceAccountJson) {
-      alert('請先在設定中配置 Google Drive 憑證');
+    if (!settings.googleDrive?.gasWebAppUrl) {
+      alert('請先在設定中配置 GAS Web App URL');
       return;
     }
 
@@ -94,18 +94,19 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
       const content = JSON.stringify(allData, null, 2);
       const contentSize = new Blob([content]).size;
 
-      const { data, error } = await supabase.functions.invoke('google-drive-backup', {
-        body: {
+      const response = await fetch(settings.googleDrive.gasWebAppUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           action: 'backup',
-          serviceAccountJson: settings.googleDrive.serviceAccountJson,
           fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
           folderId: settings.googleDrive.folderId || undefined,
           content,
-        },
+        }),
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
 
       await dbHelper.recordBackup();
       setCloudBackupStatus('success');
@@ -131,8 +132,8 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   };
 
   const handleCloudRestore = async () => {
-    if (!settings.googleDrive?.serviceAccountJson) {
-      alert('請先在設定中配置 Google Drive 憑證');
+    if (!settings.googleDrive?.gasWebAppUrl) {
+      alert('請先在設定中配置 GAS Web App URL');
       return;
     }
 
@@ -142,24 +143,25 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
 
     setCloudRestoreStatus('loading');
     try {
-      const { data, error } = await supabase.functions.invoke('google-drive-backup', {
-        body: {
-          action: 'restore',
-          serviceAccountJson: settings.googleDrive.serviceAccountJson,
-          fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
-          folderId: settings.googleDrive.folderId || undefined,
-        },
+      const params = new URLSearchParams({
+        action: 'restore',
+        fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
       });
+      if (settings.googleDrive.folderId) {
+        params.set('folderId', settings.googleDrive.folderId);
+      }
 
-      if (error) throw error;
-      if (data?.notFound) {
+      const response = await fetch(`${settings.googleDrive.gasWebAppUrl}?${params.toString()}`);
+      const data = await response.json();
+
+      if (data.notFound) {
         alert('找不到備份檔案');
         setCloudRestoreStatus('idle');
         return;
       }
-      if (data?.error) throw new Error(data.error);
+      if (data.error) throw new Error(data.error);
 
-      const restoredData = JSON.parse(data.data);
+      const restoredData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
       if (onImportData) {
         onImportData(restoredData);
       }

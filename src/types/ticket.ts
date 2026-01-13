@@ -45,7 +45,7 @@ export interface ViewConfig {
 }
 
 export interface GoogleDriveConfig {
-  serviceAccountJson: string;
+  gasWebAppUrl: string;
   backupFileName: string;
   folderId?: string;
 }
