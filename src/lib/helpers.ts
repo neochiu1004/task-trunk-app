@@ -99,14 +99,26 @@ export const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
     : { r: 255, g: 255, b: 255 };
 };
 
+// Rate limiting for Telegram messages
+let lastTelegramMessageTime = 0;
+const TELEGRAM_MIN_INTERVAL_MS = 1000; // 1 second minimum between messages
+
 export const sendTelegramMessage = async (
   token: string,
   chatId: string,
   text: string
 ): Promise<{ success: boolean; error?: string }> => {
   if (!token || !chatId) return { success: false, error: 'Missing token or chat_id' };
+  
+  // Rate limiting
+  const now = Date.now();
+  if (now - lastTelegramMessageTime < TELEGRAM_MIN_INTERVAL_MS) {
+    return { success: false, error: 'Rate limited - please wait' };
+  }
+  lastTelegramMessageTime = now;
+  
   try {
-    const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(text)}&parse_mode=Markdown`;
+    const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${encodeURIComponent(chatId)}&text=${encodeURIComponent(text)}&parse_mode=Markdown`;
     const response = await fetch(url);
     const data = await response.json();
 

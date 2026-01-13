@@ -5,6 +5,7 @@ import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
+import { validateImportData, ValidatedImportData } from '@/lib/validation';
 import { Header } from '@/components/layout/Header';
 import { TicketCard } from '@/components/ticket/TicketCard';
 import { RedeemModal } from '@/components/ticket/RedeemModal';
@@ -173,10 +174,23 @@ const Index = () => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
   };
   const handleImportClick = () => {
-    const input = document.createElement('input'); input.type = 'file';
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
     input.onchange = (e: any) => {
       const r = new FileReader();
-      r.onload = (ev) => { try { setImportPendingData(JSON.parse(ev.target?.result as string)); setShowDataModal(false); } catch { alert('格式錯誤'); } };
+      r.onload = (ev) => { 
+        try { 
+          const rawData = JSON.parse(ev.target?.result as string);
+          const validationResult = validateImportData(rawData);
+          if (validationResult.success === false) {
+            alert(validationResult.error);
+            return;
+          }
+          setImportPendingData(validationResult.data);
+          setShowDataModal(false);
+        } catch { 
+          alert('JSON 格式錯誤，無法解析檔案'); 
+        } 
+      };
       r.readAsText(e.target.files[0]);
     }; input.click();
   };
