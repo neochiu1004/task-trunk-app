@@ -27,6 +27,7 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { WebImageSearch } from '@/components/ui/web-image-search';
 import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
 import { useToast } from '@/hooks/use-toast';
+import { validateRedeemUrl } from '@/lib/validation';
 
 interface RedeemModalProps {
   ticket: Ticket | null;
@@ -189,11 +190,16 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
         onToggleComplete(ticket);
         setIsRedeemAnimating(false);
         onClose();
-        // 核銷後詢問是否跳轉網址
+        // 核銷後詢問是否跳轉網址 (with URL validation)
         if (!ticket.completed && ticket.redeemUrl) {
           setTimeout(() => {
+            const urlValidation = validateRedeemUrl(ticket.redeemUrl);
+            if (!urlValidation.valid) {
+              alert(`無法開啟連結：${urlValidation.error}`);
+              return;
+            }
             if (window.confirm('是否開啟跳轉連結？')) {
-              window.open(ticket.redeemUrl, '_blank');
+              window.open(ticket.redeemUrl, '_blank', 'noopener,noreferrer');
             }
           }, 300);
         }

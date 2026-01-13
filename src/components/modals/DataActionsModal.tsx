@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload, Loader2, ExternalLink, FileJson, RefreshCw } from 'lucide-react';
+import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload, Loader2, ExternalLink, FileJson, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Settings } from '@/types/ticket';
 import { dbHelper } from '@/lib/db';
 import { formatDistanceToNow, format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
+import { validateImportData, isValidGasUrl } from '@/lib/validation';
 
 interface CloudFileInfo {
   id: string;
@@ -42,7 +43,7 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   const [cloudFileError, setCloudFileError] = useState<string | null>(null);
 
   const hasGoogleDriveConfig = !!settings.googleDrive?.gasWebAppUrl;
-
+  const isGasUrlValid = settings.googleDrive?.gasWebAppUrl ? isValidGasUrl(settings.googleDrive.gasWebAppUrl) : false;
   const fetchCloudFileInfo = async () => {
     if (!settings.googleDrive?.gasWebAppUrl) return;
 
@@ -85,6 +86,11 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   const handleCloudBackup = async () => {
     if (!settings.googleDrive?.gasWebAppUrl) {
       alert('請先在設定中配置 GAS Web App URL');
+      return;
+    }
+
+    if (!isValidGasUrl(settings.googleDrive.gasWebAppUrl)) {
+      alert('請使用官方 Google Apps Script 網址 (https://script.google.com/...)');
       return;
     }
 
@@ -137,6 +143,11 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
       return;
     }
 
+    if (!isValidGasUrl(settings.googleDrive.gasWebAppUrl)) {
+      alert('請使用官方 Google Apps Script 網址 (https://script.google.com/...)');
+      return;
+    }
+
     if (!confirm('確定要從雲端還原嗎？這將覆蓋目前的所有資料。')) {
       return;
     }
@@ -162,8 +173,18 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
       if (data.error) throw new Error(data.error);
 
       const restoredData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+      
+      // Validate restored data
+      const validationResult = validateImportData(restoredData);
+      if (validationResult.success === false) {
+        alert(`還原資料驗證失敗:\n${validationResult.error}`);
+        setCloudRestoreStatus('error');
+        setTimeout(() => setCloudRestoreStatus('idle'), 3000);
+        return;
+      }
+      
       if (onImportData) {
-        onImportData(restoredData);
+        onImportData(validationResult.data);
       }
 
       setCloudRestoreStatus('success');
@@ -197,6 +218,14 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
         
         {hasGoogleDriveConfig && (
           <div className="space-y-3">
+            {/* Security warning for non-official GAS URL */}
+            {!isGasUrlValid && settings.googleDrive?.gasWebAppUrl && (
+              <div className="flex items-start gap-2 p-2 bg-ticket-warning/10 rounded-lg text-ticket-warning text-xs">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                <span>請使用官方 Google Apps Script 網址 (https://script.google.com/...)</span>
+              </div>
+            )}
+            
             {/* Cloud File Info Section */}
             <div className="bg-muted/50 rounded-xl p-3 space-y-2">
               <div className="flex items-center justify-between">

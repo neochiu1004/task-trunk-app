@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen, FileJson, Copy, Link } from 'lucide-react';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen, FileJson, Copy, Link, ShieldAlert } from 'lucide-react';
 import { Settings, ViewConfig, GoogleDriveConfig } from '@/types/ticket';
 import { defaultViewConfig } from '@/lib/constants';
 import { compressImage, sendTelegramMessage } from '@/lib/helpers';
+import { isValidGasUrl } from '@/lib/validation';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -259,6 +260,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <HardDrive size={14} /> Google 雲端硬碟備份 (GAS)
             </label>
             
+            {/* Security notice for GAS backup */}
+            <div className="flex items-start gap-2 p-2 mb-3 bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400 text-[10px]">
+              <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+              <span>請僅使用您信任的 Google Apps Script 網址，網址必須為 https://script.google.com/...</span>
+            </div>
+            
             <div className="space-y-3 bg-muted p-3 rounded-xl">
               <div>
                 <label className="text-xs font-bold text-muted-foreground mb-1 flex items-center gap-1">
@@ -269,11 +276,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   value={localSettings.googleDrive?.gasWebAppUrl || ''}
                   onChange={(e) => handleGoogleDriveChange('gasWebAppUrl', e.target.value)}
                   placeholder="https://script.google.com/macros/s/..."
-                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                  className={`w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary ${
+                    localSettings.googleDrive?.gasWebAppUrl && !isValidGasUrl(localSettings.googleDrive.gasWebAppUrl)
+                      ? 'ring-2 ring-ticket-warning'
+                      : ''
+                  }`}
                 />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  部署 GAS 腳本後取得的 Web App URL
-                </p>
+                {localSettings.googleDrive?.gasWebAppUrl && !isValidGasUrl(localSettings.googleDrive.gasWebAppUrl) && (
+                  <p className="text-[10px] text-ticket-warning mt-1">
+                    請使用官方 Google Apps Script 網址
+                  </p>
+                )}
+                {(!localSettings.googleDrive?.gasWebAppUrl || isValidGasUrl(localSettings.googleDrive.gasWebAppUrl)) && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    部署 GAS 腳本後取得的 Web App URL
+                  </p>
+                )}
               </div>
 
               <div>
@@ -857,56 +875,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div className="border-t border-border pt-4">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
-              Telegram Bot Token
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+              <SendHorizontal size={14} /> Telegram 通知設定
             </label>
-            <input
-              type="text"
-              value={localSettings.tgToken}
-              onChange={(e) => handleGlobalChange('tgToken', e.target.value)}
-              placeholder="123456:ABC-DEF..."
-              className="w-full p-3 bg-muted rounded-xl text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
-            />
+            
+            {/* Security notice for Telegram */}
+            <div className="flex items-start gap-2 p-2 mb-3 bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400 text-[10px]">
+              <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+              <span>Bot Token 將儲存在本機瀏覽器，請僅在個人裝置上使用此功能</span>
+            </div>
+            
+            <div className="space-y-3 bg-muted p-3 rounded-xl">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">
+                  Bot Token
+                </label>
+                <input
+                  type="password"
+                  value={localSettings.tgToken}
+                  onChange={(e) => handleGlobalChange('tgToken', e.target.value)}
+                  placeholder="123456:ABC-DEF..."
+                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">
+                  Chat ID
+                </label>
+                <input
+                  type="text"
+                  value={localSettings.tgChatId}
+                  onChange={(e) => handleGlobalChange('tgChatId', e.target.value)}
+                  placeholder="-123456789"
+                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              
+              <button
+                onClick={handleTest}
+                disabled={!localSettings.tgToken || !localSettings.tgChatId || testStatus === 'sending'}
+                className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  testStatus === 'success'
+                    ? 'bg-ticket-success/10 text-ticket-success'
+                    : testStatus === 'error'
+                    ? 'bg-ticket-warning/10 text-ticket-warning'
+                    : 'bg-card text-muted-foreground hover:bg-card/80 border border-border'
+                }`}
+              >
+                {testStatus === 'sending' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : testStatus === 'success' ? (
+                  <Check size={14} />
+                ) : (
+                  <SendHorizontal size={14} />
+                )}
+                {testStatus === 'sending'
+                  ? '傳送中...'
+                  : testStatus === 'success'
+                  ? '測試成功'
+                  : testStatus === 'error'
+                  ? '測試失敗'
+                  : '測試傳送'}
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
-              Telegram Chat ID
-            </label>
-            <input
-              type="text"
-              value={localSettings.tgChatId}
-              onChange={(e) => handleGlobalChange('tgChatId', e.target.value)}
-              placeholder="-123456789"
-              className="w-full p-3 bg-muted rounded-xl text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <button
-            onClick={handleTest}
-            disabled={!localSettings.tgToken || !localSettings.tgChatId || testStatus === 'sending'}
-            className={`w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-              testStatus === 'success'
-                ? 'bg-ticket-success/10 text-ticket-success'
-                : testStatus === 'error'
-                ? 'bg-ticket-warning/10 text-ticket-warning'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            {testStatus === 'sending' ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : testStatus === 'success' ? (
-              <Check size={14} />
-            ) : (
-              <SendHorizontal size={14} />
-            )}
-            {testStatus === 'sending'
-              ? '傳送中...'
-              : testStatus === 'success'
-              ? '測試成功'
-              : testStatus === 'error'
-              ? '測試失敗'
-              : '測試傳送'}
-          </button>
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button
