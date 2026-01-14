@@ -5,7 +5,7 @@ import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
-import { validateImportData, ValidatedImportData } from '@/lib/validation';
+import { validateImportData } from '@/lib/validation';
 import { Header } from '@/components/layout/Header';
 import { TicketCard } from '@/components/ticket/TicketCard';
 import { RedeemModal } from '@/components/ticket/RedeemModal';

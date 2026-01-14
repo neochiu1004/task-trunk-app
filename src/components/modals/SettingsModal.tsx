@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen, FileJson, Copy, Link, ShieldAlert } from 'lucide-react';
-import { Settings, ViewConfig, GoogleDriveConfig } from '../../types/ticket';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, Copy, ShieldAlert } from 'lucide-react';
+import { Settings, ViewConfig } from '../../types/ticket';
 import { defaultViewConfig } from '../../lib/constants';
 import { compressImage, sendTelegramMessage } from '../../lib/helpers';
-import { isValidGasUrl } from '../../lib/validation';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -29,58 +28,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const [currentTab, setCurrentTab] = useState<'active' | 'completed' | 'deleted'>('active');
   const [testStatus, setTestStatus] = useState<'sending' | 'success' | 'error' | null>(null);
-  const [driveTestStatus, setDriveTestStatus] = useState<'testing' | 'success' | 'error' | null>(null);
   const [newKw, setNewKw] = useState('');
   const headerFileInputRef = React.useRef<HTMLInputElement>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleGoogleDriveChange = (key: keyof GoogleDriveConfig, value: string) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      googleDrive: {
-        gasWebAppUrl: prev.googleDrive?.gasWebAppUrl || '',
-        backupFileName: prev.googleDrive?.backupFileName || 'vouchy-backup.json',
-        folderId: prev.googleDrive?.folderId || '',
-        [key]: value,
-      },
-    }));
-  };
-
-  const handleTestGoogleDrive = async () => {
-    const config = localSettings.googleDrive;
-    if (!config?.gasWebAppUrl) {
-      alert('請先輸入 GAS Web App URL');
-      return;
-    }
-    
-    setDriveTestStatus('testing');
-    try {
-      // Test connection by querying a random non-existent folder
-      // If GAS returns "Folder not found", it means connection is working
-      const randomFolderName = `_test_connection_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      // Use text/plain for connection test consistency
-      const response = await fetch(`${config.gasWebAppUrl}?folder=${encodeURIComponent(randomFolderName)}&filename=test.json`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-      });
-      const data = await response.json().catch(() => ({ error: '無法解析回應' }));
-
-      // If we get "Folder not found" or "File not found", it means GAS is responding correctly
-      if (data.error === 'Folder not found' || data.error === 'File not found') {
-        setDriveTestStatus('success');
-        setTimeout(() => setDriveTestStatus(null), 3000);
-      } else if (data.error) {
-        throw new Error(data.error);
-      } else {
-        // Any other response also means connection works
-        setDriveTestStatus('success');
-        setTimeout(() => setDriveTestStatus(null), 3000);
-      }
-    } catch (err) {
-      setDriveTestStatus('error');
-      alert(`連線失敗: ${(err as Error).message}`);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -266,103 +216,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {(!localSettings.specificViewKeywords || localSettings.specificViewKeywords.length === 0) && (
                 <span className="text-[10px] text-muted-foreground">預設：MOMO, 85度C</span>
               )}
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-4">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-              <HardDrive size={14} /> Google 雲端硬碟備份 (GAS)
-            </label>
-            
-            {/* Security notice for GAS backup */}
-            <div className="flex items-start gap-2 p-2 mb-3 bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400 text-[10px]">
-              <ShieldAlert size={14} className="shrink-0 mt-0.5" />
-              <span>請僅使用您信任的 Google Apps Script 網址，網址必須為 https://script.google.com/...</span>
-            </div>
-            
-            <div className="space-y-3 bg-muted p-3 rounded-xl">
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 flex items-center gap-1">
-                  <Link size={12} /> GAS Web App URL
-                </label>
-                <input
-                  type="text"
-                  value={localSettings.googleDrive?.gasWebAppUrl || ''}
-                  onChange={(e) => handleGoogleDriveChange('gasWebAppUrl', e.target.value)}
-                  placeholder="https://script.google.com/macros/s/..."
-                  className={`w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary ${
-                    localSettings.googleDrive?.gasWebAppUrl && !isValidGasUrl(localSettings.googleDrive.gasWebAppUrl)
-                      ? 'ring-2 ring-ticket-warning'
-                      : ''
-                  }`}
-                />
-                {localSettings.googleDrive?.gasWebAppUrl && !isValidGasUrl(localSettings.googleDrive.gasWebAppUrl) && (
-                  <p className="text-[10px] text-ticket-warning mt-1">
-                    請使用官方 Google Apps Script 網址
-                  </p>
-                )}
-                {(!localSettings.googleDrive?.gasWebAppUrl || isValidGasUrl(localSettings.googleDrive.gasWebAppUrl)) && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    部署 GAS 腳本後取得的 Web App URL
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">
-                  備份檔案名稱
-                </label>
-                <input
-                  type="text"
-                  value={localSettings.googleDrive?.backupFileName || 'vouchy-backup.json'}
-                  onChange={(e) => handleGoogleDriveChange('backupFileName', e.target.value)}
-                  placeholder="vouchy-backup.json"
-                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 flex items-center gap-1">
-                  <FolderOpen size={12} /> 資料夾名稱（選填）
-                </label>
-                <input
-                  type="text"
-                  value={localSettings.googleDrive?.folderId || ''}
-                  onChange={(e) => handleGoogleDriveChange('folderId', e.target.value)}
-                  placeholder="請輸入資料夾顯示名稱"
-                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  請輸入雲端硬碟中用於存放備份的資料夾名稱
-                </p>
-              </div>
-
-              <button
-                onClick={handleTestGoogleDrive}
-                disabled={!localSettings.googleDrive?.gasWebAppUrl || driveTestStatus === 'testing'}
-                className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  driveTestStatus === 'success'
-                    ? 'bg-ticket-success/10 text-ticket-success'
-                    : driveTestStatus === 'error'
-                    ? 'bg-ticket-warning/10 text-ticket-warning'
-                    : 'bg-card text-muted-foreground hover:bg-card/80 border border-border'
-                }`}
-              >
-                {driveTestStatus === 'testing' ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : driveTestStatus === 'success' ? (
-                  <Check size={14} />
-                ) : (
-                  <HardDrive size={14} />
-                )}
-                {driveTestStatus === 'testing'
-                  ? '測試中...'
-                  : driveTestStatus === 'success'
-                  ? '連線成功'
-                  : driveTestStatus === 'error'
-                  ? '連線失敗'
-                  : '測試連線'}
-              </button>
             </div>
           </div>
 
