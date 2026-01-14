@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, HardDrive, FolderOpen, FileJson, Copy, Link, ShieldAlert } from 'lucide-react';
-import { Settings, ViewConfig, GoogleDriveConfig } from '@/types/ticket';
-import { defaultViewConfig } from '@/lib/constants';
-import { compressImage, sendTelegramMessage } from '@/lib/helpers';
-import { isValidGasUrl } from '@/lib/validation';
+import { Settings, ViewConfig, GoogleDriveConfig } from '../../types/ticket';
+import { defaultViewConfig } from '../../lib/constants';
+import { compressImage, sendTelegramMessage } from '../../lib/helpers';
+import { isValidGasUrl } from '../../lib/validation';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -58,8 +58,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       // Test connection by querying a random non-existent folder
       // If GAS returns "Folder not found", it means connection is working
       const randomFolderName = `_test_connection_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const response = await fetch(`${config.gasWebAppUrl}?folder=${encodeURIComponent(randomFolderName)}&filename=test.json`);
-      const data = await response.json();
+      // Use text/plain for connection test consistency
+      const response = await fetch(`${config.gasWebAppUrl}?folder=${encodeURIComponent(randomFolderName)}&filename=test.json`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+      });
+      const data = await response.json().catch(() => ({ error: '無法解析回應' }));
 
       // If we get "Folder not found" or "File not found", it means GAS is responding correctly
       if (data.error === 'Folder not found' || data.error === 'File not found') {
@@ -325,11 +329,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="text"
                   value={localSettings.googleDrive?.folderId || ''}
                   onChange={(e) => handleGoogleDriveChange('folderId', e.target.value)}
-                  placeholder="例如：DataEntryBackups"
+                  placeholder="請輸入資料夾顯示名稱"
                   className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  留空則儲存至 GAS 預設資料夾 (DataEntryBackups)
+                  請輸入雲端硬碟中用於存放備份的資料夾名稱
                 </p>
               </div>
 
