@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { DatabaseBackup, ArchiveRestore, Eraser, Activity, Cloud, CloudDownload, Loader2, ExternalLink, FileJson, RefreshCw, AlertTriangle } from 'lucide-react';
-import { Settings } from '@/types/ticket';
-import { dbHelper } from '@/lib/db';
+import { Settings } from '../../types/ticket';
+import { dbHelper } from '../../lib/db';
 import { formatDistanceToNow, format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
-import { toast } from '@/hooks/use-toast';
-import { validateImportData, isValidGasUrl } from '@/lib/validation';
+import { toast } from '../../hooks/use-toast';
+import { validateImportData, isValidGasUrl } from '../../lib/validation';
 
 interface CloudFileInfo {
   id: string;
@@ -83,20 +83,20 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
       const contentForSize = JSON.stringify(allData, null, 2);
       const contentSize = new Blob([contentForSize]).size;
 
-      // Send raw object to GAS - DO NOT stringify content
-      // GAS will handle the serialization (JSON.stringify) on the server side
+      // Use text/plain to avoid CORS preflight (OPTIONS) which GAS doesn't support
+      // GAS will handle the string content and we must manually stringify the body
       const response = await fetch(settings.googleDrive.gasWebAppUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          // Use lowercase 'filename' and 'folder' to match GAS expectations
           filename: settings.googleDrive.backupFileName || 'vouchy-backup.json',
-          folder: settings.googleDrive.folderId || undefined, // folderId is actually folder name
-          content: allData, // Raw object, not stringified
+          folder: settings.googleDrive.folderId || undefined, 
+          content: allData, 
         }),
       });
 
-      const data = await response.json();
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+      const data = await response.json().catch(() => ({ status: 'error', message: '無法解析伺服器回應' }));
       if (data.status === 'error') throw new Error(data.message || 'Unknown error');
       if (data.error) throw new Error(data.error);
 
@@ -144,10 +144,15 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
         filename: settings.googleDrive.backupFileName || 'vouchy-backup.json',
       });
       if (settings.googleDrive.folderId) {
-        params.set('folder', settings.googleDrive.folderId); // folderId is actually folder name
+        params.set('folder', settings.googleDrive.folderId); 
       }
 
       const response = await fetch(`${settings.googleDrive.gasWebAppUrl}?${params.toString()}`);
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) throw new Error('伺服器未傳回正確的 JSON 格式');
+      
       const data = await response.json();
 
       // Check for error responses from GAS
@@ -161,7 +166,6 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
       }
 
       // Legacy GAS returns the content directly without { data: ... } wrapper
-      // The response body IS the restored data
       const restoredData = data;
       
       // Validate restored data
