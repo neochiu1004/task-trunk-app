@@ -44,12 +44,6 @@ export interface ViewConfig {
   headerBgOpacity: number;
 }
 
-export interface GoogleDriveConfig {
-  gasWebAppUrl: string;
-  backupFileName: string;
-  folderId?: string;
-}
-
 export interface Settings {
   tgToken: string;
   tgChatId: string;
@@ -63,7 +57,6 @@ export interface Settings {
     completed: ViewConfig;
     deleted: ViewConfig;
   };
-  googleDrive?: GoogleDriveConfig;
   localBackupFileName?: string;
   autoCopySerialOnRedeem?: boolean;
 }
