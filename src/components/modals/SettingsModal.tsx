@@ -55,13 +55,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     
     setDriveTestStatus('testing');
     try {
-      const response = await fetch(`${config.gasWebAppUrl}?action=test`);
+      // Test connection by querying a random non-existent folder
+      // If GAS returns "Folder not found", it means connection is working
+      const randomFolderName = `_test_connection_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const response = await fetch(`${config.gasWebAppUrl}?folder=${encodeURIComponent(randomFolderName)}&filename=test.json`);
       const data = await response.json();
 
-      if (data.error) throw new Error(data.error);
-
-      setDriveTestStatus('success');
-      setTimeout(() => setDriveTestStatus(null), 3000);
+      // If we get "Folder not found" or "File not found", it means GAS is responding correctly
+      if (data.error === 'Folder not found' || data.error === 'File not found') {
+        setDriveTestStatus('success');
+        setTimeout(() => setDriveTestStatus(null), 3000);
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else {
+        // Any other response also means connection works
+        setDriveTestStatus('success');
+        setTimeout(() => setDriveTestStatus(null), 3000);
+      }
     } catch (err) {
       setDriveTestStatus('error');
       alert(`連線失敗: ${(err as Error).message}`);
@@ -309,17 +319,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <div>
                 <label className="text-xs font-bold text-muted-foreground mb-1 flex items-center gap-1">
-                  <FolderOpen size={12} /> 資料夾 ID（選填）
+                  <FolderOpen size={12} /> 資料夾名稱（選填）
                 </label>
                 <input
                   type="text"
                   value={localSettings.googleDrive?.folderId || ''}
                   onChange={(e) => handleGoogleDriveChange('folderId', e.target.value)}
-                  placeholder="從雲端硬碟資料夾網址取得 ID"
+                  placeholder="例如：DataEntryBackups"
                   className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  留空則儲存至根目錄或 GAS 預設位置
+                  留空則儲存至 GAS 預設資料夾 (DataEntryBackups)
                 </p>
               </div>
 

@@ -44,40 +44,22 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
 
   const hasGoogleDriveConfig = !!settings.googleDrive?.gasWebAppUrl;
   const isGasUrlValid = settings.googleDrive?.gasWebAppUrl ? isValidGasUrl(settings.googleDrive.gasWebAppUrl) : false;
+  
+  // Note: fetchCloudFileInfo is disabled because the legacy GAS backend
+  // does not support action=getFileInfo. The doGet only returns file content.
+  // Keeping this as a placeholder for future GAS versions that may support metadata.
   const fetchCloudFileInfo = async () => {
-    if (!settings.googleDrive?.gasWebAppUrl) return;
-
-    setCloudFileLoading(true);
-    setCloudFileError(null);
-    try {
-      const params = new URLSearchParams({
-        action: 'getFileInfo',
-        fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
-      });
-      if (settings.googleDrive.folderId) {
-        params.set('folderId', settings.googleDrive.folderId);
-      }
-
-      const response = await fetch(`${settings.googleDrive.gasWebAppUrl}?${params.toString()}`);
-      const data = await response.json();
-
-      if (data.error) throw new Error(data.error);
-
-      if (data.notFound) {
-        setCloudFileInfo(null);
-      } else if (data.fileInfo) {
-        setCloudFileInfo(data.fileInfo);
-      }
-    } catch (err) {
-      setCloudFileError((err as Error).message);
-    } finally {
-      setCloudFileLoading(false);
-    }
+    // Legacy GAS mode: metadata query not supported
+    // Set to null to show "舊版模式不支援顯示詳細資訊" message
+    setCloudFileInfo(null);
+    setCloudFileError('舊版 GAS 不支援顯示詳細資訊');
   };
 
   useEffect(() => {
     if (isOpen && hasGoogleDriveConfig) {
-      fetchCloudFileInfo();
+      // Show legacy mode message instead of fetching
+      setCloudFileError('舊版 GAS 模式');
+      setCloudFileInfo(null);
     }
   }, [isOpen, hasGoogleDriveConfig]);
 
@@ -97,26 +79,29 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
     setCloudBackupStatus('loading');
     try {
       const allData = await dbHelper.exportAllData();
-      const content = JSON.stringify(allData, null, 2);
-      const contentSize = new Blob([content]).size;
+      // Calculate size before sending (for display purposes)
+      const contentForSize = JSON.stringify(allData, null, 2);
+      const contentSize = new Blob([contentForSize]).size;
 
+      // Send raw object to GAS - DO NOT stringify content
+      // GAS will handle the serialization (JSON.stringify) on the server side
       const response = await fetch(settings.googleDrive.gasWebAppUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'backup',
-          fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
-          folderId: settings.googleDrive.folderId || undefined,
-          content,
+          // Use lowercase 'filename' and 'folder' to match GAS expectations
+          filename: settings.googleDrive.backupFileName || 'vouchy-backup.json',
+          folder: settings.googleDrive.folderId || undefined, // folderId is actually folder name
+          content: allData, // Raw object, not stringified
         }),
       });
 
       const data = await response.json();
+      if (data.status === 'error') throw new Error(data.message || 'Unknown error');
       if (data.error) throw new Error(data.error);
 
       await dbHelper.recordBackup();
       setCloudBackupStatus('success');
-      fetchCloudFileInfo();
       
       const now = new Date();
       const fileSizeKB = (contentSize / 1024).toFixed(1);
@@ -154,25 +139,30 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
 
     setCloudRestoreStatus('loading');
     try {
+      // Use lowercase 'filename' and 'folder' to match GAS expectations
       const params = new URLSearchParams({
-        action: 'restore',
-        fileName: settings.googleDrive.backupFileName || 'vouchy-backup.json',
+        filename: settings.googleDrive.backupFileName || 'vouchy-backup.json',
       });
       if (settings.googleDrive.folderId) {
-        params.set('folderId', settings.googleDrive.folderId);
+        params.set('folder', settings.googleDrive.folderId); // folderId is actually folder name
       }
 
       const response = await fetch(`${settings.googleDrive.gasWebAppUrl}?${params.toString()}`);
       const data = await response.json();
 
-      if (data.notFound) {
-        alert('找不到備份檔案');
-        setCloudRestoreStatus('idle');
-        return;
+      // Check for error responses from GAS
+      if (data.error) {
+        if (data.error === 'Folder not found' || data.error === 'File not found') {
+          alert('找不到備份檔案或資料夾');
+          setCloudRestoreStatus('idle');
+          return;
+        }
+        throw new Error(data.error);
       }
-      if (data.error) throw new Error(data.error);
 
-      const restoredData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+      // Legacy GAS returns the content directly without { data: ... } wrapper
+      // The response body IS the restored data
+      const restoredData = data;
       
       // Validate restored data
       const validationResult = validateImportData(restoredData);
@@ -226,66 +216,15 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
               </div>
             )}
             
-            {/* Cloud File Info Section */}
+            {/* Cloud File Info Section - Legacy Mode Notice */}
             <div className="bg-muted/50 rounded-xl p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <FileJson size={16} className="text-indigo-500" />
-                  雲端備份資訊
-                </div>
-                <button
-                  onClick={fetchCloudFileInfo}
-                  disabled={cloudFileLoading}
-                  className="p-1 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <RefreshCw size={14} className={`text-muted-foreground ${cloudFileLoading ? 'animate-spin' : ''}`} />
-                </button>
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <FileJson size={16} className="text-indigo-500" />
+                雲端備份 (舊版模式)
               </div>
-              
-              {cloudFileLoading ? (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 size={12} className="animate-spin" />
-                  載入中...
-                </div>
-              ) : cloudFileError ? (
-                <div className="text-xs text-ticket-warning">
-                  {cloudFileError}
-                </div>
-              ) : cloudFileInfo ? (
-                <div className="space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">檔案名稱</span>
-                    <span className="text-foreground font-medium">{cloudFileInfo.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">上次備份</span>
-                    <span className="text-foreground font-medium">
-                      {formatDistanceToNow(new Date(cloudFileInfo.modifiedTime), { addSuffix: true, locale: zhTW })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">檔案大小</span>
-                    <span className="text-foreground font-medium">
-                      {(parseInt(cloudFileInfo.size) / 1024).toFixed(1)} KB
-                    </span>
-                  </div>
-                  {cloudFileInfo.webViewLink && (
-                    <a
-                      href={cloudFileInfo.webViewLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-indigo-500 hover:underline mt-1"
-                    >
-                      <ExternalLink size={12} />
-                      在 Google Drive 中查看
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground">
-                  尚無雲端備份檔案
-                </div>
-              )}
+              <div className="text-xs text-muted-foreground">
+                舊版 GAS 不支援顯示詳細資訊，請直接使用備份/還原功能。
+              </div>
             </div>
 
             {/* Cloud Backup/Restore Buttons */}
