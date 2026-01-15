@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw } from 'lucide-react';
-import { Template } from '@/types/ticket';
+import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { TagSelectInput } from '../ticket/TagSelectInput';
+import { RedeemUrlPresetSelect } from '../ticket/RedeemUrlPresetSelect';
 import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
 import { useToast } from '@/hooks/use-toast';
 import { WebImageSearch } from '@/components/ui/web-image-search';
@@ -17,6 +18,7 @@ interface AddModalProps {
   specificViewKeywords: string[];
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
+  redeemUrlPresets?: RedeemUrlPreset[];
   onAddBatch: (tickets: Array<{
     id: string;
     productName: string;
@@ -43,6 +45,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   specificViewKeywords,
   templates,
   onDeleteTemplate,
+  redeemUrlPresets,
   onAddBatch,
 }) => {
   const { toast } = useToast();
@@ -430,25 +433,11 @@ export const AddModal: React.FC<AddModalProps> = ({
           variants={sectionVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-1"
         >
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">核銷後跳轉網址</label>
-          <input
-            type="url"
-            className="w-full p-3.5 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
-            placeholder="留空則不跳轉 (可用於行動支付連結)"
+          <RedeemUrlPresetSelect
+            presets={redeemUrlPresets || []}
             value={manualData.redeemUrl}
-            onChange={(e) => setManualData({ ...manualData, redeemUrl: e.target.value })}
-            onTouchStart={(e) => e.stopPropagation()}
-            onFocus={(e) => {
-              const target = e.target;
-              target.style.touchAction = 'manipulation';
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 350);
-              });
-            }}
+            onChange={(url) => setManualData({ ...manualData, redeemUrl: url })}
           />
         </motion.div>
 

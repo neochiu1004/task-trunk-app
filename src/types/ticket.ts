@@ -44,6 +44,12 @@ export interface ViewConfig {
   headerBgOpacity: number;
 }
 
+export interface RedeemUrlPreset {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface Settings {
   tgToken: string;
   tgChatId: string;
@@ -59,6 +65,7 @@ export interface Settings {
   };
   localBackupFileName?: string;
   autoCopySerialOnRedeem?: boolean;
+  redeemUrlPresets?: RedeemUrlPreset[];
 }
 
 export type ViewType = 'active' | 'completed' | 'deleted';
