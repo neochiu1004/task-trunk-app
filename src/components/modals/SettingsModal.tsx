@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, Copy, ShieldAlert } from 'lucide-react';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert } from 'lucide-react';
 import { Settings, ViewConfig } from '../../types/ticket';
 import { defaultViewConfig } from '../../lib/constants';
 import { compressImage, sendTelegramMessage } from '../../lib/helpers';
@@ -239,37 +239,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <p className="text-[10px] text-muted-foreground mt-1">
                   檔名格式：<span className="font-mono">{localSettings.localBackupFileName?.trim() || 'vouchy_backup'}_日期_時間.json</span>
                 </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-4">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Copy size={14} /> 核銷行為設定
-            </label>
-            
-            <div className="space-y-3 bg-muted p-3 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-xs font-bold text-foreground block">
-                    自動複製序號
-                  </label>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    核銷時自動將序號複製到剪貼簿
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleGlobalChange('autoCopySerialOnRedeem', !localSettings.autoCopySerialOnRedeem)}
-                  className={`w-12 h-7 rounded-full transition-all relative ${
-                    localSettings.autoCopySerialOnRedeem !== false ? 'bg-primary' : 'bg-muted-foreground/30'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${
-                      localSettings.autoCopySerialOnRedeem !== false ? 'left-6' : 'left-1'
-                    }`}
-                  />
-                </button>
               </div>
             </div>
           </div>

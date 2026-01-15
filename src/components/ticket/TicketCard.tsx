@@ -206,7 +206,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     >
       {/* Background layer with opacity */}
       <div 
-        className="absolute inset-0 ticket-card rounded-xl"
+        className="absolute inset-0 glass-card rounded-xl"
         style={{ 
           opacity: cardBgOpacity,
           ...(cardBgColor && { backgroundColor: cardBgColor }),
