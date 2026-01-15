@@ -10,12 +10,12 @@ import {
   Eraser,
   Trash2,
   Check,
-  Link,
 } from 'lucide-react';
-import { Template } from '@/types/ticket';
+import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { TagSelectInput } from '../ticket/TagSelectInput';
+import { RedeemUrlPresetSelect } from '../ticket/RedeemUrlPresetSelect';
 
 interface BatchEditModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ interface BatchEditModalProps {
   allTags: string[];
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
+  redeemUrlPresets?: RedeemUrlPreset[];
 }
 
 export const BatchEditModal: React.FC<BatchEditModalProps> = ({
@@ -43,6 +44,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   allTags,
   templates,
   onDeleteTemplate,
+  redeemUrlPresets,
 }) => {
   const [tagsToAdd, setTagsToAdd] = useState<string[]>([]);
   const [clearTags, setClearTags] = useState(false);
@@ -265,10 +267,8 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
           animate="visible"
           className="glass-card p-3 rounded-2xl space-y-2"
         >
-          <div className="flex justify-between items-center">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <Link size={12} /> 核銷後跳轉網址
-            </label>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">核銷後跳轉網址</span>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setClearRedeemUrl(!clearRedeemUrl)}
@@ -302,14 +302,19 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
               {clearRedeemUrl ? '清除網址' : '保留網址'}
             </motion.button>
           </div>
-          <input
-            type="url"
-            className="w-full p-3 bg-background border border-border rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-50"
-            placeholder={clearRedeemUrl ? "將清除所有選取票券的網址" : "留空則保持不變 (可用於行動支付連結)"}
-            value={newRedeemUrl}
-            onChange={(e) => setNewRedeemUrl(e.target.value)}
-            disabled={clearRedeemUrl}
-          />
+          
+          {!clearRedeemUrl && (
+            <RedeemUrlPresetSelect
+              presets={redeemUrlPresets || []}
+              value={newRedeemUrl}
+              onChange={setNewRedeemUrl}
+              placeholder="留空則保持不變 (可用於行動支付連結)"
+            />
+          )}
+          
+          {clearRedeemUrl && (
+            <p className="text-xs text-muted-foreground italic">將清除所有選取票券的網址</p>
+          )}
         </motion.div>
 
         {/* Actions */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert } from 'lucide-react';
-import { Settings, ViewConfig } from '../../types/ticket';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link } from 'lucide-react';
+import { Settings, ViewConfig, RedeemUrlPreset } from '../../types/ticket';
+import { generateId } from '../../lib/helpers';
 import { defaultViewConfig } from '../../lib/constants';
 import { compressImage, sendTelegramMessage } from '../../lib/helpers';
 
@@ -29,6 +30,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [currentTab, setCurrentTab] = useState<'active' | 'completed' | 'deleted'>('active');
   const [testStatus, setTestStatus] = useState<'sending' | 'success' | 'error' | null>(null);
   const [newKw, setNewKw] = useState('');
+  const [newPresetLabel, setNewPresetLabel] = useState('');
+  const [newPresetUrl, setNewPresetUrl] = useState('');
   const headerFileInputRef = React.useRef<HTMLInputElement>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -240,6 +243,77 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   檔名格式：<span className="font-mono">{localSettings.localBackupFileName?.trim() || 'vouchy_backup'}_日期_時間.json</span>
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Link size={14} /> 跳轉網址預設選項
+            </label>
+            
+            <div className="space-y-3 bg-muted p-3 rounded-xl">
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={newPresetLabel}
+                  onChange={(e) => setNewPresetLabel(e.target.value)}
+                  placeholder="名稱 (如: Line Pay)"
+                  className="w-full p-2.5 bg-card rounded-lg text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPresetUrl}
+                    onChange={(e) => setNewPresetUrl(e.target.value)}
+                    placeholder="網址 (如: linepay://...)"
+                    className="flex-1 p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!newPresetLabel.trim() || !newPresetUrl.trim()) return;
+                      const presets = localSettings.redeemUrlPresets || [];
+                      const newPreset: RedeemUrlPreset = {
+                        id: generateId(),
+                        label: newPresetLabel.trim(),
+                        url: newPresetUrl.trim(),
+                      };
+                      handleGlobalChange('redeemUrlPresets', [...presets, newPreset]);
+                      setNewPresetLabel('');
+                      setNewPresetUrl('');
+                    }}
+                    className="px-4 bg-primary text-primary-foreground rounded-lg font-bold shrink-0"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              </div>
+              
+              {(localSettings.redeemUrlPresets && localSettings.redeemUrlPresets.length > 0) ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto no-scrollbar">
+                  {localSettings.redeemUrlPresets.map((preset) => (
+                    <div
+                      key={preset.id}
+                      className="flex items-center gap-2 bg-card p-2 rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-foreground truncate">{preset.label}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono truncate">{preset.url}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const presets = localSettings.redeemUrlPresets || [];
+                          handleGlobalChange('redeemUrlPresets', presets.filter((p) => p.id !== preset.id));
+                        }}
+                        className="p-1.5 text-muted-foreground hover:text-ticket-warning transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-muted-foreground">尚未設定任何預設網址</p>
+              )}
             </div>
           </div>
 

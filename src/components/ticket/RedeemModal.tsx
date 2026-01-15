@@ -17,12 +17,13 @@ import {
   Loader2,
   Download,
 } from 'lucide-react';
-import { Ticket, Template, Settings } from '@/types/ticket';
+import { Ticket, Template, Settings, RedeemUrlPreset } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
 import { BarcodeCanvas } from './BarcodeCanvas';
 import { QRCodeCanvas } from './QRCodeCanvas';
 import { MomoTemplate } from './MomoTemplate';
 import { TagSelectInput } from './TagSelectInput';
+import { RedeemUrlPresetSelect } from './RedeemUrlPresetSelect';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { WebImageSearch } from '@/components/ui/web-image-search';
 import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
@@ -42,6 +43,7 @@ interface RedeemModalProps {
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
   settings?: Settings;
+  redeemUrlPresets?: RedeemUrlPreset[];
 }
 
 type ViewModeType = 'standard' | 'image' | 'momo';
@@ -59,6 +61,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   templates,
   onDeleteTemplate,
   settings,
+  redeemUrlPresets,
 }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -496,18 +499,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">核銷後跳轉網址</label>
-                        <input
-                          type="url"
-                          className="w-full p-3 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+                        <RedeemUrlPresetSelect
+                          presets={redeemUrlPresets || []}
                           value={editRedeemUrl}
-                          onChange={(e) => setEditRedeemUrl(e.target.value)}
+                          onChange={setEditRedeemUrl}
                           placeholder="留空則不跳轉"
-                          onFocus={(e) => {
-                            setTimeout(() => {
-                              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 300);
-                          }}
                         />
                       </div>
                     </motion.div>
