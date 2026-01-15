@@ -15,10 +15,20 @@ export const isValidHttpUrl = (url: string): boolean => {
   }
 };
 
+export const isValidUrl = (url: string): boolean => {
+  if (!url) return false;
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const validateRedeemUrl = (url: string): { valid: boolean; error?: string } => {
   if (!url) return { valid: false, error: '網址為空' };
-  if (!isValidHttpUrl(url)) {
-    return { valid: false, error: '無效的網址格式，必須為 http:// 或 https://' };
+  if (!isValidUrl(url)) {
+    return { valid: false, error: '無效的網址格式' };
   }
   return { valid: true };
 };
