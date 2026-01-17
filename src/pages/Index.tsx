@@ -275,6 +275,17 @@ const Index = () => {
     alert(`已儲存範本：${data.label}`);
   };
   const handleDeleteTemplate = (id: string) => { if (window.confirm('確定刪除此範本？')) setTemplates((prev) => prev.filter((t) => t.id !== id)); };
+  const handleReorderTemplate = (id: string, direction: 'up' | 'down') => {
+    setTemplates((prev) => {
+      const index = prev.findIndex((t) => t.id === id);
+      if (index === -1) return prev;
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+      const newTemplates = [...prev];
+      [newTemplates[index], newTemplates[newIndex]] = [newTemplates[newIndex], newTemplates[index]];
+      return newTemplates;
+    });
+  };
   const handleDeleteTag = (tagToDelete: string) => {
     if (window.confirm(`確定刪除標籤「${tagToDelete}」？將從所有票券移除此標籤。`)) {
       setTasks((prev) => prev.map((t) => ({ ...t, tags: (t.tags || []).filter((tag) => tag !== tagToDelete) })));
@@ -468,8 +479,8 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} settings={settings} redeemUrlPresets={settings.redeemUrlPresets} />
-      <AddModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} templates={templates} onDeleteTemplate={handleDeleteTemplate} onAddBatch={handleAddBatch} redeemUrlPresets={settings.redeemUrlPresets} />
+      <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} settings={settings} redeemUrlPresets={settings.redeemUrlPresets} />
+      <AddModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onAddBatch={handleAddBatch} redeemUrlPresets={settings.redeemUrlPresets} />
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} bgHistory={bgHistory} onSave={handleSaveSettings} onRemoveHistory={(url) => { if (confirm('移除此背景？')) setBgHistory((prev) => prev.filter((i) => i !== url)); }} onAddToHistory={(bg) => { if (bg) setBgHistory((prev) => [bg, ...prev.filter((b) => b !== bg)].slice(0, 20)); }} />
       <DataActionsModal 
         isOpen={showDataModal} 
@@ -485,7 +496,7 @@ const Index = () => {
         }}
       />
       <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
-      <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} redeemUrlPresets={settings.redeemUrlPresets} />
+      <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} redeemUrlPresets={settings.redeemUrlPresets} />
       <TagManagerModal isOpen={showTagManager} onClose={() => setShowTagManager(false)} tags={allTags} onDeleteTag={handleDeleteTag} />
       <DataHealthCheck isOpen={showHealthCheck} onClose={() => setShowHealthCheck(false)} onBackup={handleBackup} onMismatchedSerials={setHealthIssueSerials} />
     </>
