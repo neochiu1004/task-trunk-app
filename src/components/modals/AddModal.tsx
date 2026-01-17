@@ -61,12 +61,17 @@ export const AddModal: React.FC<AddModalProps> = ({
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   const applyTemplate = (tpl: Template) => {
+    // Resolve preset ID to actual URL
+    const resolvedUrl = tpl.redeemUrlPresetId 
+      ? redeemUrlPresets?.find(p => p.id === tpl.redeemUrlPresetId)?.url 
+      : undefined;
+    
     setManualData((prev) => ({ 
       ...prev, 
       name: tpl.productName,
       serial: tpl.serial || prev.serial,
       expiry: tpl.expiry || prev.expiry,
-      redeemUrl: tpl.redeemUrl || prev.redeemUrl
+      redeemUrl: resolvedUrl || prev.redeemUrl
     }));
     if (tpl.image) setImages([tpl.image]);
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);

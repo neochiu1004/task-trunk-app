@@ -82,7 +82,11 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       setTagsToAdd(tpl.tags);
       setClearTags(true);
     }
-    if (tpl.redeemUrl) setNewRedeemUrl(tpl.redeemUrl);
+    // Resolve preset ID to actual URL
+    if (tpl.redeemUrlPresetId) {
+      const resolvedUrl = redeemUrlPresets?.find(p => p.id === tpl.redeemUrlPresetId)?.url;
+      if (resolvedUrl) setNewRedeemUrl(resolvedUrl);
+    }
   };
 
   const sectionVariants = {

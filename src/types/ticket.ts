@@ -25,7 +25,7 @@ export interface Template {
   tags?: string[];
   serial?: string;
   expiry?: string;
-  redeemUrl?: string;
+  redeemUrlPresetId?: string;
 }
 
 export interface ViewConfig {
