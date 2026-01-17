@@ -39,7 +39,7 @@ interface RedeemModalProps {
   onUpdate: (ticket: Ticket) => void;
   allTags: string[];
   specificViewKeywords: string[];
-  onSaveTemplate: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrl?: string }) => void;
+  onSaveTemplate: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
   settings?: Settings;
@@ -147,7 +147,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     if (tpl.tags && tpl.tags.length > 0) setEditTags(tpl.tags);
     if (tpl.serial) setEditSerial(tpl.serial);
     if (tpl.expiry) setEditExpiry(tpl.expiry);
-    if (tpl.redeemUrl) setEditRedeemUrl(tpl.redeemUrl);
+    // Resolve preset ID to actual URL
+    if (tpl.redeemUrlPresetId) {
+      const resolvedUrl = redeemUrlPresets?.find(p => p.id === tpl.redeemUrlPresetId)?.url;
+      if (resolvedUrl) setEditRedeemUrl(resolvedUrl);
+    }
   };
 
   const handleSwapImages = () => {
@@ -708,15 +712,19 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                         whileTap="tap"
                         onClick={() => {
                           const name = prompt('請輸入範本名稱');
-                          if (name) onSaveTemplate({ 
-                            label: name, 
-                            productName: editName, 
-                            image: editImage, 
-                            tags: editTags, 
-                            serial: editSerial, 
-                            expiry: editExpiry, 
-                            redeemUrl: editRedeemUrl 
-                          });
+                          if (name) {
+                            // Find preset ID that matches current URL
+                            const matchingPreset = redeemUrlPresets?.find(p => p.url === editRedeemUrl);
+                            onSaveTemplate({ 
+                              label: name, 
+                              productName: editName, 
+                              image: editImage, 
+                              tags: editTags, 
+                              serial: editSerial, 
+                              expiry: editExpiry, 
+                              redeemUrlPresetId: matchingPreset?.id
+                            });
+                          }
                         }}
                         className="px-5 py-3 bg-ticket-success/10 text-ticket-success rounded-xl font-semibold text-sm flex items-center gap-1 hover:bg-ticket-success/20"
                       >
