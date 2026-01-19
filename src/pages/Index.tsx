@@ -275,14 +275,12 @@ const Index = () => {
     alert(`已儲存範本：${data.label}`);
   };
   const handleDeleteTemplate = (id: string) => { if (window.confirm('確定刪除此範本？')) setTemplates((prev) => prev.filter((t) => t.id !== id)); };
-  const handleReorderTemplate = (id: string, direction: 'up' | 'down') => {
+  const handleReorderTemplate = (fromIndex: number, toIndex: number) => {
     setTemplates((prev) => {
-      const index = prev.findIndex((t) => t.id === id);
-      if (index === -1) return prev;
-      const newIndex = direction === 'up' ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= prev.length) return prev;
+      if (fromIndex < 0 || fromIndex >= prev.length || toIndex < 0 || toIndex >= prev.length) return prev;
       const newTemplates = [...prev];
-      [newTemplates[index], newTemplates[newIndex]] = [newTemplates[newIndex], newTemplates[index]];
+      const [removed] = newTemplates.splice(fromIndex, 1);
+      newTemplates.splice(toIndex, 0, removed);
       return newTemplates;
     });
   };

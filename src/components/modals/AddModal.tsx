@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw, Link, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw, Link } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { TagSelectInput } from '../ticket/TagSelectInput';
 import { RedeemUrlPresetSelect } from '../ticket/RedeemUrlPresetSelect';
+import { DraggableTemplateList } from '../ticket/DraggableTemplateList';
 import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
 import { useToast } from '@/hooks/use-toast';
 import { WebImageSearch } from '@/components/ui/web-image-search';
@@ -18,7 +19,7 @@ interface AddModalProps {
   specificViewKeywords: string[];
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
-  onReorderTemplate: (id: string, direction: 'up' | 'down') => void;
+  onReorderTemplate: (fromIndex: number, toIndex: number) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
   onAddBatch: (tickets: Array<{
     id: string;
@@ -237,64 +238,13 @@ export const AddModal: React.FC<AddModalProps> = ({
               )}
             </div>
             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-              {templates.map((tpl, index) => {
-                const presetLabel = tpl.redeemUrlPresetId 
-                  ? redeemUrlPresets?.find(p => p.id === tpl.redeemUrlPresetId)?.label 
-                  : undefined;
-                return (
-                  <motion.div
-                    key={tpl.id}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => applyTemplate(tpl)}
-                    className="shrink-0 flex flex-col glass-card rounded-xl p-1.5 cursor-pointer hover:bg-muted/80 transition-colors min-w-[90px]"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden">
-                        {tpl.image ? (
-                          <img src={tpl.image} className="w-full h-full object-cover" alt="" />
-                        ) : (
-                          <ImageIcon size={12} className="text-primary/30" />
-                        )}
-                      </div>
-                      <span className="text-xs font-semibold text-foreground max-w-[60px] truncate flex-1">{tpl.label}</span>
-                      <div className="flex flex-col gap-0.5">
-                        <motion.button
-                          whileTap={{ scale: 0.8 }}
-                          onClick={(e) => { e.stopPropagation(); onReorderTemplate(tpl.id, 'up'); }}
-                          disabled={index === 0}
-                          className="text-muted-foreground/50 hover:text-primary p-0.5 disabled:opacity-30"
-                        >
-                          <ChevronUp size={10} />
-                        </motion.button>
-                        <motion.button
-                          whileTap={{ scale: 0.8 }}
-                          onClick={(e) => { e.stopPropagation(); onReorderTemplate(tpl.id, 'down'); }}
-                          disabled={index === templates.length - 1}
-                          className="text-muted-foreground/50 hover:text-primary p-0.5 disabled:opacity-30"
-                        >
-                          <ChevronDown size={10} />
-                        </motion.button>
-                      </div>
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteTemplate(tpl.id);
-                        }}
-                        className="text-muted-foreground/50 hover:text-ticket-warning p-0.5"
-                      >
-                        <X size={12} />
-                      </motion.button>
-                    </div>
-                    {presetLabel && (
-                      <div className="flex items-center gap-1 mt-1 pl-1">
-                        <Link size={8} className="text-primary/50" />
-                        <span className="text-[9px] text-primary/70 truncate">{presetLabel}</span>
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
+              <DraggableTemplateList
+                templates={templates}
+                redeemUrlPresets={redeemUrlPresets}
+                onApplyTemplate={applyTemplate}
+                onDeleteTemplate={onDeleteTemplate}
+                onReorderTemplates={onReorderTemplate}
+              />
             </div>
           </motion.div>
         )}

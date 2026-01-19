@@ -17,8 +17,6 @@ import {
   Loader2,
   Download,
   Link,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react';
 import { Ticket, Template, Settings, RedeemUrlPreset } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
@@ -27,6 +25,7 @@ import { QRCodeCanvas } from './QRCodeCanvas';
 import { MomoTemplate } from './MomoTemplate';
 import { TagSelectInput } from './TagSelectInput';
 import { RedeemUrlPresetSelect } from './RedeemUrlPresetSelect';
+import { DraggableTemplateList } from './DraggableTemplateList';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { WebImageSearch } from '@/components/ui/web-image-search';
 import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
@@ -45,7 +44,7 @@ interface RedeemModalProps {
   onSaveTemplate: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
-  onReorderTemplate: (id: string, direction: 'up' | 'down') => void;
+  onReorderTemplate: (fromIndex: number, toIndex: number) => void;
   settings?: Settings;
   redeemUrlPresets?: RedeemUrlPreset[];
 }
@@ -354,66 +353,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           <div className="text-[10px] font-semibold text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
                             <LayoutDashboard size={12} /> 套用範本
                           </div>
-                          <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                            {templates.map((tpl, index) => {
-                              const presetLabel = tpl.redeemUrlPresetId 
-                                ? redeemUrlPresets?.find(p => p.id === tpl.redeemUrlPresetId)?.label 
-                                : undefined;
-                              return (
-                                <motion.div
-                                  key={tpl.id}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => applyTemplate(tpl)}
-                                  className="shrink-0 flex flex-col bg-card border border-primary/20 rounded-xl p-1.5 cursor-pointer hover:bg-primary/10 transition-colors min-w-[90px]"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center overflow-hidden">
-                                      {tpl.image ? (
-                                        <img src={tpl.image} className="w-full h-full object-cover" alt="" />
-                                      ) : (
-                                        <ImageIcon size={12} className="text-primary/30" />
-                                      )}
-                                    </div>
-                                    <span className="text-xs font-semibold text-primary max-w-[60px] truncate flex-1">{tpl.label}</span>
-                                    <div className="flex flex-col gap-0.5">
-                                      <motion.button
-                                        whileTap={{ scale: 0.8 }}
-                                        onClick={(e) => { e.stopPropagation(); onReorderTemplate(tpl.id, 'up'); }}
-                                        disabled={index === 0}
-                                        className="text-primary/30 hover:text-primary p-0.5 disabled:opacity-30"
-                                      >
-                                        <ChevronUp size={10} />
-                                      </motion.button>
-                                      <motion.button
-                                        whileTap={{ scale: 0.8 }}
-                                        onClick={(e) => { e.stopPropagation(); onReorderTemplate(tpl.id, 'down'); }}
-                                        disabled={index === templates.length - 1}
-                                        className="text-primary/30 hover:text-primary p-0.5 disabled:opacity-30"
-                                      >
-                                        <ChevronDown size={10} />
-                                      </motion.button>
-                                    </div>
-                                    <motion.button
-                                      whileTap={{ scale: 0.9 }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteTemplate(tpl.id);
-                                      }}
-                                      className="text-primary/30 hover:text-ticket-warning p-0.5"
-                                    >
-                                      <X size={12} />
-                                    </motion.button>
-                                  </div>
-                                  {presetLabel && (
-                                    <div className="flex items-center gap-1 mt-1 pl-1">
-                                      <Link size={8} className="text-primary/50" />
-                                      <span className="text-[9px] text-primary/70 truncate">{presetLabel}</span>
-                                    </div>
-                                  )}
-                                </motion.div>
-                              );
-                            })}
-                          </div>
+                          <DraggableTemplateList
+                            templates={templates}
+                            redeemUrlPresets={redeemUrlPresets}
+                            onApplyTemplate={applyTemplate}
+                            onDeleteTemplate={onDeleteTemplate}
+                            onReorderTemplates={onReorderTemplate}
+                          />
                         </div>
                       )}
 
