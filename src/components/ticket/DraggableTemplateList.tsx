@@ -105,74 +105,87 @@ export const DraggableTemplateList: React.FC<DraggableTemplateListProps> = ({
     setDragOverIndex(null);
   };
 
+  const renderDropIndicator = (position: 'before' | 'after', index: number) => {
+    const showBefore = position === 'before' && dragOverIndex === index && draggedIndex !== null && draggedIndex > index;
+    const showAfter = position === 'after' && dragOverIndex === index && draggedIndex !== null && draggedIndex < index;
+    
+    if (!showBefore && !showAfter) return null;
+    
+    return (
+      <div className="w-0.5 bg-primary rounded-full animate-pulse self-stretch min-h-[40px] shrink-0" />
+    );
+  };
+
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+    <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 items-center">
       {templates.map((tpl, index) => {
         const presetLabel = tpl.redeemUrlPresetId
           ? redeemUrlPresets?.find((p) => p.id === tpl.redeemUrlPresetId)?.label
           : undefined;
 
         const isDragging = draggedIndex === index;
-        const isDragOver = dragOverIndex === index;
         const isTouched = touchedIndex === index;
 
         return (
-          <div
-            key={tpl.id}
-            className={`template-item shrink-0 flex flex-col glass-card rounded-xl p-1.5 cursor-pointer transition-all min-w-[90px] ${
-              isDragging ? 'opacity-50 scale-95' : ''
-            } ${isDragOver ? 'ring-2 ring-primary' : ''} ${isTouched ? 'scale-105 shadow-lg' : ''}`}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            onTouchStart={(e) => handleTouchStart(e, index)}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onClick={() => onApplyTemplate(tpl)}
-          >
-            <div className="flex items-center gap-1.5">
-              {/* Drag Handle */}
-              <div 
-                className="drag-handle shrink-0 text-muted-foreground/40 hover:text-primary cursor-grab active:cursor-grabbing touch-none"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <GripVertical size={12} />
+          <React.Fragment key={tpl.id}>
+            {renderDropIndicator('before', index)}
+            <div
+              className={`template-item shrink-0 flex flex-col glass-card rounded-xl p-1.5 cursor-pointer transition-all min-w-[90px] ${
+                isDragging ? 'opacity-50 scale-95' : ''
+              } ${isTouched ? 'scale-105 shadow-lg' : ''}`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              onTouchStart={(e) => handleTouchStart(e, index)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onClick={() => onApplyTemplate(tpl)}
+            >
+              <div className="flex items-center gap-1.5">
+                {/* Drag Handle */}
+                <div 
+                  className="drag-handle shrink-0 text-muted-foreground/40 hover:text-primary cursor-grab active:cursor-grabbing touch-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <GripVertical size={12} />
+                </div>
+                
+                <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden shrink-0">
+                  {tpl.image ? (
+                    <img src={tpl.image} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <ImageIcon size={10} className="text-primary/30" />
+                  )}
+                </div>
+                
+                <span className="text-xs font-semibold text-foreground max-w-[50px] truncate flex-1">
+                  {tpl.label}
+                </span>
+                
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteTemplate(tpl.id);
+                  }}
+                  className="shrink-0 text-muted-foreground/50 hover:text-ticket-warning p-0.5"
+                >
+                  <X size={12} />
+                </motion.button>
               </div>
               
-              <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden shrink-0">
-                {tpl.image ? (
-                  <img src={tpl.image} className="w-full h-full object-cover" alt="" />
-                ) : (
-                  <ImageIcon size={10} className="text-primary/30" />
-                )}
-              </div>
-              
-              <span className="text-xs font-semibold text-foreground max-w-[50px] truncate flex-1">
-                {tpl.label}
-              </span>
-              
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteTemplate(tpl.id);
-                }}
-                className="shrink-0 text-muted-foreground/50 hover:text-ticket-warning p-0.5"
-              >
-                <X size={12} />
-              </motion.button>
+              {presetLabel && (
+                <div className="flex items-center gap-1 mt-1 pl-5">
+                  <Link size={8} className="text-primary/50" />
+                  <span className="text-[9px] text-primary/70 truncate">{presetLabel}</span>
+                </div>
+              )}
             </div>
-            
-            {presetLabel && (
-              <div className="flex items-center gap-1 mt-1 pl-5">
-                <Link size={8} className="text-primary/50" />
-                <span className="text-[9px] text-primary/70 truncate">{presetLabel}</span>
-              </div>
-            )}
-          </div>
+            {renderDropIndicator('after', index)}
+          </React.Fragment>
         );
       })}
     </div>
