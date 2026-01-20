@@ -1,4 +1,4 @@
-import type { ViewConfig, Settings } from '@/types/ticket';
+import type { ViewConfig, Settings, RedeemUrlPreset } from '@/types/ticket';
 
 export const defaultViewConfig: ViewConfig = {
   backgroundImage: '',
@@ -16,6 +16,18 @@ export const defaultViewConfig: ViewConfig = {
   headerBgOpacity: 1,
 };
 
+// 常用行動支付預設網址
+export const defaultRedeemUrlPresets: RedeemUrlPreset[] = [
+  { id: 'preset-linepay', label: 'Line Pay', url: 'linepay://' },
+  { id: 'preset-jkopay', label: '街口支付', url: 'jkopay://' },
+  { id: 'preset-pxpay', label: '全支付 PX Pay', url: 'pxpay://' },
+  { id: 'preset-twpay', label: '台灣 Pay', url: 'twmpay://' },
+  { id: 'preset-applepay', label: 'Apple Pay', url: 'shoebox://' },
+  { id: 'preset-icashpay', label: 'icash Pay', url: 'icashpay://' },
+  { id: 'preset-familypay', label: '全盈+PAY', url: 'familypay://' },
+  { id: 'preset-openpointpay', label: 'OPEN POINT', url: 'openpoint://' },
+];
+
 export const defaultSettings: Settings = {
   tgToken: '',
   tgChatId: '',
@@ -28,6 +40,7 @@ export const defaultSettings: Settings = {
     completed: { ...defaultViewConfig },
     deleted: { ...defaultViewConfig },
   },
+  redeemUrlPresets: defaultRedeemUrlPresets,
 };
 
 export const DB_KEYS = {
