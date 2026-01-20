@@ -45,18 +45,18 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
         modal={true}
       >
         <DrawerContent 
-          className="max-h-[85vh] rounded-t-[28px] border-border bg-card flex flex-col"
+          className="max-h-[90vh] rounded-t-[32px] border-border bg-card flex flex-col shadow-premium"
           style={{ 
-            paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom), 20px)',
           }}
           onPointerDownOutside={(e) => e.preventDefault()}
         >
-          <DrawerHeader className="text-left pb-2 flex-none">
+          <DrawerHeader className="text-left pb-3 flex-none px-5 pt-5">
             <div className="flex items-center justify-between">
               <div>
-                <DrawerTitle className="text-xl font-bold text-foreground">{title}</DrawerTitle>
+                <DrawerTitle className="text-2xl font-bold text-foreground tracking-tight">{title}</DrawerTitle>
                 {description && (
-                  <DrawerDescription className="text-sm text-muted-foreground mt-0.5">
+                  <DrawerDescription className="text-sm text-muted-foreground mt-1">
                     {description}
                   </DrawerDescription>
                 )}
@@ -64,16 +64,17 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
               {showCloseButton && (
                 <motion.button
                   whileTap={{ scale: 0.9 }}
+                  whileHover={{ scale: 1.05 }}
                   onClick={onClose}
-                  className="p-2 glass-button rounded-xl text-muted-foreground hover:text-foreground"
+                  className="p-2.5 glass-button rounded-2xl text-muted-foreground hover:text-foreground shadow-sm"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </motion.button>
               )}
             </div>
           </DrawerHeader>
           <div 
-            className="px-4 pb-6 overflow-y-auto no-scrollbar flex-1"
+            className="px-5 pb-8 overflow-y-auto no-scrollbar flex-1"
             style={{ 
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
@@ -88,20 +89,20 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[420px] rounded-3xl border-border bg-card p-0 gap-0">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="sm:max-w-[460px] rounded-3xl border-border bg-card p-0 gap-0 shadow-premium">
+        <DialogHeader className="p-6 pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="text-xl font-bold text-foreground">{title}</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-foreground tracking-tight">{title}</DialogTitle>
               {description && (
-                <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
                   {description}
                 </DialogDescription>
               )}
             </div>
           </div>
         </DialogHeader>
-        <div className="px-6 pb-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+        <div className="px-6 pb-8 max-h-[70vh] overflow-y-auto no-scrollbar">
           {children}
         </div>
       </DialogContent>

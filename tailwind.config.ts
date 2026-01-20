@@ -53,6 +53,7 @@ export default {
         ticket: {
           success: "hsl(var(--ticket-success))",
           warning: "hsl(var(--ticket-warning))",
+          danger: "hsl(var(--ticket-danger))",
           momo: "hsl(var(--ticket-momo))",
         },
         sidebar: {
@@ -79,9 +80,11 @@ export default {
         '22': '5.5rem',
       },
       boxShadow: {
-        'glass': '0 4px 24px -1px hsl(220 20% 20% / 0.08), 0 2px 8px -2px hsl(220 20% 20% / 0.06)',
-        'glass-lg': '0 8px 32px -4px hsl(220 20% 20% / 0.12), 0 4px 16px -4px hsl(220 20% 20% / 0.08)',
-        'premium': '0 20px 40px -12px hsl(220 20% 20% / 0.15)',
+        'glass': '0 8px 32px -8px hsl(220 40% 20% / 0.12), 0 4px 16px -4px hsl(220 40% 20% / 0.08)',
+        'glass-lg': '0 12px 48px -8px hsl(220 40% 20% / 0.18), 0 6px 24px -6px hsl(220 40% 20% / 0.12)',
+        'premium': '0 24px 48px -12px hsl(220 40% 20% / 0.2)',
+        'glow': '0 0 24px -4px hsl(var(--primary) / 0.4)',
+        'glow-success': '0 0 24px -4px hsl(var(--ticket-success) / 0.4)',
       },
       keyframes: {
         "accordion-down": {

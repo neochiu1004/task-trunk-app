@@ -105,11 +105,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           else onClick(ticket);
         }}
         style={{ height: `${Math.max(compactHeight - 8, 56)}px` }}
-        className={`mx-2 mb-1.5 px-2.5 rounded-xl flex items-center gap-2 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
+        className={`mx-3 mb-2 px-3 rounded-2xl flex items-center gap-2.5 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
       >
         {/* Background layer with opacity */}
         <div 
-          className="absolute inset-0 glass-card rounded-xl"
+          className="absolute inset-0 glass-card rounded-2xl"
           style={{ 
             opacity: cardBgOpacity,
             ...(cardBgColor && { backgroundColor: cardBgColor }),
@@ -117,7 +117,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           }} 
         />
         {/* Content layer - always full opacity */}
-        <div className="relative z-10 flex items-center gap-2 w-full h-full">
+        <div className="relative z-10 flex items-center gap-2.5 w-full h-full py-1">
         {isSelectionMode && (
           <motion.div
             initial={{ scale: 0 }}
@@ -131,7 +131,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         )}
         
         {compactShowImage && (
-          <div className="h-12 w-12 flex-shrink-0 rounded-xl overflow-hidden">
+          <div className="h-14 w-14 flex-shrink-0 rounded-xl overflow-hidden shadow-sm">
             {ticket.image ? (
               <img
                 src={ticket.image}
@@ -146,13 +146,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           </div>
         )}
         
-        <div className="flex-1 min-w-0 py-2">
+        <div className="flex-1 min-w-0 py-2.5">
           <div className="flex items-center gap-2">
             {isHealthIssueWarning && (
-              <span className="text-[10px] bg-ticket-danger text-primary-foreground px-1.5 py-0.5 rounded-md font-semibold">不符</span>
+              <span className="text-[10px] bg-ticket-danger text-primary-foreground px-2 py-0.5 rounded-lg font-semibold shadow-sm">不符</span>
             )}
             {isDuplicateWarning && !isHealthIssueWarning && (
-              <span className="text-[10px] bg-ticket-warning text-primary-foreground px-1.5 py-0.5 rounded-md font-semibold">重複</span>
+              <span className="text-[10px] bg-ticket-warning text-primary-foreground px-2 py-0.5 rounded-lg font-semibold shadow-sm">重複</span>
             )}
             <h3 className={`font-semibold text-foreground line-clamp-1 text-sm tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
               {ticket.productName}
@@ -176,10 +176,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`flex-shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-xl transition-colors ${
+            className={`flex-shrink-0 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 shadow-sm ${
               ticket.completed
                 ? 'bg-muted text-muted-foreground'
-                : 'bg-ticket-success/15 text-ticket-success hover:bg-ticket-success hover:text-primary-foreground'
+                : 'bg-ticket-success text-primary-foreground hover:shadow-md hover:shadow-ticket-success/30'
             }`}
           >
             {ticket.completed ? '查看' : '兌換'}
@@ -202,11 +202,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         if (isSelectionMode) onSelect(ticket.id);
         else onClick(ticket);
       }}
-      className={`mx-3 mt-3 rounded-xl flex cursor-pointer relative overflow-visible ${getStatusStyles()}`}
+      className={`mx-4 mt-4 rounded-2xl flex cursor-pointer relative overflow-visible ${getStatusStyles()}`}
     >
       {/* Background layer with opacity */}
       <div 
-        className="absolute inset-0 glass-card rounded-xl"
+        className="absolute inset-0 glass-card rounded-2xl"
         style={{ 
           opacity: cardBgOpacity,
           ...(cardBgColor && { backgroundColor: cardBgColor }),
@@ -227,13 +227,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       )}
       
       {isHealthIssueWarning && (
-        <div className="absolute -top-2 left-4 bg-ticket-danger text-primary-foreground text-[10px] px-2.5 py-0.5 rounded-full z-20 font-semibold shadow-sm">
+        <div className="absolute -top-2 left-4 bg-ticket-danger text-primary-foreground text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
           序號不符
         </div>
       )}
       
       {isDuplicateWarning && !isHealthIssueWarning && (
-        <div className="absolute -top-2 left-4 bg-ticket-warning text-primary-foreground text-[10px] px-2.5 py-0.5 rounded-full z-20 font-semibold shadow-sm">
+        <div className="absolute -top-2 left-4 bg-ticket-warning text-primary-foreground text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
           重複序號
         </div>
       )}
@@ -241,17 +241,17 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       {/* Content layer - always full opacity */}
       <div className="relative z-10 flex w-full">
         {/* Left stub - image section */}
-        <div className="ticket-stub w-20 flex-shrink-0 rounded-l-xl flex items-center justify-center p-2 relative overflow-hidden">
+        <div className="ticket-stub w-24 flex-shrink-0 rounded-l-2xl flex items-center justify-center p-2.5 relative overflow-hidden">
           {ticket.image ? (
             <motion.img 
               src={ticket.image} 
-              className={`w-full h-full object-cover rounded-lg ${ticket.completed ? 'grayscale opacity-50' : ''}`}
+              className={`w-full h-full object-cover rounded-xl shadow-sm ${ticket.completed ? 'grayscale opacity-50' : ''}`}
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
               alt=""
             />
           ) : (
-            <div className="w-full aspect-square bg-muted/50 rounded-lg flex items-center justify-center">
+            <div className="w-full aspect-square bg-muted/50 rounded-xl flex items-center justify-center">
               <span className="text-muted-foreground text-2xl">🎫</span>
             </div>
           )}
@@ -266,7 +266,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         <div className="ticket-divider self-stretch my-2" />
         
         {/* Main content section */}
-        <div className="flex-1 flex flex-col justify-between py-2.5 pr-3 pl-2 min-w-0">
+        <div className="flex-1 flex flex-col justify-between py-3 pr-4 pl-2.5 min-w-0">
           <div>
             <div className="flex justify-between items-start">
               <h3 className={`font-bold text-foreground line-clamp-1 text-sm tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
@@ -274,7 +274,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
               </h3>
               {ticket.completed && (
-                <span className="bg-muted text-muted-foreground text-[9px] px-1.5 py-0.5 rounded-md font-medium ml-1 flex-shrink-0">已用</span>
+                <span className="bg-muted text-muted-foreground text-[10px] px-2 py-1 rounded-lg font-medium ml-1.5 flex-shrink-0 shadow-sm">已用</span>
               )}
             </div>
             
@@ -288,9 +288,9 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               </motion.div>
             )}
             
-            <div className="flex gap-1 mt-1.5 overflow-x-auto no-scrollbar">
+            <div className="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar">
               {ticket.tags && ticket.tags.map((t) => (
-                <span key={t} className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap">
+                <span key={t} className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-lg font-medium whitespace-nowrap shadow-sm">
                   {t}
                 </span>
               ))}
@@ -298,14 +298,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             </div>
           </div>
           
-          <div className="flex justify-between items-end mt-2">
+          <div className="flex justify-between items-end mt-2.5">
             {ticket.completed && ticket.completedAt ? (
-              <div className="text-[9px] font-medium text-ticket-success flex items-center gap-1 bg-ticket-success/10 px-2 py-0.5 rounded-full">
-                <CheckCircle2 size={10} /> <span>{formatDateTime(ticket.completedAt)}</span>
+              <div className="text-[10px] font-semibold text-ticket-success flex items-center gap-1.5 bg-ticket-success/10 px-2.5 py-1 rounded-xl shadow-sm">
+                <CheckCircle2 size={12} /> <span>{formatDateTime(ticket.completedAt)}</span>
               </div>
             ) : (
-              <div className={`text-[10px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full ${isExpiring ? 'text-ticket-warning bg-ticket-warning/10' : 'text-ticket-success bg-ticket-success/10'}`}>
-                <Clock size={11} /> <span>{ticket.expiry || '無期限'}</span>
+              <div className={`text-[11px] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-xl shadow-sm ${isExpiring ? 'text-ticket-warning bg-ticket-warning/10' : 'text-ticket-success bg-ticket-success/10'}`}>
+                <Clock size={12} /> <span>{ticket.expiry || '無期限'}</span>
               </div>
             )}
             
@@ -313,10 +313,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                className={`text-[11px] font-bold px-4 py-1.5 rounded-full transition-all shadow-sm ${
+                className={`text-xs font-bold px-5 py-2 rounded-xl transition-all duration-200 shadow-md ${
                   ticket.completed
                     ? 'bg-muted text-muted-foreground'
-                    : 'bg-ticket-success text-primary-foreground hover:shadow-md'
+                    : 'bg-ticket-success text-primary-foreground hover:shadow-lg hover:shadow-ticket-success/30'
                 }`}
               >
                 {ticket.completed ? '查看' : '兌換'}
