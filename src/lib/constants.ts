@@ -16,17 +16,8 @@ export const defaultViewConfig: ViewConfig = {
   headerBgOpacity: 1,
 };
 
-// 常用行動支付預設網址
-export const defaultRedeemUrlPresets: RedeemUrlPreset[] = [
-  { id: 'preset-linepay', label: 'Line Pay', url: 'linepay://' },
-  { id: 'preset-jkopay', label: '街口支付', url: 'jkopay://' },
-  { id: 'preset-pxpay', label: '全支付 PX Pay', url: 'pxpay://' },
-  { id: 'preset-twpay', label: '台灣 Pay', url: 'twmpay://' },
-  { id: 'preset-applepay', label: 'Apple Pay', url: 'shoebox://' },
-  { id: 'preset-icashpay', label: 'icash Pay', url: 'icashpay://' },
-  { id: 'preset-familypay', label: '全盈+PAY', url: 'familypay://' },
-  { id: 'preset-openpointpay', label: 'OPEN POINT', url: 'openpoint://' },
-];
+// 使用者自訂核銷網址預設（預設為空，由使用者在設定中自行新增）
+export const defaultRedeemUrlPresets: RedeemUrlPreset[] = [];
 
 export const defaultSettings: Settings = {
   tgToken: '',
