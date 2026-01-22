@@ -11,6 +11,7 @@ import {
   Trash2,
   Check,
   Link,
+  X,
 } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -145,12 +146,29 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Pencil size={12} /> 修改名稱
           </label>
-          <input
-            className="w-full p-3 bg-background border border-border rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-primary/30 transition-all"
-            placeholder="留空則保持不變"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              className="w-full p-3 pr-10 bg-background border border-border rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-primary/30 transition-all"
+              placeholder="留空則保持不變"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <AnimatePresence>
+              {newName && (
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setNewName('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X size={14} />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
 
         {/* Expiry */}

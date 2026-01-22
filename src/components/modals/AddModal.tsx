@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw, Link } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
@@ -302,28 +302,45 @@ export const AddModal: React.FC<AddModalProps> = ({
         />
 
         {/* Name Input */}
-        <motion.input
+        <motion.div
           custom={2}
           variants={sectionVariants}
           initial="hidden"
           animate="visible"
-          className="w-full p-3.5 glass-card rounded-xl outline-none font-medium focus:ring-2 focus:ring-primary/30 transition-all"
-          placeholder="票券名稱 (必填)"
-          value={manualData.name}
-          onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
-          onTouchStart={(e) => e.stopPropagation()}
-          onFocus={(e) => {
-            const target = e.target;
-            // Prevent drawer from intercepting touch events
-            target.style.touchAction = 'manipulation';
-            // Use requestAnimationFrame for smoother scroll on iOS PWA
-            requestAnimationFrame(() => {
-              setTimeout(() => {
-                target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              }, 350);
-            });
-          }}
-        />
+          className="relative"
+        >
+          <input
+            className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-medium focus:ring-2 focus:ring-primary/30 transition-all"
+            placeholder="票券名稱 (必填)"
+            value={manualData.name}
+            onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
+            onTouchStart={(e) => e.stopPropagation()}
+            onFocus={(e) => {
+              const target = e.target;
+              target.style.touchAction = 'manipulation';
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 350);
+              });
+            }}
+          />
+          <AnimatePresence>
+            {manualData.name && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setManualData({ ...manualData, name: '' })}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={14} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Tags */}
         <motion.div
@@ -349,22 +366,42 @@ export const AddModal: React.FC<AddModalProps> = ({
           className="w-full max-w-full overflow-x-hidden"
         >
           <div className="flex items-center gap-2 w-full max-w-full">
-            <input
-              className="flex-1 min-w-0 p-3.5 glass-card rounded-xl outline-none font-mono text-sm focus:ring-2 focus:ring-primary/30 transition-all"
-              placeholder="序號/代碼"
-              value={manualData.serial}
-              onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
-              onTouchStart={(e) => e.stopPropagation()}
-              onFocus={(e) => {
-                const target = e.target;
-                target.style.touchAction = 'manipulation';
-                requestAnimationFrame(() => {
-                  setTimeout(() => {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  }, 350);
-                });
-              }}
-            />
+            <div className="relative flex-1 min-w-0">
+              <input
+                className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-mono text-sm focus:ring-2 focus:ring-primary/30 transition-all"
+                placeholder="序號/代碼"
+                value={manualData.serial}
+                onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
+                onTouchStart={(e) => e.stopPropagation()}
+                onFocus={(e) => {
+                  const target = e.target;
+                  target.style.touchAction = 'manipulation';
+                  requestAnimationFrame(() => {
+                    setTimeout(() => {
+                      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 350);
+                  });
+                }}
+              />
+              <AnimatePresence>
+                {manualData.serial && (
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      setManualData({ ...manualData, serial: '' });
+                      setBarcodeFormat(undefined);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X size={14} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
             <input
               ref={scanInputRef}
               type="file"
