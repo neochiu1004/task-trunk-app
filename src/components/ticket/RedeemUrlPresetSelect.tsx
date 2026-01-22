@@ -34,7 +34,7 @@ export const RedeemUrlPresetSelect: React.FC<RedeemUrlPresetSelectProps> = ({
       <div className="relative">
         <input
           type="text"
-          className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+          className="w-full p-3.5 pr-16 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -50,21 +50,39 @@ export const RedeemUrlPresetSelect: React.FC<RedeemUrlPresetSelectProps> = ({
           }}
         />
         
-        {presets && presets.length > 0 && (
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setIsOpen(!isOpen)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-primary transition-colors"
-            type="button"
-          >
-            <motion.div
-              animate={{ rotate: isOpen ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <AnimatePresence>
+            {value && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => onChange('')}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={14} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+          
+          {presets && presets.length > 0 && (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
+              type="button"
             >
-              <ChevronDown size={18} />
-            </motion.div>
-          </motion.button>
-        )}
+              <motion.div
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown size={18} />
+              </motion.div>
+            </motion.button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -98,18 +116,6 @@ export const RedeemUrlPresetSelect: React.FC<RedeemUrlPresetSelectProps> = ({
         )}
       </AnimatePresence>
       
-      {value && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => onChange('')}
-          className="text-[10px] text-ticket-warning flex items-center gap-1 pl-1 hover:underline"
-          type="button"
-        >
-          <X size={10} /> 清除網址
-        </motion.button>
-      )}
     </div>
   );
 };

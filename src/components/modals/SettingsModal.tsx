@@ -195,13 +195,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               特定畫面觸發關鍵字 (MOMO模式)
             </label>
             <div className="flex gap-2 mb-3 pr-1">
-              <input
-                value={newKw}
-                onChange={(e) => setNewKw(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddKw()}
-                placeholder="輸入關鍵字 (如: MOMO, 85度C)..."
-                className="flex-1 p-2 bg-muted rounded-lg text-sm outline-none border-none focus:ring-1 focus:ring-primary min-w-0"
-              />
+              <div className="relative flex-1 min-w-0">
+                <input
+                  value={newKw}
+                  onChange={(e) => setNewKw(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddKw()}
+                  placeholder="輸入關鍵字 (如: MOMO, 85度C)..."
+                  className="w-full p-2 pr-8 bg-muted rounded-lg text-sm outline-none border-none focus:ring-1 focus:ring-primary"
+                />
+                {newKw && (
+                  <button
+                    type="button"
+                    onClick={() => setNewKw('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-card hover:bg-border text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
               <button onClick={handleAddKw} className="px-4 bg-primary text-primary-foreground rounded-lg font-bold shrink-0">
                 <Plus size={18} />
               </button>
@@ -232,13 +243,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <label className="text-xs font-bold text-muted-foreground mb-1 block">
                   備份檔案名稱前綴
                 </label>
-                <input
-                  type="text"
-                  value={localSettings.localBackupFileName || ''}
-                  onChange={(e) => handleGlobalChange('localBackupFileName', e.target.value)}
-                  placeholder="vouchy_backup"
-                  className="w-full p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={localSettings.localBackupFileName || ''}
+                    onChange={(e) => handleGlobalChange('localBackupFileName', e.target.value)}
+                    placeholder="vouchy_backup"
+                    className="w-full p-2.5 pr-10 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {localSettings.localBackupFileName && (
+                    <button
+                      type="button"
+                      onClick={() => handleGlobalChange('localBackupFileName', '')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-muted hover:bg-border text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
                 <p className="text-[10px] text-muted-foreground mt-1">
                   檔名格式：<span className="font-mono">{localSettings.localBackupFileName?.trim() || 'vouchy_backup'}_日期_時間.json</span>
                 </p>
@@ -253,21 +275,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             <div className="space-y-3 bg-muted p-3 rounded-xl">
               <div className="space-y-2">
-                <input
-                  type="text"
-                  value={newPresetLabel}
-                  onChange={(e) => setNewPresetLabel(e.target.value)}
-                  placeholder="名稱 (如: Line Pay)"
-                  className="w-full p-2.5 bg-card rounded-lg text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
-                />
-                <div className="flex gap-2">
+                <div className="relative">
                   <input
                     type="text"
-                    value={newPresetUrl}
-                    onChange={(e) => setNewPresetUrl(e.target.value)}
-                    placeholder="網址 (如: linepay://...)"
-                    className="flex-1 p-2.5 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                    value={newPresetLabel}
+                    onChange={(e) => setNewPresetLabel(e.target.value)}
+                    placeholder="名稱 (如: Line Pay)"
+                    className="w-full p-2.5 pr-10 bg-card rounded-lg text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
                   />
+                  {newPresetLabel && (
+                    <button
+                      type="button"
+                      onClick={() => setNewPresetLabel('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-muted hover:bg-border text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={newPresetUrl}
+                      onChange={(e) => setNewPresetUrl(e.target.value)}
+                      placeholder="網址 (如: linepay://...)"
+                      className="w-full p-2.5 pr-10 bg-card rounded-lg text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    {newPresetUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setNewPresetUrl('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-muted hover:bg-border text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={() => {
                       if (!newPresetLabel.trim() || !newPresetUrl.trim()) return;
