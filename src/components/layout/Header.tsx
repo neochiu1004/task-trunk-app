@@ -16,6 +16,7 @@ import {
   BoxSelect,
   Palette,
   ImageIcon,
+  X,
 } from 'lucide-react';
 import { compressImage } from '@/lib/helpers';
 import { ViewType, SortType } from '@/types/ticket';
@@ -192,8 +193,22 @@ export const Header: React.FC<HeaderProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜尋票券或標籤..."
-            className="w-full py-3 pl-11 pr-4 glass-card rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/40 focus:shadow-lg focus:shadow-primary/10 transition-all duration-200 placeholder:text-muted-foreground/50"
+            className="w-full py-3 pl-11 pr-10 glass-card rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/40 focus:shadow-lg focus:shadow-primary/10 transition-all duration-200 placeholder:text-muted-foreground/50"
           />
+          <AnimatePresence>
+            {searchQuery && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={14} />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Tags Row */}
