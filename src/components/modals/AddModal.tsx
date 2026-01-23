@@ -327,17 +327,17 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
           <AnimatePresence>
             {manualData.name && (
-              <motion.button
-                type="button"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setManualData({ ...manualData, name: '' })}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X size={14} />
-              </motion.button>
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setManualData({ ...manualData, name: '' })}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
+                >
+                  <X size={14} strokeWidth={2.5} />
+                </motion.button>
             )}
           </AnimatePresence>
         </motion.div>
@@ -395,9 +395,9 @@ export const AddModal: React.FC<AddModalProps> = ({
                       setManualData({ ...manualData, serial: '' });
                       setBarcodeFormat(undefined);
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
                   >
-                    <X size={14} />
+                    <X size={14} strokeWidth={2.5} />
                   </motion.button>
                 )}
               </AnimatePresence>
