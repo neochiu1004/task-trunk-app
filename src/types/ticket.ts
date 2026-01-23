@@ -66,6 +66,7 @@ export interface Settings {
   localBackupFileName?: string;
   autoCopySerialOnRedeem?: boolean;
   redeemUrlPresets?: RedeemUrlPreset[];
+  headerButtonSize?: number;
 }
 
 export type ViewType = 'active' | 'completed' | 'deleted';

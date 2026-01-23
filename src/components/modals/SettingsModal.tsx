@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link } from 'lucide-react';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link, MousePointer2 } from 'lucide-react';
 import { Settings, ViewConfig, RedeemUrlPreset } from '../../types/ticket';
 import { generateId } from '../../lib/helpers';
 import { defaultViewConfig } from '../../lib/constants';
@@ -187,6 +187,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 <Plus size={16} />
               </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+              <MousePointer2 size={12} /> 右上角按鈕大小
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleStep('headerButtonSize', -1, 32, 56, false, 4)}
+                className="w-9 h-9 flex items-center justify-center bg-muted rounded-xl text-muted-foreground hover:bg-muted/80 transition-colors"
+              >
+                <Minus size={16} />
+              </button>
+              <div className="flex-1 flex items-center gap-3">
+                <input
+                  type="range"
+                  min="32"
+                  max="56"
+                  step="4"
+                  value={localSettings.headerButtonSize || 44}
+                  onChange={(e) => handleGlobalChange('headerButtonSize', parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <span className="text-xs font-bold text-primary w-10 text-right">{localSettings.headerButtonSize || 44}px</span>
+              </div>
+              <button
+                onClick={() => handleStep('headerButtonSize', 1, 32, 56, false, 4)}
+                className="w-9 h-9 flex items-center justify-center bg-muted rounded-xl text-muted-foreground hover:bg-muted/80 transition-colors"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            <div className="flex gap-2 mt-2 justify-center">
+              <div 
+                className="rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 shadow-md flex items-center justify-center transition-all" 
+                style={{ width: localSettings.headerButtonSize || 44, height: localSettings.headerButtonSize || 44 }}
+              >
+                <Palette size={Math.round((localSettings.headerButtonSize || 44) * 0.4)} className="text-white" />
+              </div>
+              <div 
+                className="rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 shadow-md flex items-center justify-center transition-all" 
+                style={{ width: localSettings.headerButtonSize || 44, height: localSettings.headerButtonSize || 44 }}
+              >
+                <CloudCog size={Math.round((localSettings.headerButtonSize || 44) * 0.4)} className="text-white" />
+              </div>
+              <div 
+                className="rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md flex items-center justify-center transition-all" 
+                style={{ width: localSettings.headerButtonSize || 44, height: localSettings.headerButtonSize || 44 }}
+              >
+                <X size={Math.round((localSettings.headerButtonSize || 44) * 0.4)} className="text-white" />
+              </div>
             </div>
           </div>
 

@@ -50,6 +50,7 @@ interface HeaderProps {
   headerBgOpacity?: number;
   brandLogo?: string;
   onBrandLogoChange: (logo: string) => void;
+  headerButtonSize?: number;
 }
 
 const viewTabs = [
@@ -86,11 +87,20 @@ export const Header: React.FC<HeaderProps> = ({
   headerBgOpacity = 1,
   brandLogo,
   onBrandLogoChange,
+  headerButtonSize = 44,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const iconButtonClass = "w-11 h-11 flex items-center justify-center glass-card rounded-2xl text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 shadow-md border border-border/30 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10";
+  // 計算圖示大小 (按鈕大小的 40%)
+  const iconSize = Math.round(headerButtonSize * 0.4);
+
+  // 按鈕顏色配置
+  const buttonConfigs = [
+    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-pink-500 to-purple-600', hoverClass: 'hover:from-pink-400 hover:to-purple-500' },
+    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-blue-500 to-cyan-600', hoverClass: 'hover:from-blue-400 hover:to-cyan-500' },
+    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-emerald-500 to-teal-600', hoverClass: 'hover:from-emerald-400 hover:to-teal-500' },
+  ];
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -173,15 +183,18 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           <div className="flex gap-2">
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.08 }} onClick={onQuickBgChange} className={iconButtonClass}>
-              <Palette size={18} />
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.08 }} onClick={onOpenSettings} className={iconButtonClass}>
-              <Settings2 size={18} />
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.08 }} onClick={onOpenMenu} className={iconButtonClass}>
-              <MoreVertical size={18} />
-            </motion.button>
+            {buttonConfigs.map((config, index) => (
+              <motion.button
+                key={index}
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.08 }}
+                onClick={config.onClick}
+                style={{ width: headerButtonSize, height: headerButtonSize }}
+                className={`flex items-center justify-center rounded-2xl text-white shadow-lg ${config.bgClass} ${config.hoverClass} active:scale-95 transition-all duration-200`}
+              >
+                <config.icon size={iconSize} />
+              </motion.button>
+            ))}
           </div>
         </div>
 
