@@ -90,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const iconButtonClass = "w-9 h-9 flex items-center justify-center glass-button rounded-2xl text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm";
+  const iconButtonClass = "w-11 h-11 flex items-center justify-center glass-card rounded-2xl text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 shadow-md border border-border/30 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10";
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -173,14 +173,14 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           <div className="flex gap-2">
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.05 }} onClick={onQuickBgChange} className={iconButtonClass}>
-              <Palette size={15} />
+            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.08 }} onClick={onQuickBgChange} className={iconButtonClass}>
+              <Palette size={18} />
             </motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.05 }} onClick={onOpenSettings} className={iconButtonClass}>
-              <Settings2 size={16} />
+            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.08 }} onClick={onOpenSettings} className={iconButtonClass}>
+              <Settings2 size={18} />
             </motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.05 }} onClick={onOpenMenu} className={iconButtonClass}>
-              <MoreVertical size={16} />
+            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.08 }} onClick={onOpenMenu} className={iconButtonClass}>
+              <MoreVertical size={18} />
             </motion.button>
           </div>
         </div>
