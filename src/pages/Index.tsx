@@ -375,6 +375,7 @@ const Index = () => {
           headerBgOpacity={currentConfig.headerBgOpacity}
           brandLogo={settings.brandLogo}
           onBrandLogoChange={(logo) => setSettings((s) => ({ ...s, brandLogo: logo }))}
+          headerButtonSize={settings.headerButtonSize}
         />
         
         <div className="pt-2 min-h-[50vh] pb-24 overflow-x-hidden">
