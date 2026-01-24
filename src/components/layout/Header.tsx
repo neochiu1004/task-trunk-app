@@ -18,6 +18,7 @@ import {
   ImageIcon,
   X,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { compressImage } from '@/lib/helpers';
 import { ViewType, SortType } from '@/types/ticket';
 import vouchyLogo from '@/assets/vouchy-logo.png';
@@ -143,19 +144,28 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
             {/* Brand Logo */}
-            <motion.div
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.05 }}
-              onClick={() => logoInputRef.current?.click()}
-              style={{ width: headerButtonSize, height: headerButtonSize }}
-              className="rounded-2xl bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-lg border-2 border-border/40 ring-1 ring-white/10"
-            >
-              {brandLogo ? (
-                <img src={brandLogo} alt="Brand" className="w-full h-full object-cover" />
-              ) : (
-                <img src={vouchyLogo} alt="Vouchy" className="w-full h-full object-cover" />
-              )}
-            </motion.div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.div
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => logoInputRef.current?.click()}
+                    style={{ width: headerButtonSize, height: headerButtonSize }}
+                    className="rounded-2xl bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-lg border-2 border-border/40 ring-1 ring-white/10"
+                  >
+                    {brandLogo ? (
+                      <img src={brandLogo} alt="Brand" className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={vouchyLogo} alt="Vouchy" className="w-full h-full object-cover" />
+                    )}
+                  </motion.div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  點擊更換 Logo
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <input
               ref={logoInputRef}
               type="file"
