@@ -98,9 +98,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   // 按鈕顏色配置
   const buttonConfigs = [
-    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-pink-500 to-purple-600', hoverClass: 'hover:from-pink-400 hover:to-purple-500' },
-    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-blue-500 to-cyan-600', hoverClass: 'hover:from-blue-400 hover:to-cyan-500' },
-    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-emerald-500 to-teal-600', hoverClass: 'hover:from-emerald-400 hover:to-teal-500' },
+    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-pink-500 to-purple-600', hoverClass: 'hover:from-pink-400 hover:to-purple-500', tooltip: '背景' },
+    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-blue-500 to-cyan-600', hoverClass: 'hover:from-blue-400 hover:to-cyan-500', tooltip: '設定' },
+    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-emerald-500 to-teal-600', hoverClass: 'hover:from-emerald-400 hover:to-teal-500', tooltip: '選單' },
   ];
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,18 +194,26 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           <div className="flex gap-2">
-            {buttonConfigs.map((config, index) => (
-              <motion.button
-                key={index}
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.08 }}
-                onClick={config.onClick}
-                style={{ width: headerButtonSize, height: headerButtonSize }}
-                className={`flex items-center justify-center rounded-2xl text-white shadow-lg ${config.bgClass} ${config.hoverClass} active:scale-95 transition-all duration-200`}
-              >
-                <config.icon size={iconSize} />
-              </motion.button>
-            ))}
+            <TooltipProvider>
+              {buttonConfigs.map((config, index) => (
+                <Tooltip key={index}>
+                  <TooltipTrigger asChild>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.08 }}
+                      onClick={config.onClick}
+                      style={{ width: headerButtonSize, height: headerButtonSize }}
+                      className={`flex items-center justify-center rounded-2xl text-white shadow-lg ${config.bgClass} ${config.hoverClass} active:scale-95 transition-all duration-200`}
+                    >
+                      <config.icon size={iconSize} />
+                    </motion.button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    {config.tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </TooltipProvider>
           </div>
         </div>
 
