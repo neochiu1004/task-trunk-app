@@ -184,13 +184,22 @@ export const Header: React.FC<HeaderProps> = ({
                 onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
               />
             ) : (
-              <motion.h1
-                whileTap={{ scale: 0.98 }}
-                className="text-xl font-bold cursor-pointer flex items-center gap-2 tracking-tight"
-                onClick={() => setIsEditingTitle(true)}
-              >
-                <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{appTitle}</span>
-              </motion.h1>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.h1
+                      whileTap={{ scale: 0.98 }}
+                      className="text-xl font-bold cursor-pointer flex items-center gap-2 tracking-tight"
+                      onClick={() => setIsEditingTitle(true)}
+                    >
+                      <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{appTitle}</span>
+                    </motion.h1>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    點擊編輯標題
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <div className="flex gap-2">
