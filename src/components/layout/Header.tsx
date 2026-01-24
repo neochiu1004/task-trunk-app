@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.05 }}
               onClick={() => logoInputRef.current?.click()}
-              className="w-10 h-10 rounded-2xl glass-button flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-md"
+              className="w-11 h-11 rounded-2xl bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-lg border-2 border-border/40 ring-1 ring-white/10"
             >
               {brandLogo ? (
                 <img src={brandLogo} alt="Brand" className="w-full h-full object-cover" />
