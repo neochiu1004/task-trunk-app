@@ -37,8 +37,8 @@ export interface ViewConfig {
   bgSize: number;
   cardBgColor: string;
   cardBorderColor: string;
-  compactHeight: number;
-  compactShowImage: boolean;
+  gridImageHeight: number;
+  gridColumns: number;
   headerBgSize: number;
   headerBgPosY: number;
   headerBgOpacity: number;

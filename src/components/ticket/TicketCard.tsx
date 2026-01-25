@@ -16,8 +16,7 @@ interface TicketCardProps {
   cardBgColor?: string;
   cardBorderColor?: string;
   isCompact: boolean;
-  compactHeight?: number;
-  compactShowImage?: boolean;
+  gridImageHeight?: number;
   index?: number;
   hasHealthIssue?: boolean;
 }
@@ -34,8 +33,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   cardBgColor,
   cardBorderColor,
   isCompact,
-  compactHeight = 72,
-  compactShowImage = false,
+  gridImageHeight = 96,
   index = 0,
   hasHealthIssue = false,
 }) => {
@@ -145,7 +143,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         {/* Content layer */}
         <div className="relative z-10 flex flex-col flex-1">
           {/* Image header area */}
-          <div className="h-24 rounded-xl mb-3 flex items-center justify-center overflow-hidden shadow-inner">
+          <div 
+            className="rounded-xl mb-3 flex items-center justify-center overflow-hidden shadow-inner"
+            style={{ height: `${gridImageHeight}px` }}
+          >
             {ticket.image ? (
               <img
                 src={ticket.image}
