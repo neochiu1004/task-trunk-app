@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink } from 'lucide-react';
+import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink, QrCode, Ticket as TicketIcon } from 'lucide-react';
 import { Ticket } from '@/types/ticket';
 import { checkIsExpiringSoon, formatTime, formatDateTime } from '@/lib/helpers';
 
@@ -91,6 +91,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   // Calculate background opacity for card (content stays at full opacity)
   const cardBgOpacity = opacity !== undefined && opacity < 1 ? opacity : 1;
 
+  // Get status dot color
+  const getStatusDotColor = () => {
+    if (isHealthIssueWarning) return 'bg-ticket-danger';
+    if (isExpiringWarning) return 'bg-ticket-warning';
+    if (ticket.completed) return 'bg-muted-foreground';
+    return 'bg-ticket-success';
+  };
+
   if (isCompact) {
     return (
       <motion.div
@@ -104,34 +112,40 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           if (isSelectionMode) onSelect(ticket.id);
           else onClick(ticket);
         }}
-        style={{ height: `${Math.max(compactHeight - 8, 56)}px` }}
-        className={`mx-3 mb-2 px-3 rounded-2xl flex items-center gap-2.5 cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
+        className={`rounded-2xl p-3 cursor-pointer relative overflow-hidden flex flex-col ${getStatusStyles()}`}
       >
         {/* Background layer with opacity */}
         <div 
-          className="absolute inset-0 glass-card rounded-2xl"
+          className="absolute inset-0 glass-card rounded-2xl border border-border/50"
           style={{ 
             opacity: cardBgOpacity,
             ...(cardBgColor && { backgroundColor: cardBgColor }),
             ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
           }} 
         />
-        {/* Content layer - always full opacity */}
-        <div className="relative z-10 flex items-center gap-2.5 w-full h-full py-1">
+        
+        {/* Status dot indicator */}
+        <div className="absolute top-0 right-0 p-2 z-20">
+          <span className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} block ring-4 ring-card`}></span>
+        </div>
+        
+        {/* Selection checkbox */}
         {isSelectionMode && (
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className={`w-5 h-5 flex-shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${
-              isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30 bg-background/50'
+            className={`absolute top-2 left-2 z-20 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+              isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30 bg-background/80'
             }`}
           >
             {isSelected && <Check size={12} className="text-primary-foreground" />}
           </motion.div>
         )}
         
-        {compactShowImage && (
-          <div className="h-14 w-14 flex-shrink-0 rounded-xl overflow-hidden shadow-sm">
+        {/* Content layer */}
+        <div className="relative z-10 flex flex-col flex-1">
+          {/* Image header area */}
+          <div className="h-24 rounded-xl mb-3 flex items-center justify-center overflow-hidden shadow-inner">
             {ticket.image ? (
               <img
                 src={ticket.image}
@@ -139,52 +153,50 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 alt=""
               />
             ) : (
-              <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-                <span className="text-muted-foreground text-sm">🎫</span>
+              <div className="w-full h-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                <TicketIcon size={28} className="text-primary-foreground" />
               </div>
             )}
           </div>
-        )}
-        
-        <div className="flex-1 min-w-0 py-2.5">
-          <div className="flex items-center gap-2">
-            {isHealthIssueWarning && (
-              <span className="text-[10px] bg-ticket-danger text-primary-foreground px-2 py-0.5 rounded-lg font-semibold shadow-sm">不符</span>
-            )}
-            {isDuplicateWarning && !isHealthIssueWarning && (
-              <span className="text-[10px] bg-ticket-warning text-primary-foreground px-2 py-0.5 rounded-lg font-semibold shadow-sm">重複</span>
-            )}
-            <h3 className={`font-semibold text-foreground line-clamp-1 text-sm tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
+          
+          {/* Main content */}
+          <div className="flex-1">
+            <h3 className={`font-bold text-foreground leading-tight line-clamp-1 text-sm ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
               {ticket.productName}
               {ticket.originalImage && <Maximize2 size={10} className="inline ml-1 text-primary" />}
               {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
             </h3>
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            {isExpiringWarning && (
-              <span className="text-[10px] font-semibold text-ticket-warning flex items-center gap-0.5">
-                <AlertCircle size={10} /> 快到期
-              </span>
+            
+            {/* Tags as subtitle */}
+            {ticket.tags && ticket.tags.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                {ticket.tags.join(', ')}
+              </p>
             )}
-            <span className={`text-[11px] font-medium ${ticket.completed ? 'text-muted-foreground' : 'text-ticket-success'}`}>
-              {ticket.completed ? `已用 ${formatTime(ticket.completedAt)}` : ticket.expiry || '無期限'}
-            </span>
+            
+            {/* Expiry info */}
+            <div className="flex items-center gap-1 mt-2">
+              {isExpiringWarning ? (
+                <span className="text-xs font-medium text-ticket-warning flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  <span>快到期</span>
+                </span>
+              ) : (
+                <span className={`text-xs font-medium flex items-center gap-1 ${ticket.completed ? 'text-muted-foreground' : 'text-ticket-success'}`}>
+                  <Clock size={12} />
+                  <span>{ticket.completed ? `已用 ${formatTime(ticket.completedAt)}` : ticket.expiry || '無期限'}</span>
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        
-        {!isSelectionMode && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`flex-shrink-0 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 shadow-sm ${
-              ticket.completed
-                ? 'bg-muted text-muted-foreground'
-                : 'bg-ticket-success text-primary-foreground hover:shadow-md hover:shadow-ticket-success/30'
-            }`}
-          >
-            {ticket.completed ? '查看' : '兌換'}
-          </motion.button>
-        )}
+          
+          {/* Footer with serial and QR icon */}
+          <div className="mt-3 pt-3 border-t border-border/50 flex justify-between items-center">
+            <span className="text-[10px] text-muted-foreground font-mono tracking-wider line-clamp-1">
+              #{ticket.serial?.slice(0, 8) || 'N/A'}
+            </span>
+            <QrCode size={18} className="text-muted-foreground/40 flex-shrink-0" />
+          </div>
         </div>
       </motion.div>
     );
