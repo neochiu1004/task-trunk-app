@@ -64,6 +64,7 @@ const Index = () => {
             ...dbSettings,
             bgConfigMap: dbSettings.bgConfigMap || {},
             specificViewKeywords: dbSettings.specificViewKeywords || ['MOMO', '85度C'],
+            brandLogo: dbSettings.brandLogo || '',
             viewConfigs: {
               active: migrateConfig(dbSettings.viewConfigs?.active),
               completed: migrateConfig(dbSettings.viewConfigs?.completed),
