@@ -387,7 +387,7 @@ const Index = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={isCompact ? "grid grid-cols-2 gap-3 px-4" : ""}
+              className={isCompact ? `grid gap-3 px-4 ${(currentConfig.gridColumns || 2) === 3 ? 'grid-cols-3' : 'grid-cols-2'}` : ""}
             >
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((t, index) => (
@@ -404,8 +404,7 @@ const Index = () => {
                     cardBgColor={currentConfig.cardBgColor}
                     cardBorderColor={currentConfig.cardBorderColor}
                     isCompact={isCompact}
-                    compactHeight={currentConfig.compactHeight}
-                    compactShowImage={currentConfig.compactShowImage}
+                    gridImageHeight={currentConfig.gridImageHeight}
                     index={index}
                     hasHealthIssue={healthIssueSerials.has(t.serial || '')}
                   />

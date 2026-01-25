@@ -831,28 +831,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="bg-muted p-3 rounded-xl space-y-3">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                    <Rows size={12} /> 列表模式高度
+                    <Rows size={12} /> 網格圖片高度
                   </label>
-                  <span className="text-xs font-bold text-primary">{currentViewConfig.compactHeight || 70}px</span>
+                  <span className="text-xs font-bold text-primary">{currentViewConfig.gridImageHeight || 96}px</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleStep('compactHeight', -1, 40, 150, true, 5)}
+                    onClick={() => handleStep('gridImageHeight', -1, 64, 160, true, 8)}
                     className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
                   >
                     <Minus size={14} />
                   </button>
                   <input
                     type="range"
-                    min="40"
-                    max="150"
-                    step="5"
-                    value={currentViewConfig.compactHeight || 70}
-                    onChange={(e) => handleViewConfigChange('compactHeight', parseInt(e.target.value))}
+                    min="64"
+                    max="160"
+                    step="8"
+                    value={currentViewConfig.gridImageHeight || 96}
+                    onChange={(e) => handleViewConfigChange('gridImageHeight', parseInt(e.target.value))}
                     className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
                   />
                   <button
-                    onClick={() => handleStep('compactHeight', 1, 40, 150, true, 5)}
+                    onClick={() => handleStep('gridImageHeight', 1, 64, 160, true, 8)}
                     className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:text-primary hover:border-primary transition-all"
                   >
                     <Plus size={14} />
@@ -861,20 +861,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className="flex justify-between items-center mt-2">
                   <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                    <ImageIcon size={12} /> 列表顯示圖片
+                    <ImageIcon size={12} /> 網格欄數
                   </label>
-                  <button
-                    onClick={() => handleViewConfigChange('compactShowImage', !currentViewConfig.compactShowImage)}
-                    className={`w-10 h-5 rounded-full relative transition-colors ${
-                      currentViewConfig.compactShowImage ? 'bg-primary' : 'bg-muted-foreground/30'
-                    }`}
-                  >
-                    <div
-                      className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${
-                        currentViewConfig.compactShowImage ? 'left-6' : 'left-1'
-                      }`}
-                    ></div>
-                  </button>
+                  <div className="flex gap-1">
+                    {[2, 3].map((cols) => (
+                      <button
+                        key={cols}
+                        onClick={() => handleViewConfigChange('gridColumns', cols)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          (currentViewConfig.gridColumns || 2) === cols
+                            ? 'bg-primary text-primary-foreground shadow-md'
+                            : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {cols} 欄
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
