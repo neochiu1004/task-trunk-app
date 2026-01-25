@@ -387,6 +387,7 @@ const Index = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
+              className={isCompact ? "grid grid-cols-2 gap-3 px-4" : ""}
             >
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((t, index) => (
