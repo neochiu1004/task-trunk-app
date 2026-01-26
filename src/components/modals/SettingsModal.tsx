@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link, MousePointer2 } from 'lucide-react';
+import { X, Minus, Plus, Check, CloudCog, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link, MousePointer2 } from 'lucide-react';
 import { Settings, ViewConfig, RedeemUrlPreset } from '../../types/ticket';
 import { generateId } from '../../lib/helpers';
 import { defaultViewConfig } from '../../lib/constants';
@@ -27,7 +27,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [localSettings, setLocalSettings] = useState<Settings>(() =>
     settings ? JSON.parse(JSON.stringify(settings)) : ({} as Settings)
   );
-  const [currentTab, setCurrentTab] = useState<'active' | 'completed' | 'deleted'>('active');
   const [testStatus, setTestStatus] = useState<'sending' | 'success' | 'error' | null>(null);
   const [newKw, setNewKw] = useState('');
   const [newPresetLabel, setNewPresetLabel] = useState('');
@@ -37,7 +36,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentViewConfig: ViewConfig = localSettings.viewConfigs?.[currentTab] || { ...defaultViewConfig };
+  // Use active config as the unified config (all views share the same settings)
+  const currentViewConfig: ViewConfig = localSettings.viewConfigs?.active || { ...defaultViewConfig };
 
   const handleGlobalChange = (key: keyof Settings, value: any) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
@@ -60,20 +60,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     );
   };
 
+  // Update all views with the same config (unified settings)
   const handleViewConfigChange = (key: keyof ViewConfig, value: any) => {
     setLocalSettings((prev) => {
       const next = { ...prev };
-      const currentView = { ...next.viewConfigs[currentTab] };
-      (currentView as any)[key] = value;
+      const updatedConfig = { ...next.viewConfigs.active };
+      (updatedConfig as any)[key] = value;
 
-      const imageUrl = currentView.backgroundImage;
+      const imageUrl = updatedConfig.backgroundImage;
       if (!next.bgConfigMap) next.bgConfigMap = {};
 
       if (key === 'backgroundImage' && value) {
         const sharedConfig = next.bgConfigMap[value];
         if (sharedConfig) {
-          currentView.bgSize = sharedConfig.bgSize ?? currentView.bgSize;
-          currentView.bgPosY = sharedConfig.bgPosY ?? currentView.bgPosY;
+          updatedConfig.bgSize = sharedConfig.bgSize ?? updatedConfig.bgSize;
+          updatedConfig.bgPosY = sharedConfig.bgPosY ?? updatedConfig.bgPosY;
         }
       } else if (imageUrl && (key === 'bgSize' || key === 'bgPosY')) {
         next.bgConfigMap[imageUrl] = {
@@ -82,7 +83,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         };
       }
 
-      next.viewConfigs = { ...next.viewConfigs, [currentTab]: currentView };
+      // Apply the same config to all views
+      next.viewConfigs = {
+        active: { ...updatedConfig },
+        completed: { ...updatedConfig },
+        deleted: { ...updatedConfig },
+      };
       return next;
     });
   };
@@ -415,24 +421,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className="border-t border-border pt-4">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">外觀設定</label>
-
-            <div className="flex bg-muted p-1 rounded-xl mb-4">
-              {([
-                { id: 'active', label: '待使用', icon: ListTodo },
-                { id: 'completed', label: '已使用', icon: CheckCircle2 },
-                { id: 'deleted', label: '回收桶', icon: Trash },
-              ] as const).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setCurrentTab(tab.id)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-                    currentTab === tab.id ? 'bg-card shadow text-primary' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <tab.icon size={12} /> {tab.label}
-                </button>
-              ))}
-            </div>
 
             <div className="space-y-4 animate-fade-in">
               <div className="bg-muted p-3 rounded-xl space-y-3">
