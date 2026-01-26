@@ -9,9 +9,6 @@ import {
   ArrowUpDown,
   Rows,
   LayoutGrid,
-  ListTodo,
-  CheckCircle2,
-  Trash,
   CheckSquare,
   BoxSelect,
   Palette,
@@ -20,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { compressImage } from '@/lib/helpers';
-import { ViewType, SortType } from '@/types/ticket';
+import { SortType } from '@/types/ticket';
 import vouchyLogo from '@/assets/vouchy-logo.png';
 
 interface HeaderProps {
@@ -38,8 +35,6 @@ interface HeaderProps {
   onSelectAll: () => void;
   isCompact: boolean;
   setIsCompact: (compact: boolean) => void;
-  view: ViewType;
-  setView: (view: ViewType) => void;
   activeTag: string;
   setActiveTag: (tag: string) => void;
   allTags: string[];
@@ -53,12 +48,6 @@ interface HeaderProps {
   onBrandLogoChange: (logo: string) => void;
   headerButtonSize?: number;
 }
-
-const viewTabs = [
-  { id: 'active' as const, label: '待使用', icon: ListTodo },
-  { id: 'completed' as const, label: '已使用', icon: CheckCircle2 },
-  { id: 'deleted' as const, label: '回收桶', icon: Trash },
-];
 
 export const Header: React.FC<HeaderProps> = ({
   appTitle,
@@ -75,8 +64,6 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectAll,
   isCompact,
   setIsCompact,
-  view,
-  setView,
   activeTag,
   setActiveTag,
   allTags,
@@ -348,32 +335,6 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </AnimatePresence>
             
-            {/* View Tabs - Premium Pill Design */}
-            <div className="flex glass-card p-1 rounded-2xl flex-shrink-0 shadow-md">
-              {viewTabs.map((tab) => (
-                <motion.button
-                  key={tab.id}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setView(tab.id)}
-                  className={`relative px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 ${
-                    view === tab.id 
-                      ? 'text-primary' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {view === tab.id && (
-                    <motion.div
-                      layoutId="activeViewTab"
-                      className="absolute inset-0 bg-card shadow-md rounded-xl"
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative z-10 flex items-center gap-1.5">
-                    <tab.icon size={12} /> {tab.label}
-                  </span>
-                </motion.button>
-              ))}
-            </div>
           </div>
 
           <div className="flex gap-2 flex-shrink-0">
