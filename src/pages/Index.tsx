@@ -467,7 +467,6 @@ const Index = () => {
           view={view}
           setView={setView}
           onAddClick={() => setShowAddModal(true)}
-          onSettingsClick={() => setShowSettings(true)}
         />
       </div>
 
