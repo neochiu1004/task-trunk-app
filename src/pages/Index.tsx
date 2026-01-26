@@ -7,6 +7,7 @@ import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
 import { validateImportData } from '@/lib/validation';
 import { Header } from '@/components/layout/Header';
+import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { TicketCard } from '@/components/ticket/TicketCard';
 import { RedeemModal } from '@/components/ticket/RedeemModal';
 import { AddModal } from '@/components/modals/AddModal';
@@ -363,8 +364,6 @@ const Index = () => {
           onSelectAll={handleSelectAll}
           isCompact={isCompact}
           setIsCompact={setIsCompact}
-          view={view}
-          setView={setView}
           activeTag={activeTag}
           setActiveTag={setActiveTag}
           allTags={allTags}
@@ -379,7 +378,7 @@ const Index = () => {
           headerButtonSize={settings.headerButtonSize}
         />
         
-        <div className="pt-2 min-h-[50vh] pb-24 overflow-x-hidden">
+        <div className="pt-2 min-h-[50vh] pb-28 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={view + activeTag + sortType}
@@ -423,60 +422,53 @@ const Index = () => {
           </AnimatePresence>
         </div>
         
-        <AnimatePresence>
-          {isSelectionMode ? (
-            <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-2.5 z-40"
-            >
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => { setIsSelectionMode(false); setSelectedIds(new Set()); }}
-                className="px-5 py-3.5 glass-card text-foreground rounded-2xl font-semibold text-sm shadow-glass-lg"
-              >
-                取消
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowBatchModal(true)}
-                disabled={selectedIds.size === 0}
-                className="px-5 py-3.5 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Pencil size={16} /> 編輯 {selectedIds.size} 張
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  if (confirm(`確定刪除 ${selectedIds.size} 張票券？`)) {
-                    const skipConfirm = view === 'deleted';
-                    selectedIds.forEach((id) => handleDelete(id, false, skipConfirm));
-                    setSelectedIds(new Set());
-                    setIsSelectionMode(false);
-                  }
-                }}
-                disabled={selectedIds.size === 0}
-                className="px-5 py-3.5 bg-ticket-warning text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash2 size={16} />
-              </motion.button>
-            </motion.div>
-          ) : (
+        {isSelectionMode && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-2.5 z-40"
+          >
             <motion.button
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowAddModal(true)}
-              className="fixed bottom-8 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-2xl shadow-premium flex items-center justify-center z-40"
+              onClick={() => { setIsSelectionMode(false); setSelectedIds(new Set()); }}
+              className="px-5 py-3.5 glass-card text-foreground rounded-2xl font-semibold text-sm shadow-glass-lg"
             >
-              <Plus size={26} strokeWidth={2.5} />
+              取消
             </motion.button>
-          )}
-        </AnimatePresence>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowBatchModal(true)}
+              disabled={selectedIds.size === 0}
+              className="px-5 py-3.5 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Pencil size={16} /> 編輯 {selectedIds.size} 張
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (confirm(`確定刪除 ${selectedIds.size} 張票券？`)) {
+                  const skipConfirm = view === 'deleted';
+                  selectedIds.forEach((id) => handleDelete(id, false, skipConfirm));
+                  setSelectedIds(new Set());
+                  setIsSelectionMode(false);
+                }
+              }}
+              disabled={selectedIds.size === 0}
+              className="px-5 py-3.5 bg-ticket-warning text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={16} />
+            </motion.button>
+          </motion.div>
+        )}
+        
+        <BottomNavigation
+          view={view}
+          setView={setView}
+          onAddClick={() => setShowAddModal(true)}
+          onSettingsClick={() => setShowSettings(true)}
+        />
       </div>
 
       <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} settings={settings} redeemUrlPresets={settings.redeemUrlPresets} />
