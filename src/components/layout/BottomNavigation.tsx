@@ -36,15 +36,26 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
           {/* Navigation Bar */}
           <nav className="glass-header border-t border-border/30 px-4 pt-2 pb-6 flex items-center justify-around">
-            {navItems.map((item) => (
-              <NavItem
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                isActive={view === item.id}
-                onClick={() => setView(item.id)}
-              />
-            ))}
+            <NavItem
+              icon={navItems[0].icon}
+              label={navItems[0].label}
+              isActive={view === navItems[0].id}
+              onClick={() => setView(navItems[0].id)}
+            />
+            <NavItem
+              icon={navItems[1].icon}
+              label={navItems[1].label}
+              isActive={view === navItems[1].id}
+              onClick={() => setView(navItems[1].id)}
+            />
+            {/* Center spacer for FAB */}
+            <div className="w-16" />
+            <NavItem
+              icon={navItems[2].icon}
+              label={navItems[2].label}
+              isActive={view === navItems[2].id}
+              onClick={() => setView(navItems[2].id)}
+            />
           </nav>
         </div>
       </div>
