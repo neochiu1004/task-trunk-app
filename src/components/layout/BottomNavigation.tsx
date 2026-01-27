@@ -32,19 +32,20 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             onClick={() => setView(navItems[0].id)}
           />
           
-          {/* Add Button in center */}
+          {/* Add Button in center - highlighted */}
           <motion.button
             whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
             onClick={onAddClick}
-            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors text-primary"
+            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
           >
             <div className="relative">
               <motion.div
-                className="absolute -inset-2 bg-primary/20 rounded-xl"
+                className="absolute -inset-2.5 bg-gradient-to-tr from-primary to-primary/70 rounded-xl shadow-lg shadow-primary/30"
               />
-              <Plus size={22} className="relative z-10" />
+              <Plus size={22} className="relative z-10 text-primary-foreground" />
             </div>
-            <span className="text-[10px] font-medium">新增</span>
+            <span className="text-[10px] font-semibold text-primary">新增</span>
           </motion.button>
           
           <NavItem
