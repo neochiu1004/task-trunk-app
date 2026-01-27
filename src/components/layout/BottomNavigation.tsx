@@ -23,41 +23,43 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-md pointer-events-auto">
-        <div className="relative">
-          {/* Floating Action Button */}
+        {/* Navigation Bar */}
+        <nav className="glass-header border-t border-border/30 px-4 pt-2 pb-6 flex items-center justify-around">
+          <NavItem
+            icon={navItems[0].icon}
+            label={navItems[0].label}
+            isActive={view === navItems[0].id}
+            onClick={() => setView(navItems[0].id)}
+          />
+          
+          {/* Add Button in center */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            whileHover={{ scale: 1.05 }}
             onClick={onAddClick}
-            className="absolute left-1/2 -translate-x-1/2 -top-6 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground shadow-xl shadow-primary/40 flex items-center justify-center z-10"
+            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors text-primary"
           >
-            <Plus size={28} strokeWidth={2.5} />
+            <div className="relative">
+              <motion.div
+                className="absolute -inset-2 bg-primary/20 rounded-xl"
+              />
+              <Plus size={22} className="relative z-10" />
+            </div>
+            <span className="text-[10px] font-medium">新增</span>
           </motion.button>
-
-          {/* Navigation Bar */}
-          <nav className="glass-header border-t border-border/30 px-4 pt-2 pb-6 flex items-center justify-around">
-            <NavItem
-              icon={navItems[0].icon}
-              label={navItems[0].label}
-              isActive={view === navItems[0].id}
-              onClick={() => setView(navItems[0].id)}
-            />
-            <NavItem
-              icon={navItems[1].icon}
-              label={navItems[1].label}
-              isActive={view === navItems[1].id}
-              onClick={() => setView(navItems[1].id)}
-            />
-            {/* Center spacer for FAB */}
-            <div className="w-16" />
-            <NavItem
-              icon={navItems[2].icon}
-              label={navItems[2].label}
-              isActive={view === navItems[2].id}
-              onClick={() => setView(navItems[2].id)}
-            />
-          </nav>
-        </div>
+          
+          <NavItem
+            icon={navItems[1].icon}
+            label={navItems[1].label}
+            isActive={view === navItems[1].id}
+            onClick={() => setView(navItems[1].id)}
+          />
+          <NavItem
+            icon={navItems[2].icon}
+            label={navItems[2].label}
+            isActive={view === navItems[2].id}
+            onClick={() => setView(navItems[2].id)}
+          />
+        </nav>
       </div>
     </div>
   );
