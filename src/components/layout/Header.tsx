@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="px-4 pt-10 pb-4 sticky top-0 z-40 glass-header rounded-b-[24px] relative overflow-hidden"
+      className="fixed top-0 left-0 right-0 z-40 px-4 pt-10 pb-4 glass-header rounded-b-[24px] overflow-hidden"
     >
       {/* 背景圖層：獨立控制背景圖的透明度 */}
       {headerBackgroundImage && (

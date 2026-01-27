@@ -378,7 +378,7 @@ const Index = () => {
           headerButtonSize={settings.headerButtonSize}
         />
         
-        <div className="pt-2 min-h-[50vh] pb-28 overflow-x-hidden">
+        <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={view + activeTag + sortType}
