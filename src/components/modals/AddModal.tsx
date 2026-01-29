@@ -310,20 +310,10 @@ export const AddModal: React.FC<AddModalProps> = ({
           className="relative"
         >
           <input
-            className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-medium focus:ring-2 focus:ring-primary/30 transition-all"
+            className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-medium text-base focus:ring-2 focus:ring-primary/30 transition-all"
             placeholder="票券名稱 (必填)"
             value={manualData.name}
             onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
-            onTouchStart={(e) => e.stopPropagation()}
-            onFocus={(e) => {
-              const target = e.target;
-              target.style.touchAction = 'manipulation';
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 350);
-              });
-            }}
           />
           <AnimatePresence>
             {manualData.name && (
@@ -368,20 +358,10 @@ export const AddModal: React.FC<AddModalProps> = ({
           <div className="flex items-center gap-2 w-full max-w-full">
             <div className="relative flex-1 min-w-0">
               <input
-                className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-mono text-sm focus:ring-2 focus:ring-primary/30 transition-all"
+                className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-mono text-base focus:ring-2 focus:ring-primary/30 transition-all"
                 placeholder="序號/代碼"
                 value={manualData.serial}
                 onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
-                onTouchStart={(e) => e.stopPropagation()}
-                onFocus={(e) => {
-                  const target = e.target;
-                  target.style.touchAction = 'manipulation';
-                  requestAnimationFrame(() => {
-                    setTimeout(() => {
-                      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }, 350);
-                  });
-                }}
               />
               <AnimatePresence>
                 {manualData.serial && (
@@ -436,19 +416,9 @@ export const AddModal: React.FC<AddModalProps> = ({
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">兌換期限</label>
           <input
             type="date"
-            className="w-full p-3.5 glass-card rounded-xl outline-none text-sm font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+            className="w-full p-3.5 glass-card rounded-xl outline-none text-base font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
             value={manualData.expiry}
             onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
-            onTouchStart={(e) => e.stopPropagation()}
-            onFocus={(e) => {
-              const target = e.target;
-              target.style.touchAction = 'manipulation';
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 350);
-              });
-            }}
           />
         </motion.div>
 
