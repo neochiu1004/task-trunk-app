@@ -38,16 +38,6 @@ export const RedeemUrlPresetSelect: React.FC<RedeemUrlPresetSelectProps> = ({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onTouchStart={(e) => e.stopPropagation()}
-          onFocus={(e) => {
-            const target = e.target;
-            target.style.touchAction = 'manipulation';
-            requestAnimationFrame(() => {
-              setTimeout(() => {
-                target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              }, 350);
-            });
-          }}
         />
         
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
