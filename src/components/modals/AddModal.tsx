@@ -20,6 +20,7 @@ interface AddModalProps {
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
   onReorderTemplate: (fromIndex: number, toIndex: number) => void;
+  onRenameTemplate: (id: string, newLabel: string) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
   onAddBatch: (tickets: Array<{
     id: string;
@@ -48,6 +49,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   templates,
   onDeleteTemplate,
   onReorderTemplate,
+  onRenameTemplate,
   redeemUrlPresets,
   onAddBatch,
 }) => {
@@ -244,6 +246,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                 onApplyTemplate={applyTemplate}
                 onDeleteTemplate={onDeleteTemplate}
                 onReorderTemplates={onReorderTemplate}
+                onRenameTemplate={onRenameTemplate}
               />
             </div>
           </motion.div>
