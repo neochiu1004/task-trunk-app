@@ -45,6 +45,7 @@ interface RedeemModalProps {
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
   onReorderTemplate: (fromIndex: number, toIndex: number) => void;
+  onRenameTemplate: (id: string, newLabel: string) => void;
   settings?: Settings;
   redeemUrlPresets?: RedeemUrlPreset[];
 }
@@ -64,6 +65,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   templates,
   onDeleteTemplate,
   onReorderTemplate,
+  onRenameTemplate,
   settings,
   redeemUrlPresets,
 }) => {
@@ -354,6 +356,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             onApplyTemplate={applyTemplate}
                             onDeleteTemplate={onDeleteTemplate}
                             onReorderTemplates={onReorderTemplate}
+                            onRenameTemplate={onRenameTemplate}
                           />
                         </div>
                       )}

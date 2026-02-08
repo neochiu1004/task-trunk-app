@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, Image as ImageIcon, Link, GripVertical } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Image as ImageIcon, Link, GripVertical, Pencil, Check } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 
 interface DraggableTemplateListProps {
@@ -9,6 +9,7 @@ interface DraggableTemplateListProps {
   onApplyTemplate: (template: Template) => void;
   onDeleteTemplate: (id: string) => void;
   onReorderTemplates: (fromIndex: number, toIndex: number) => void;
+  onRenameTemplate: (id: string, newLabel: string) => void;
 }
 
 export const DraggableTemplateList: React.FC<DraggableTemplateListProps> = ({
@@ -17,9 +18,20 @@ export const DraggableTemplateList: React.FC<DraggableTemplateListProps> = ({
   onApplyTemplate,
   onDeleteTemplate,
   onReorderTemplates,
+  onRenameTemplate,
 }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -142,7 +154,9 @@ export const DraggableTemplateList: React.FC<DraggableTemplateListProps> = ({
               onTouchStart={(e) => handleTouchStart(e, index)}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              onClick={() => onApplyTemplate(tpl)}
+              onClick={() => {
+                if (editingId !== tpl.id) onApplyTemplate(tpl);
+              }}
             >
               <div className="flex items-center gap-1.5">
                 {/* Drag Handle */}
@@ -161,9 +175,64 @@ export const DraggableTemplateList: React.FC<DraggableTemplateListProps> = ({
                   )}
                 </div>
                 
-                <span className="text-xs font-semibold text-foreground max-w-[50px] truncate flex-1">
-                  {tpl.label}
-                </span>
+                {editingId === tpl.id ? (
+                  <input
+                    ref={editInputRef}
+                    className="text-xs font-semibold text-foreground max-w-[60px] bg-background/80 border border-primary/30 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-primary/50"
+                    value={editingLabel}
+                    onChange={(e) => setEditingLabel(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (editingLabel.trim()) {
+                          onRenameTemplate(tpl.id, editingLabel.trim());
+                        }
+                        setEditingId(null);
+                      } else if (e.key === 'Escape') {
+                        setEditingId(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editingLabel.trim() && editingLabel.trim() !== tpl.label) {
+                        onRenameTemplate(tpl.id, editingLabel.trim());
+                      }
+                      setEditingId(null);
+                    }}
+                  />
+                ) : (
+                  <span className="text-xs font-semibold text-foreground max-w-[50px] truncate flex-1">
+                    {tpl.label}
+                  </span>
+                )}
+                
+                {editingId === tpl.id ? (
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (editingLabel.trim()) {
+                        onRenameTemplate(tpl.id, editingLabel.trim());
+                      }
+                      setEditingId(null);
+                    }}
+                    className="shrink-0 text-primary p-0.5"
+                  >
+                    <Check size={12} />
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingId(tpl.id);
+                      setEditingLabel(tpl.label);
+                    }}
+                    className="shrink-0 text-muted-foreground/40 hover:text-primary p-0.5"
+                  >
+                    <Pencil size={10} />
+                  </motion.button>
+                )}
                 
                 <motion.button
                   whileTap={{ scale: 0.9 }}
