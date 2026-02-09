@@ -1,24 +1,29 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image as ImageIcon, Link, GripVertical, Pencil, Check, Tag, Hash, Calendar, ExternalLink } from 'lucide-react';
+import { X, Image as ImageIcon, Link, GripVertical, Pencil, Check } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
+import { TemplatePreviewPopover } from './TemplatePreviewPopover';
 
 interface DraggableTemplateListProps {
   templates: Template[];
   redeemUrlPresets?: RedeemUrlPreset[];
+  allTags?: string[];
   onApplyTemplate: (template: Template) => void;
   onDeleteTemplate: (id: string) => void;
   onReorderTemplates: (fromIndex: number, toIndex: number) => void;
   onRenameTemplate: (id: string, newLabel: string) => void;
+  onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
 }
 
 export const DraggableTemplateList: React.FC<DraggableTemplateListProps> = ({
   templates,
   redeemUrlPresets,
+  allTags,
   onApplyTemplate,
   onDeleteTemplate,
   onReorderTemplates,
   onRenameTemplate,
+  onEditTemplate,
 }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -163,84 +168,17 @@ export const DraggableTemplateList: React.FC<DraggableTemplateListProps> = ({
 
   const renderPreviewPopover = (tpl: Template) => {
     if (previewId !== tpl.id) return null;
-    
-    const presetLabel = tpl.redeemUrlPresetId
-      ? redeemUrlPresets?.find((p) => p.id === tpl.redeemUrlPresetId)?.label
-      : undefined;
-    const presetUrl = tpl.redeemUrlPresetId
-      ? redeemUrlPresets?.find((p) => p.id === tpl.redeemUrlPresetId)?.url
-      : undefined;
 
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 8, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 8, scale: 0.95 }}
-        transition={{ duration: 0.15 }}
-        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-56 glass-card rounded-xl p-3 shadow-lg border border-border/50"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Arrow */}
-        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card border-r border-b border-border/50" />
-        
-        <div className="space-y-2 relative">
-          {/* Header with image and name */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden shrink-0">
-              {tpl.image ? (
-                <img src={tpl.image} className="w-full h-full object-cover" alt="" />
-              ) : (
-                <ImageIcon size={16} className="text-primary/30" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-foreground truncate">{tpl.label}</p>
-              {tpl.productName !== tpl.label && (
-                <p className="text-[10px] text-muted-foreground truncate">產品: {tpl.productName}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Details */}
-          <div className="space-y-1.5 pt-1 border-t border-border/30">
-            {tpl.tags && tpl.tags.length > 0 && (
-              <div className="flex items-start gap-1.5">
-                <Tag size={10} className="text-primary/60 mt-0.5 shrink-0" />
-                <div className="flex flex-wrap gap-1">
-                  {tpl.tags.map((tag) => (
-                    <span key={tag} className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {tpl.serial && (
-              <div className="flex items-center gap-1.5">
-                <Hash size={10} className="text-primary/60 shrink-0" />
-                <span className="text-[10px] text-muted-foreground font-mono truncate">{tpl.serial}</span>
-              </div>
-            )}
-            
-            {tpl.expiry && (
-              <div className="flex items-center gap-1.5">
-                <Calendar size={10} className="text-primary/60 shrink-0" />
-                <span className="text-[10px] text-muted-foreground">{tpl.expiry}</span>
-              </div>
-            )}
-            
-            {(presetLabel || presetUrl) && (
-              <div className="flex items-center gap-1.5">
-                <ExternalLink size={10} className="text-primary/60 shrink-0" />
-                <span className="text-[10px] text-primary/70 truncate">{presetLabel || presetUrl}</span>
-              </div>
-            )}
-
-            {!tpl.tags?.length && !tpl.serial && !tpl.expiry && !presetLabel && (
-              <p className="text-[10px] text-muted-foreground/60 italic">無額外資料</p>
-            )}
-          </div>
-        </div>
-      </motion.div>
+      <TemplatePreviewPopover
+        template={tpl}
+        redeemUrlPresets={redeemUrlPresets}
+        allTags={allTags}
+        onEdit={(id, updates) => {
+          if (onEditTemplate) onEditTemplate(id, updates);
+        }}
+        onClose={() => setPreviewId(null)}
+      />
     );
   };
 
