@@ -38,6 +38,7 @@ interface BatchEditModalProps {
   onDeleteTemplate: (id: string) => void;
   onReorderTemplate: (fromIndex: number, toIndex: number) => void;
   onRenameTemplate: (id: string, newLabel: string) => void;
+  onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
 }
 
@@ -51,6 +52,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   onDeleteTemplate,
   onReorderTemplate,
   onRenameTemplate,
+  onEditTemplate,
   redeemUrlPresets,
 }) => {
   const [tagsToAdd, setTagsToAdd] = useState<string[]>([]);
@@ -129,10 +131,12 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
               <DraggableTemplateList
                 templates={templates}
                 redeemUrlPresets={redeemUrlPresets}
+                allTags={allTags}
                 onApplyTemplate={applyTemplate}
                 onDeleteTemplate={onDeleteTemplate}
                 onReorderTemplates={onReorderTemplate}
                 onRenameTemplate={onRenameTemplate}
+                onEditTemplate={onEditTemplate}
               />
             </motion.div>
           )}

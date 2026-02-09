@@ -46,6 +46,7 @@ interface RedeemModalProps {
   onDeleteTemplate: (id: string) => void;
   onReorderTemplate: (fromIndex: number, toIndex: number) => void;
   onRenameTemplate: (id: string, newLabel: string) => void;
+  onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   settings?: Settings;
   redeemUrlPresets?: RedeemUrlPreset[];
 }
@@ -66,6 +67,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   onDeleteTemplate,
   onReorderTemplate,
   onRenameTemplate,
+  onEditTemplate,
   settings,
   redeemUrlPresets,
 }) => {
@@ -353,10 +355,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           <DraggableTemplateList
                             templates={templates}
                             redeemUrlPresets={redeemUrlPresets}
+                            allTags={allTags}
                             onApplyTemplate={applyTemplate}
                             onDeleteTemplate={onDeleteTemplate}
                             onReorderTemplates={onReorderTemplate}
                             onRenameTemplate={onRenameTemplate}
+                            onEditTemplate={onEditTemplate}
                           />
                         </div>
                       )}
