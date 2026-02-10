@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink, QrCode, Ticket as TicketIcon } from 'lucide-react';
+import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink, QrCode, Ticket as TicketIcon, Copy } from 'lucide-react';
 import { Ticket } from '@/types/ticket';
 import { checkIsExpiringSoon, formatTime, formatDateTime } from '@/lib/helpers';
 
@@ -175,8 +175,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               </p>
             )}
             
-            {/* Expiry info */}
-            <div className="flex items-center gap-1 mt-2">
+            {/* Expiry & duplicate info */}
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {isDuplicateWarning && (
+                <span className="text-[10px] font-semibold text-orange-500 flex items-center gap-0.5 bg-orange-500/10 px-1.5 py-0.5 rounded-full">
+                  <Copy size={10} /> 重複
+                </span>
+              )}
               {isExpiringWarning ? (
                 <span className="text-xs font-medium text-ticket-warning flex items-center gap-1">
                   <AlertCircle size={12} />
