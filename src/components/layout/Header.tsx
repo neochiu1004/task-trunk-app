@@ -14,6 +14,7 @@ import {
   Palette,
   ImageIcon,
   X,
+  Copy,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { compressImage } from '@/lib/helpers';
@@ -264,6 +265,18 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <AlertCircle size={12} /> 快到期
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            onClick={() => setActiveTag('special_duplicate')}
+            className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
+              activeTag === 'special_duplicate' 
+                ? 'bg-orange-500 text-primary-foreground shadow-lg shadow-orange-500/30' 
+                : 'glass-button text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Copy size={12} /> 重複
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.95 }}
