@@ -79,10 +79,32 @@ export const Header: React.FC<HeaderProps> = ({
   headerButtonSize = 44,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [logoLongPress, setLogoLongPress] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 計算圖示大小 (按鈕大小的 40%)
   const iconSize = Math.round(headerButtonSize * 0.4);
+
+  // 長按移除自訂 Logo
+  const handleLogoPointerDown = () => {
+    longPressTimer.current = setTimeout(() => {
+      if (brandLogo) {
+        onBrandLogoChange('');
+        setLogoLongPress(true);
+      }
+    }, 600);
+  };
+  const handleLogoPointerUp = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    if (!logoLongPress) {
+      logoInputRef.current?.click();
+    }
+    setLogoLongPress(false);
+  };
+
+  // 決定 Logo 顯示：自訂 > 背景圖 > 預設
+  const displayLogo = brandLogo || headerBackgroundImage || vouchyLogo;
 
   // 按鈕顏色配置
   const buttonConfigs = [
@@ -135,22 +157,20 @@ export const Header: React.FC<HeaderProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.div
+                    <motion.div
                     whileTap={{ scale: 0.95 }}
                     whileHover={{ scale: 1.05 }}
-                    onClick={() => logoInputRef.current?.click()}
+                    onPointerDown={handleLogoPointerDown}
+                    onPointerUp={handleLogoPointerUp}
+                    onPointerLeave={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
                     style={{ width: headerButtonSize, height: headerButtonSize }}
                     className="rounded-2xl bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-lg border-2 border-border/40 ring-1 ring-white/10"
                   >
-                    {brandLogo ? (
-                      <img src={brandLogo} alt="Brand" className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={vouchyLogo} alt="Vouchy" className="w-full h-full object-cover" />
-                    )}
+                    <img src={displayLogo} alt="Brand" className="w-full h-full object-cover" />
                   </motion.div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  點擊更換 Logo
+                  {brandLogo ? '點擊更換 / 長按移除' : '點擊更換 Logo'}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
