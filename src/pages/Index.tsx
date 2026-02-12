@@ -267,7 +267,7 @@ const Index = () => {
     const nextBg = history[(history.indexOf(currentBg) + 1) % history.length] || '';
     setSettings((prev) => {
       const next = { ...prev };
-      const currentView = { ...next.viewConfigs[view], backgroundImage: nextBg };
+      const currentView = { ...next.viewConfigs[view], backgroundImage: nextBg, headerBackgroundImage: nextBg };
       next.viewConfigs = { ...next.viewConfigs, [view]: currentView };
       return next;
     });
