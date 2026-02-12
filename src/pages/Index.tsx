@@ -39,6 +39,7 @@ const Index = () => {
   const [showTagManager, setShowTagManager] = useState(false);
   const [showHealthCheck, setShowHealthCheck] = useState(false);
   const [healthIssueSerials, setHealthIssueSerials] = useState<Set<string>>(new Set());
+  const [invertFilter, setInvertFilter] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const migrateConfig = (config: any) => ({
@@ -101,10 +102,24 @@ const Index = () => {
       if (view === 'active' && (t.completed || t.isDeleted)) return false;
       if (view === 'completed' && (!t.completed || t.isDeleted)) return false;
       if (view === 'deleted' && !t.isDeleted) return false;
-      if (activeTag === 'special_expiring') return checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
-      if (activeTag === 'special_duplicate') return duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
-      if (activeTag === 'special_has_original') return !!t.originalImage && !t.completed && !t.isDeleted;
-      if (activeTag !== 'all' && (!t.tags || !t.tags.includes(activeTag))) return false;
+      
+      // Special filters with invert support
+      if (activeTag === 'special_expiring') {
+        const match = checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
+        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
+      }
+      if (activeTag === 'special_duplicate') {
+        const match = duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
+        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
+      }
+      if (activeTag === 'special_has_original') {
+        const match = !!t.originalImage && !t.completed && !t.isDeleted;
+        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
+      }
+      if (activeTag !== 'all') {
+        const match = t.tags && t.tags.includes(activeTag);
+        return invertFilter ? !match : match;
+      }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return t.productName.toLowerCase().includes(q) || 
@@ -133,7 +148,7 @@ const Index = () => {
       return 0;
     });
     return result;
-  }, [tasks, view, activeTag, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials]);
+  }, [tasks, view, activeTag, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials, invertFilter]);
 
   const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
   const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
@@ -371,7 +386,9 @@ const Index = () => {
           isCompact={isCompact}
           setIsCompact={setIsCompact}
           activeTag={activeTag}
-          setActiveTag={setActiveTag}
+          setActiveTag={(tag) => { setActiveTag(tag); setInvertFilter(false); }}
+          invertFilter={invertFilter}
+          setInvertFilter={setInvertFilter}
           allTags={allTags}
           onQuickBgChange={handleQuickBgChange}
           onOpenTagManager={() => setShowTagManager(true)}
