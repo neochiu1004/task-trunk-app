@@ -15,6 +15,7 @@ import {
   ImageIcon,
   X,
   Copy,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { compressImage } from '@/lib/helpers';
@@ -38,6 +39,8 @@ interface HeaderProps {
   setIsCompact: (compact: boolean) => void;
   activeTag: string;
   setActiveTag: (tag: string) => void;
+  invertFilter: boolean;
+  setInvertFilter: (invert: boolean) => void;
   allTags: string[];
   onQuickBgChange: () => void;
   onOpenTagManager: () => void;
@@ -67,6 +70,8 @@ export const Header: React.FC<HeaderProps> = ({
   setIsCompact,
   activeTag,
   setActiveTag,
+  invertFilter,
+  setInvertFilter,
   allTags,
   onQuickBgChange,
   onOpenTagManager,
@@ -261,7 +266,25 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Tags Row */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2.5 -mx-4 px-4">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2.5 -mx-4 px-4 items-center">
+          <AnimatePresence>
+            {activeTag !== 'all' && (
+              <motion.button
+                initial={{ scale: 0, opacity: 0, width: 0 }}
+                animate={{ scale: 1, opacity: 1, width: 'auto' }}
+                exit={{ scale: 0, opacity: 0, width: 0 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setInvertFilter(!invertFilter)}
+                className={`px-3 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1 flex-shrink-0 ${
+                  invertFilter
+                    ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
+                    : 'glass-button text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <ArrowLeftRight size={11} /> {invertFilter ? '反向中' : '反向'}
+              </motion.button>
+            )}
+          </AnimatePresence>
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
