@@ -16,6 +16,8 @@ import {
   X,
   Copy,
   ArrowLeftRight,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { compressImage } from '@/lib/helpers';
@@ -51,6 +53,8 @@ interface HeaderProps {
   brandLogo?: string;
   onBrandLogoChange: (logo: string) => void;
   headerButtonSize?: number;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -82,6 +86,8 @@ export const Header: React.FC<HeaderProps> = ({
   brandLogo,
   onBrandLogoChange,
   headerButtonSize = 44,
+  isDark = false,
+  onToggleTheme,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [logoLongPress, setLogoLongPress] = useState(false);
@@ -114,6 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
   // 按鈕顏色配置
   const buttonConfigs = [
     { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-pink-500 to-purple-600', hoverClass: 'hover:from-pink-400 hover:to-purple-500', tooltip: '背景' },
+    { icon: isDark ? Sun : Moon, onClick: onToggleTheme || (() => {}), bgClass: isDark ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-violet-600', hoverClass: isDark ? 'hover:from-amber-300 hover:to-orange-400' : 'hover:from-indigo-400 hover:to-violet-500', tooltip: isDark ? '淺色模式' : '深色模式' },
     { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-blue-500 to-cyan-600', hoverClass: 'hover:from-blue-400 hover:to-cyan-500', tooltip: '設定' },
     { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-emerald-500 to-teal-600', hoverClass: 'hover:from-emerald-400 hover:to-teal-500', tooltip: '選單' },
   ];
