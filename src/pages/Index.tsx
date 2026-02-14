@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '@/hooks/use-theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
@@ -19,6 +20,7 @@ import { TagManagerModal } from '@/components/modals/TagManagerModal';
 import { DataHealthCheck } from '@/components/modals/DataHealthCheck';
 
 const Index = () => {
+  const { isDark, toggleTheme } = useTheme();
   const [tasks, setTasks] = useState<Ticket[]>([]);
   const [view, setView] = useState<ViewType>('active');
   const [activeTag, setActiveTag] = useState('all');
@@ -399,6 +401,8 @@ const Index = () => {
           brandLogo={settings.brandLogo}
           onBrandLogoChange={(logo) => setSettings((s) => ({ ...s, brandLogo: logo }))}
           headerButtonSize={settings.headerButtonSize}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
         />
         
         <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
