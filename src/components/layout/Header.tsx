@@ -18,6 +18,7 @@ import {
   ArrowLeftRight,
   Moon,
   Sun,
+  Clock,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { compressImage } from '@/lib/helpers';
@@ -55,6 +56,7 @@ interface HeaderProps {
   headerButtonSize?: number;
   isDark?: boolean;
   onToggleTheme?: () => void;
+  currentView?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -88,6 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
   headerButtonSize = 44,
   isDark = false,
   onToggleTheme,
+  currentView,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [logoLongPress, setLogoLongPress] = useState(false);
@@ -401,21 +404,28 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex gap-2 flex-shrink-0">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                const types: SortType[] = ['expiring', 'newest', 'oldest'];
-                const nextIdx = (types.indexOf(sortType) + 1) % types.length;
-                setSortType(types[nextIdx]);
-              }}
-              className="px-3 h-8 glass-card rounded-xl flex items-center justify-center text-foreground transition-all duration-200 gap-1.5 shadow-sm"
-            >
-              <ArrowUpDown size={12} className="text-primary" />
-              <span className="text-xs font-semibold">
-                {sortType === 'expiring' ? '期限' : sortType === 'newest' ? '新' : '舊'}
-              </span>
-            </motion.button>
+            {currentView === 'completed' ? (
+              <div className="px-3 h-8 glass-card rounded-xl flex items-center justify-center text-foreground gap-1.5 shadow-sm opacity-70">
+                <Clock size={12} className="text-primary" />
+                <span className="text-xs font-semibold">核銷時間</span>
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => {
+                  const types: SortType[] = ['expiring', 'newest', 'oldest'];
+                  const nextIdx = (types.indexOf(sortType) + 1) % types.length;
+                  setSortType(types[nextIdx]);
+                }}
+                className="px-3 h-8 glass-card rounded-xl flex items-center justify-center text-foreground transition-all duration-200 gap-1.5 shadow-sm"
+              >
+                <ArrowUpDown size={12} className="text-primary" />
+                <span className="text-xs font-semibold">
+                  {sortType === 'expiring' ? '期限' : sortType === 'newest' ? '新' : '舊'}
+                </span>
+              </motion.button>
+            )}
             <motion.button
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.02 }}
