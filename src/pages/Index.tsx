@@ -407,6 +407,7 @@ const Index = () => {
           headerButtonSize={settings.headerButtonSize}
           isDark={isDark}
           onToggleTheme={toggleTheme}
+          currentView={view}
         />
         
         <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
