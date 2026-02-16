@@ -150,7 +150,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             {ticket.image ? (
               <img
                 src={ticket.image}
-                className={`w-full h-full object-cover ${ticket.completed ? 'grayscale opacity-50' : ''}`}
+                className="w-full h-full object-cover"
                 alt=""
               />
             ) : (
@@ -162,7 +162,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           
           {/* Main content */}
           <div className="flex-1">
-            <h3 className={`font-bold text-foreground leading-tight line-clamp-1 text-sm ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
+            <h3 className="font-bold text-foreground leading-tight line-clamp-1 text-sm">
               {ticket.productName}
               {ticket.originalImage && <Maximize2 size={10} className="inline ml-1 text-primary" />}
               {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
@@ -263,7 +263,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           {ticket.image ? (
             <motion.img 
               src={ticket.image} 
-              className={`w-full h-full object-cover rounded-xl shadow-sm ${ticket.completed ? 'grayscale opacity-50' : ''}`}
+              className="w-full h-full object-cover rounded-xl shadow-sm"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
               alt=""
@@ -287,7 +287,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         <div className="flex-1 flex flex-col justify-between py-3 pr-4 pl-2.5 min-w-0">
           <div>
             <div className="flex justify-between items-start">
-              <h3 className={`font-bold text-foreground line-clamp-1 text-sm tracking-tight ${ticket.completed ? 'line-through text-muted-foreground' : ''}`}>
+              <h3 className="font-bold text-foreground line-clamp-1 text-sm tracking-tight">
                 {ticket.productName}
                 {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
               </h3>
