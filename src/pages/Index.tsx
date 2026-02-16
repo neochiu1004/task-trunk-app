@@ -132,6 +132,10 @@ const Index = () => {
       return true;
     });
     result.sort((a, b) => {
+      // 已使用區：只按核銷時間排序，最近核銷的在最上方
+      if (view === 'completed') {
+        return (b.completedAt || 0) - (a.completedAt || 0);
+      }
       // 健檢有問題的票券最優先
       const hasHealthIssueA = !a.completed && !a.isDeleted && healthIssueSerials.has(a.serial || '');
       const hasHealthIssueB = !b.completed && !b.isDeleted && healthIssueSerials.has(b.serial || '');
