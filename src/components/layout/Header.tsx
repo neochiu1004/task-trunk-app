@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   // 決定 Logo 顯示：自訂 > 背景圖 > 預設
-  const displayLogo = brandLogo || headerBackgroundImage || vouchyLogo;
+  const displayLogo = brandLogo || vouchyLogo;
 
   // 按鈕顏色配置
   const buttonConfigs = [
