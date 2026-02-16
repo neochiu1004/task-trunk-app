@@ -282,13 +282,26 @@ const Index = () => {
     const imagesToAdd = [newSettings.viewConfigs.active.backgroundImage, newSettings.viewConfigs.completed.backgroundImage, newSettings.viewConfigs.deleted.backgroundImage].filter(Boolean);
     if (imagesToAdd.length > 0) setBgHistory((prev) => [...new Set([...imagesToAdd, ...prev])].slice(0, 20));
   };
+  // 記住使用者自訂的 header 背景圖（用於切換）
+  const savedHeaderBgRef = React.useRef<Record<string, string>>({});
   const handleQuickBgChange = () => {
     const history = [''].concat(bgHistory);
     const currentBg = settings.viewConfigs[view].backgroundImage || '';
     const nextBg = history[(history.indexOf(currentBg) + 1) % history.length] || '';
+
+    // 記住使用者設定過的 header 背景（非空時儲存）
+    const currentHeaderBg = settings.viewConfigs[view].headerBackgroundImage || '';
+    if (currentHeaderBg) {
+      savedHeaderBgRef.current[view] = currentHeaderBg;
+    }
+    const savedHeaderBg = savedHeaderBgRef.current[view] || '';
+
+    // Header 背景在「自訂圖片」與「無圖片」之間切換
+    const nextHeaderBg = currentHeaderBg ? '' : savedHeaderBg;
+
     setSettings((prev) => {
       const next = { ...prev };
-      const currentView = { ...next.viewConfigs[view], backgroundImage: nextBg };
+      const currentView = { ...next.viewConfigs[view], backgroundImage: nextBg, headerBackgroundImage: nextHeaderBg };
       next.viewConfigs = { ...next.viewConfigs, [view]: currentView };
       return next;
     });
