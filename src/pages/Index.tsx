@@ -300,24 +300,32 @@ const Index = () => {
     let nextBg: string;
     let nextHeaderBg: string;
 
+    let modeName: string;
+
     if (currentBg && currentHeaderBg) {
       // 模式1 (兩者都有) → 模式2 (只顯示主背景)
       nextBg = currentBg;
       nextHeaderBg = '';
+      modeName = '🖼 只顯示主背景';
     } else if (currentBg && !currentHeaderBg) {
       // 模式2 (只有主背景) → 模式3 (都不顯示)
       nextBg = '';
       nextHeaderBg = '';
+      modeName = '🚫 無背景';
     } else {
       // 模式3 (都沒有) → 模式1 (兩者都顯示)
-      // 主背景：從歷史中輪轉
       const history = bgHistory.length > 0 ? bgHistory : [];
       const lastMain = saved.main || '';
       const idx = history.indexOf(lastMain);
       const nextIdx = (idx + 1) % Math.max(history.length, 1);
       nextBg = history[nextIdx] || saved.main || '';
       nextHeaderBg = saved.header || '';
+      modeName = '✨ 全部背景';
     }
+
+    import('sonner').then(({ toast }) => {
+      toast(modeName, { duration: 1200, position: 'top-center' });
+    });
 
     setSettings((prev) => {
       const next = { ...prev };
