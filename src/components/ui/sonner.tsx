@@ -10,7 +10,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      style={{ pointerEvents: 'none' }}
       toastOptions={{
+        style: { pointerEvents: 'auto' },
         classNames: {
           toast:
             "group toast group-[.toaster]:backdrop-blur-xl group-[.toaster]:bg-[hsl(var(--glass-bg))] group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-white/15 group-[.toaster]:shadow-xl group-[.toaster]:shadow-black/20 group-[.toaster]:ring-1 group-[.toaster]:ring-white/10 group-[.toaster]:rounded-2xl",
