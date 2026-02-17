@@ -282,22 +282,42 @@ const Index = () => {
     const imagesToAdd = [newSettings.viewConfigs.active.backgroundImage, newSettings.viewConfigs.completed.backgroundImage, newSettings.viewConfigs.deleted.backgroundImage].filter(Boolean);
     if (imagesToAdd.length > 0) setBgHistory((prev) => [...new Set([...imagesToAdd, ...prev])].slice(0, 20));
   };
-  // 記住使用者自訂的 header 背景圖（用於切換）
-  const savedHeaderBgRef = React.useRef<Record<string, string>>({});
+  // 記住使用者自訂的背景圖（用於三模式切換）
+  const savedBgRef = React.useRef<Record<string, { main: string; header: string }>>({});
   const handleQuickBgChange = () => {
-    const history = [''].concat(bgHistory);
-    const currentBg = settings.viewConfigs[view].backgroundImage || '';
-    const nextBg = history[(history.indexOf(currentBg) + 1) % history.length] || '';
+    const cfg = settings.viewConfigs[view];
+    const currentBg = cfg.backgroundImage || '';
+    const currentHeaderBg = cfg.headerBackgroundImage || '';
 
-    // 記住使用者設定過的 header 背景（非空時儲存）
-    const currentHeaderBg = settings.viewConfigs[view].headerBackgroundImage || '';
-    if (currentHeaderBg) {
-      savedHeaderBgRef.current[view] = currentHeaderBg;
+    // 儲存非空的背景圖
+    if (currentBg) savedBgRef.current[view] = { ...savedBgRef.current[view], main: currentBg };
+    if (currentHeaderBg) savedBgRef.current[view] = { ...savedBgRef.current[view], header: currentHeaderBg };
+
+    const saved = savedBgRef.current[view] || { main: '', header: '' };
+    // 如果沒有歷史主背景，從 bgHistory 取第一張
+    if (!saved.main && bgHistory.length > 0) saved.main = bgHistory[0];
+
+    let nextBg: string;
+    let nextHeaderBg: string;
+
+    if (currentBg && currentHeaderBg) {
+      // 模式1 (兩者都有) → 模式2 (只顯示主背景)
+      nextBg = currentBg;
+      nextHeaderBg = '';
+    } else if (currentBg && !currentHeaderBg) {
+      // 模式2 (只有主背景) → 模式3 (都不顯示)
+      nextBg = '';
+      nextHeaderBg = '';
+    } else {
+      // 模式3 (都沒有) → 模式1 (兩者都顯示)
+      // 主背景：從歷史中輪轉
+      const history = bgHistory.length > 0 ? bgHistory : [];
+      const lastMain = saved.main || '';
+      const idx = history.indexOf(lastMain);
+      const nextIdx = (idx + 1) % Math.max(history.length, 1);
+      nextBg = history[nextIdx] || saved.main || '';
+      nextHeaderBg = saved.header || '';
     }
-    const savedHeaderBg = savedHeaderBgRef.current[view] || '';
-
-    // Header 背景在「自訂圖片」與「無圖片」之間切換
-    const nextHeaderBg = currentHeaderBg ? '' : savedHeaderBg;
 
     setSettings((prev) => {
       const next = { ...prev };
