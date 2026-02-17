@@ -370,3 +370,34 @@ html {
     background: hsl(var(--muted-foreground) / 0.3);
   }
 }
+
+/* Sonner toast slide animations */
+@keyframes sonner-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sonner-slide-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+}
+
+[data-sonner-toast] {
+  animation: sonner-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[data-sonner-toast][data-removed="true"] {
+  animation: sonner-slide-out 0.25s cubic-bezier(0.4, 0, 1, 1) !important;
+}
