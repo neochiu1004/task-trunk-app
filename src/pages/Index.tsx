@@ -323,10 +323,6 @@ const Index = () => {
       modeName = '✨ 全部背景';
     }
 
-    import('sonner').then(({ toast }) => {
-      toast(modeName, { duration: 1200, position: 'top-center' });
-    });
-
     setSettings((prev) => {
       const next = { ...prev };
       const currentView = { ...next.viewConfigs[view], backgroundImage: nextBg, headerBackgroundImage: nextHeaderBg };
