@@ -80,6 +80,30 @@ const Index = () => {
         if (dbBgHistory) setBgHistory(dbBgHistory);
         if (dbTemplates) setTemplates(dbTemplates);
         setIsDataLoaded(true);
+
+        // Telegram expiry reminder: only for active (not completed, not deleted) tickets
+        const loadedTasks: Ticket[] = dbTasks || [];
+        const loadedSettings: Settings = dbSettings ? { ...defaultSettings, ...dbSettings } : defaultSettings;
+        if (loadedSettings.tgToken && loadedSettings.tgChatId) {
+          const notifiedMap = (await dbHelper.getItem<Record<string, string>>(DB_KEYS.EXPIRY_NOTIFIED)) || {};
+          const today = new Date().toISOString().slice(0, 10);
+          const expiringTickets = loadedTasks.filter(
+            (t) => !t.completed && !t.isDeleted && t.expiry && checkIsExpiringSoon(t.expiry, loadedSettings.notifyDays) && notifiedMap[t.id] !== today
+          );
+          if (expiringTickets.length > 0) {
+            const lines = expiringTickets.map((t) => `• ${t.productName}（${t.expiry}）`).join('\n');
+            const msg = `⏰ *[到期提醒]* 共 ${expiringTickets.length} 張快到期：\n${lines}`;
+            sendTelegramMessage(loadedSettings.tgToken, loadedSettings.tgChatId, msg).then((res) => {
+              if (res.success) {
+                expiringTickets.forEach((t) => { notifiedMap[t.id] = today; });
+                // Clean up old entries for tickets that no longer exist
+                const taskIds = new Set(loadedTasks.map((t) => t.id));
+                Object.keys(notifiedMap).forEach((id) => { if (!taskIds.has(id)) delete notifiedMap[id]; });
+                dbHelper.setItem(DB_KEYS.EXPIRY_NOTIFIED, notifiedMap);
+              }
+            }).catch(console.error);
+          }
+        }
       } catch (err) {
         console.error('Database initialization failed:', err);
       }

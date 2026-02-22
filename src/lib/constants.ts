@@ -39,4 +39,5 @@ export const DB_KEYS = {
   SETTINGS: 'wallet_settings_v3',
   BG_HISTORY: 'wallet_bg_history_v3',
   TEMPLATES: 'wallet_templates_v3',
+  EXPIRY_NOTIFIED: 'wallet_expiry_notified_v3',
 };
