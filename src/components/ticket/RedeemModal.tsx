@@ -852,7 +852,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
                 onClick={() => setShowFullScreen(false)}
-                className="flex-1 py-4 rounded-2xl font-semibold text-white bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
+                className="flex-1 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
+                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
                 返回詳情
               </motion.button>
@@ -862,7 +863,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
                 onClick={handleDownloadOriginal}
-                className="w-14 py-4 rounded-2xl font-semibold text-white bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
+                className="w-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
+                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
                 <Download size={18} />
               </motion.button>
