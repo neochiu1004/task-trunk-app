@@ -878,13 +878,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     setShowFullScreen(false);
                     setTimeout(() => handleToggleCompleteWithAnimation(), 300);
                   }}
-                  className="flex-[2] py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg"
-                  style={{ 
-                    background: ticket.completed 
-                      ? 'linear-gradient(135deg, #f59e0b, #d97706)' 
-                      : 'linear-gradient(135deg, #10b981, #059669)',
-                    textShadow: '0 1px 4px rgba(0,0,0,0.5)'
-                  }}
+                  className={`flex-[2] py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
+                    ticket.completed 
+                      ? 'bg-ticket-warning shadow-ticket-warning/25' 
+                      : 'bg-ticket-success shadow-ticket-success/25'
+                  }`}
+                  style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
                 >
                   {ticket.completed ? (
                     <>
