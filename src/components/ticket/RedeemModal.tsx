@@ -882,7 +882,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   style={{ 
                     background: ticket.completed 
                       ? 'linear-gradient(135deg, #f59e0b, #d97706)' 
-                      : 'linear-gradient(135deg, #10b981, #059669)' 
+                      : 'linear-gradient(135deg, #10b981, #059669)',
+                    textShadow: '0 1px 4px rgba(0,0,0,0.5)'
                   }}
                 >
                   {ticket.completed ? (
