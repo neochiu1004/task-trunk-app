@@ -142,6 +142,10 @@ const Index = () => {
         const match = !!t.originalImage && !t.completed && !t.isDeleted;
         return invertFilter ? !match && !t.completed && !t.isDeleted : match;
       }
+      if (activeTag === 'special_pinned') {
+        const match = !!t.pinned && !t.completed && !t.isDeleted;
+        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
+      }
       if (activeTag !== 'all') {
         const match = t.tags && t.tags.includes(activeTag);
         return invertFilter ? !match : match;
@@ -164,6 +168,11 @@ const Index = () => {
       const hasHealthIssueA = !a.completed && !a.isDeleted && healthIssueSerials.has(a.serial || '');
       const hasHealthIssueB = !b.completed && !b.isDeleted && healthIssueSerials.has(b.serial || '');
       if (hasHealthIssueA !== hasHealthIssueB) return hasHealthIssueA ? -1 : 1;
+      
+      // 置頂票券優先
+      const pinnedA = !a.completed && !a.isDeleted && !!a.pinned;
+      const pinnedB = !b.completed && !b.isDeleted && !!b.pinned;
+      if (pinnedA !== pinnedB) return pinnedA ? -1 : 1;
       
       const isExpiringA = !a.completed && !a.isDeleted && checkIsExpiringSoon(a.expiry, settings.notifyDays);
       const isExpiringB = !b.completed && !b.isDeleted && checkIsExpiringSoon(b.expiry, settings.notifyDays);

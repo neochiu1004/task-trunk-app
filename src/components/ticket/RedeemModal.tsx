@@ -775,14 +775,31 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             <RefreshCcw size={14} /> 還原
                           </motion.button>
                         ) : (
-                          <motion.button
-                            variants={buttonVariants}
-                            whileTap="tap"
-                            onClick={() => setIsEditing(true)}
-                            className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
-                          >
-                            <Pencil size={14} /> 編輯
-                          </motion.button>
+                          <>
+                            <motion.button
+                              variants={buttonVariants}
+                              whileTap="tap"
+                              onClick={() => setIsEditing(true)}
+                              className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
+                            >
+                              <Pencil size={14} /> 編輯
+                            </motion.button>
+                            <motion.button
+                              variants={buttonVariants}
+                              whileTap="tap"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUpdate({ ...ticket, pinned: !ticket.pinned });
+                              }}
+                              className={`flex-1 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 ${
+                                ticket.pinned 
+                                  ? 'bg-amber-500/15 text-amber-500' 
+                                  : 'glass-card text-muted-foreground'
+                              }`}
+                            >
+                              📌 {ticket.pinned ? '取消優先' : '優先'}
+                            </motion.button>
+                          </>
                         )}
                         <motion.button
                           variants={buttonVariants}
