@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw, Link } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
@@ -86,7 +86,6 @@ export const AddModal: React.FC<AddModalProps> = ({
     if (results.length === 1) {
       applyBarcode(results[0]);
     } else {
-      // Multiple barcodes found - let user choose
       setPendingBarcodes(results);
       setShowBarcodeSelect(true);
     }
@@ -211,15 +210,6 @@ export const AddModal: React.FC<AddModalProps> = ({
     onClose();
   };
 
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.04, duration: 0.2 }
-    }),
-  };
-
   return (
     <>
       <ResponsiveModal
@@ -227,30 +217,21 @@ export const AddModal: React.FC<AddModalProps> = ({
         onClose={onClose}
         title="新增票券"
       >
-        <div className="space-y-4 pb-32">
+        <div className="space-y-4 pb-8">
           {/* Templates */}
           {templates && templates.length > 0 && (
-            <motion.div
-              custom={0}
-              variants={sectionVariants}
-              initial="hidden"
-              animate="visible"
-              className="mb-2"
-            >
+            <div className="mb-2">
               <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <LayoutDashboard size={12} /> 快速套用範本
                 </span>
                 {hasAppliedTemplate && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileTap={{ scale: 0.9 }}
+                  <button
                     onClick={clearTemplateData}
                     className="flex items-center gap-1 text-ticket-warning hover:text-ticket-warning/80 transition-colors"
                   >
                     <RotateCcw size={10} /> 清除資料
-                  </motion.button>
+                  </button>
                 )}
               </div>
               <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
@@ -265,27 +246,20 @@ export const AddModal: React.FC<AddModalProps> = ({
                   onEditTemplate={onEditTemplate}
                 />
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Image Uploads */}
-          <motion.div
-            custom={1}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-2 gap-3"
-          >
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">封面縮圖</span>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
+                <button
                   onClick={() => setShowWebSearch(true)}
                   className="text-[10px] text-primary flex items-center gap-1 hover:underline"
                 >
                   <Search size={10} /> 網路搜尋
-                </motion.button>
+                </button>
               </div>
               <ImageUpload
                 value={images[0] || ''}
@@ -311,7 +285,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                 type="original"
               />
             </div>
-          </motion.div>
+          </div>
 
           {/* Web Image Search Modal */}
           <WebImageSearch
@@ -321,59 +295,36 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
 
           {/* Name Input */}
-          <motion.div
-            custom={2}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-            className="relative"
-          >
+          <div className="relative">
             <input
               className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-medium text-base focus:ring-2 focus:ring-primary/30 transition-all"
               placeholder="票券名稱 (必填)"
               value={manualData.name}
               onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
             />
-            <AnimatePresence>
-              {manualData.name && (
-                  <motion.button
-                    type="button"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setManualData({ ...manualData, name: '' })}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
-                  >
-                    <X size={14} strokeWidth={2.5} />
-                  </motion.button>
-              )}
-            </AnimatePresence>
-          </motion.div>
+            {manualData.name && (
+              <button
+                type="button"
+                onClick={() => setManualData({ ...manualData, name: '' })}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
 
           {/* Tags */}
-          <motion.div
-            custom={3}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-          >
+          <div>
             <TagSelectInput
               allTags={allTags}
               selectedTags={manualTags}
               onTagsChange={setManualTags}
               extraSuggestions={specificViewKeywords}
             />
-          </motion.div>
+          </div>
 
           {/* Serial Input with Scan Button */}
-          <motion.div
-            custom={4}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-            className="w-full max-w-full overflow-x-hidden"
-          >
+          <div className="w-full max-w-full overflow-x-hidden">
             <div className="flex items-center gap-2 w-full max-w-full">
               <div className="relative flex-1 min-w-0">
                 <input
@@ -382,24 +333,18 @@ export const AddModal: React.FC<AddModalProps> = ({
                   value={manualData.serial}
                   onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
                 />
-                <AnimatePresence>
-                  {manualData.serial && (
-                    <motion.button
-                      type="button"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => {
-                        setManualData({ ...manualData, serial: '' });
-                        setBarcodeFormat(undefined);
-                      }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
-                    >
-                      <X size={14} strokeWidth={2.5} />
-                    </motion.button>
-                  )}
-                </AnimatePresence>
+                {manualData.serial && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualData({ ...manualData, serial: '' });
+                      setBarcodeFormat(undefined);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
+                  >
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
+                )}
               </div>
               <input
                 ref={scanInputRef}
@@ -408,8 +353,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                 className="hidden"
                 onChange={handleStandaloneScan}
               />
-              <motion.button
-                whileTap={{ scale: 0.9 }}
+              <button
                 onClick={() => scanInputRef.current?.click()}
                 disabled={isScanningSerial}
                 className="shrink-0 p-3.5 glass-card rounded-xl text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
@@ -420,18 +364,12 @@ export const AddModal: React.FC<AddModalProps> = ({
                 ) : (
                   <ScanLine size={18} />
                 )}
-              </motion.button>
+              </button>
             </div>
-          </motion.div>
+          </div>
 
           {/* Expiry Input */}
-          <motion.div
-            custom={5}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-1"
-          >
+          <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">兌換期限</label>
             <input
               type="date"
@@ -439,34 +377,24 @@ export const AddModal: React.FC<AddModalProps> = ({
               value={manualData.expiry}
               onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
             />
-          </motion.div>
+          </div>
 
           {/* Redeem URL */}
-          <motion.div
-            custom={6}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-          >
+          <div>
             <RedeemUrlPresetSelect
               presets={redeemUrlPresets || []}
               value={manualData.redeemUrl}
               onChange={(url) => setManualData({ ...manualData, redeemUrl: url })}
             />
-          </motion.div>
+          </div>
 
           {/* Submit Button */}
-          <motion.button
-            custom={7}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={handleManualSubmit}
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all"
+            className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all active:scale-[0.98]"
           >
             確認新增
-          </motion.button>
+          </button>
         </div>
       </ResponsiveModal>
 
