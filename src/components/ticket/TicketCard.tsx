@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink, QrCode, Ticket as TicketIcon, Copy } from 'lucide-react';
+import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink, QrCode, Ticket as TicketIcon, Copy, Pin } from 'lucide-react';
 import { Ticket } from '@/types/ticket';
 import { checkIsExpiringSoon, formatTime, formatDateTime } from '@/lib/helpers';
 
@@ -163,6 +163,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           {/* Main content */}
           <div className="flex-1">
             <h3 className="font-bold text-foreground leading-tight line-clamp-1 text-sm">
+              {ticket.pinned && <Pin size={10} className="inline mr-1 text-amber-500" />}
               {ticket.productName}
               {ticket.originalImage && <Maximize2 size={10} className="inline ml-1 text-primary" />}
               {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
@@ -288,6 +289,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           <div>
             <div className="flex justify-between items-start">
               <h3 className="font-bold text-foreground line-clamp-1 text-sm tracking-tight">
+                {ticket.pinned && <Pin size={10} className="inline mr-1 text-amber-500" />}
                 {ticket.productName}
                 {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
               </h3>

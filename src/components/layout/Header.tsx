@@ -343,6 +343,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <ImageIcon size={12} /> 有原圖
           </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            onClick={() => setActiveTag('special_pinned')}
+            className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
+              activeTag === 'special_pinned' 
+                ? 'bg-amber-500 text-primary-foreground shadow-lg shadow-amber-500/30' 
+                : 'glass-button text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            📌 優先
+          </motion.button>
           {allTags.map((tag) => (
             <motion.button
               key={tag}

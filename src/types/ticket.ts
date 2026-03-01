@@ -15,6 +15,7 @@ export interface Ticket {
   deletedAt?: number;
   createdAt: number;
   redeemUrl?: string;
+  pinned?: boolean;
 }
 
 export interface Template {
