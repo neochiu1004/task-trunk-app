@@ -45,7 +45,7 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
         modal={true}
       >
         <DrawerContent 
-          className="max-h-[90vh] rounded-t-[32px] border-border bg-card flex flex-col shadow-premium"
+          className="max-h-[90dvh] rounded-t-[32px] border-border bg-card flex flex-col shadow-premium"
           style={{ 
             paddingBottom: 'max(env(safe-area-inset-bottom), 20px)',
           }}
