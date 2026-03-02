@@ -508,6 +508,9 @@ const Index = () => {
                     gridImageHeight={currentConfig.gridImageHeight}
                     index={index}
                     hasHealthIssue={healthIssueSerials.has(t.serial || '')}
+                    onTogglePin={(id) => {
+                      setTasks(prev => prev.map(tk => tk.id === id ? { ...tk, pinned: !tk.pinned } : tk));
+                    }}
                   />
                 ))
               ) : (

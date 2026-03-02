@@ -19,6 +19,7 @@ interface TicketCardProps {
   gridImageHeight?: number;
   index?: number;
   hasHealthIssue?: boolean;
+  onTogglePin?: (id: string) => void;
 }
 
 export const TicketCard: React.FC<TicketCardProps> = ({
@@ -36,6 +37,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   gridImageHeight = 96,
   index = 0,
   hasHealthIssue = false,
+  onTogglePin,
 }) => {
   const isExpiring = !ticket.completed && ticket.expiry && checkIsExpiringSoon(ticket.expiry, notifyDays);
   const isDuplicateWarning = isDuplicate && !ticket.completed && !ticket.isDeleted;
@@ -197,12 +199,22 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             </div>
           </div>
           
-          {/* Footer with serial and QR icon */}
+          {/* Footer with serial and pin toggle */}
           <div className="mt-3 pt-3 border-t border-border/50 flex justify-between items-center">
             <span className="text-[10px] text-muted-foreground font-mono tracking-wider line-clamp-1">
               #{ticket.serial?.slice(0, 8) || 'N/A'}
             </span>
-            <QrCode size={18} className="text-muted-foreground/40 flex-shrink-0" />
+            <div className="flex items-center gap-1.5">
+              {onTogglePin && !ticket.completed && !ticket.isDeleted && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onTogglePin(ticket.id); }}
+                  className={`p-1 rounded-lg transition-colors ${ticket.pinned ? 'text-amber-500 bg-amber-500/10' : 'text-muted-foreground/40 hover:text-amber-500/60'}`}
+                >
+                  <Pin size={14} className={ticket.pinned ? 'fill-amber-500' : ''} />
+                </button>
+              )}
+              <QrCode size={18} className="text-muted-foreground/40 flex-shrink-0" />
+            </div>
           </div>
         </div>
       </motion.div>
@@ -330,17 +342,28 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             )}
             
             {!isSelectionMode && (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className={`text-xs font-bold px-5 py-2 rounded-xl transition-all duration-200 shadow-md ${
-                  ticket.completed
-                    ? 'bg-muted text-muted-foreground'
-                    : 'bg-ticket-success text-primary-foreground hover:shadow-lg hover:shadow-ticket-success/30'
-                }`}
-              >
-                {ticket.completed ? '查看' : '兌換'}
-              </motion.button>
+              <div className="flex items-center gap-2">
+                {onTogglePin && !ticket.completed && !ticket.isDeleted && (
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => { e.stopPropagation(); onTogglePin(ticket.id); }}
+                    className={`p-2 rounded-xl transition-colors shadow-sm ${ticket.pinned ? 'text-amber-500 bg-amber-500/10' : 'text-muted-foreground/40 hover:text-amber-500/60 bg-muted/50'}`}
+                  >
+                    <Pin size={16} className={ticket.pinned ? 'fill-amber-500' : ''} />
+                  </motion.button>
+                )}
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`text-xs font-bold px-5 py-2 rounded-xl transition-all duration-200 shadow-md ${
+                    ticket.completed
+                      ? 'bg-muted text-muted-foreground'
+                      : 'bg-ticket-success text-primary-foreground hover:shadow-lg hover:shadow-ticket-success/30'
+                  }`}
+                >
+                  {ticket.completed ? '查看' : '兌換'}
+                </motion.button>
+              </div>
             )}
           </div>
         </div>
