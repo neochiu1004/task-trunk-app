@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw, Link } from 'lucide-react';
+import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw, Link, Pin } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -35,6 +35,7 @@ interface AddModalProps {
     tags: string[];
     barcodeFormat?: string;
     redeemUrl?: string;
+    pinned?: boolean;
     completed: boolean;
     completedAt?: number;
     isDeleted: boolean;
@@ -66,6 +67,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanningSerial, setIsScanningSerial] = useState(false);
   const [hasAppliedTemplate, setHasAppliedTemplate] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   // Multi-barcode selection state
@@ -115,6 +117,7 @@ export const AddModal: React.FC<AddModalProps> = ({
     setOriginalImage('');
     setBarcodeFormat(undefined);
     setHasAppliedTemplate(false);
+    setIsPinned(false);
     toast({
       title: "已清除",
       description: "所有範本資料已清除",
@@ -197,6 +200,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       tags: manualTags,
       barcodeFormat: barcodeFormat,
       redeemUrl: manualData.redeemUrl.trim() || undefined,
+      pinned: isPinned || undefined,
       completed: false,
       isDeleted: false,
       createdAt: Date.now(),
@@ -207,6 +211,7 @@ export const AddModal: React.FC<AddModalProps> = ({
     setImages([]);
     setOriginalImage('');
     setBarcodeFormat(undefined);
+    setIsPinned(false);
     onClose();
   };
 
@@ -388,13 +393,27 @@ export const AddModal: React.FC<AddModalProps> = ({
             />
           </div>
 
-          {/* Submit Button */}
-          <button
-            onClick={handleManualSubmit}
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all active:scale-[0.98]"
-          >
-            確認新增
-          </button>
+          {/* Pin + Submit */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsPinned(!isPinned)}
+              className={`p-3.5 rounded-2xl transition-all shadow-sm border ${
+                isPinned
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
+                  : 'glass-card border-border/50 text-muted-foreground'
+              }`}
+              title="設為優先使用"
+            >
+              <Pin size={20} className={isPinned ? 'fill-amber-500' : ''} />
+            </button>
+            <button
+              onClick={handleManualSubmit}
+              className="flex-1 bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all active:scale-[0.98]"
+            >
+              確認新增
+            </button>
+          </div>
         </div>
       </ResponsiveModal>
 
