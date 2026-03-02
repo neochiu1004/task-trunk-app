@@ -12,6 +12,7 @@ import {
   Check,
   Link,
   X,
+  Pin,
 } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -32,6 +33,7 @@ interface BatchEditModalProps {
     image: string;
     redeemUrl: string;
     clearRedeemUrl: boolean;
+    setPinned?: boolean | null;
   }) => void;
   allTags: string[];
   templates: Template[];
@@ -62,6 +64,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   const [newImage, setNewImage] = useState('');
   const [newRedeemUrl, setNewRedeemUrl] = useState('');
   const [clearRedeemUrl, setClearRedeemUrl] = useState(false);
+  const [pinnedAction, setPinnedAction] = useState<'none' | 'pin' | 'unpin'>('none');
 
   const handleConfirm = () => {
     onBatchEdit({
@@ -72,6 +75,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       image: newImage,
       redeemUrl: newRedeemUrl,
       clearRedeemUrl,
+      setPinned: pinnedAction === 'pin' ? true : pinnedAction === 'unpin' ? false : null,
     });
     // Reset state
     setTagsToAdd([]);
@@ -81,6 +85,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
     setNewImage('');
     setNewRedeemUrl('');
     setClearRedeemUrl(false);
+    setPinnedAction('none');
     onClose();
   };
 
@@ -338,9 +343,40 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
           )}
         </motion.div>
 
-        {/* Actions */}
+        {/* Pinned */}
         <motion.div
           custom={6}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="glass-card p-3 rounded-2xl"
+        >
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Pin size={12} /> 優先標記
+          </label>
+          <div className="flex gap-2 mt-2">
+            {(['none', 'pin', 'unpin'] as const).map((action) => (
+              <motion.button
+                key={action}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setPinnedAction(action)}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  pinnedAction === action
+                    ? action === 'pin' ? 'bg-amber-500 text-primary-foreground shadow-md' 
+                      : action === 'unpin' ? 'bg-muted-foreground text-primary-foreground shadow-md'
+                      : 'bg-primary text-primary-foreground shadow-md'
+                    : 'glass-button text-muted-foreground'
+                }`}
+              >
+                {action === 'none' ? '不變' : action === 'pin' ? '📌 設為優先' : '取消優先'}
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Actions */}
+        <motion.div
+          custom={7}
           variants={sectionVariants}
           initial="hidden"
           animate="visible"

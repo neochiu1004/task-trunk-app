@@ -306,6 +306,7 @@ const Index = () => {
         image: payload.image || t.image, 
         expiry: payload.expiry ? payload.expiry.replace(/-/g, '/') : t.expiry,
         redeemUrl: newRedeemUrl,
+        ...(payload.setPinned === true ? { pinned: true } : payload.setPinned === false ? { pinned: false } : {}),
       };
     }));
     setSelectedIds(new Set()); setIsSelectionMode(false);
