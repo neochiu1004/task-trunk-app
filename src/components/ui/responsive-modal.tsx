@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -62,14 +61,12 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
                 )}
               </div>
               {showCloseButton && (
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  whileHover={{ scale: 1.05 }}
+                <button
                   onClick={onClose}
-                  className="p-2.5 glass-button rounded-2xl text-muted-foreground hover:text-foreground shadow-sm"
+                  className="p-2.5 glass-button rounded-2xl text-muted-foreground hover:text-foreground shadow-sm active:scale-95 transition-transform"
                 >
                   <X size={20} />
-                </motion.button>
+                </button>
               )}
             </div>
           </DrawerHeader>
