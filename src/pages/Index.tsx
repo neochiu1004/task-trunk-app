@@ -91,8 +91,12 @@ const Index = () => {
             (t) => !t.completed && !t.isDeleted && t.expiry && checkIsExpiringSoon(t.expiry, loadedSettings.notifyDays) && notifiedMap[t.id] !== today
           );
           if (expiringTickets.length > 0) {
-            const lines = expiringTickets.map((t) => `• ${t.productName}（${t.expiry}）`).join('\n');
-            const msg = `⏰ *[到期提醒]* 共 ${expiringTickets.length} 張快到期：\n${lines}`;
+            const pinnedTickets = expiringTickets.filter((t) => t.pinned);
+            const unpinnedTickets = expiringTickets.filter((t) => !t.pinned);
+            const formatLine = (t: typeof expiringTickets[0]) => `• ${t.pinned ? '📌 ' : ''}${t.productName}（${t.expiry}）`;
+            const lines = [...pinnedTickets.map(formatLine), ...unpinnedTickets.map(formatLine)].join('\n');
+            const pinnedNote = pinnedTickets.length > 0 ? `（含 ${pinnedTickets.length} 張優先）` : '';
+            const msg = `⏰ *[到期提醒]* 共 ${expiringTickets.length} 張快到期${pinnedNote}：\n${lines}`;
             sendTelegramMessage(loadedSettings.tgToken, loadedSettings.tgChatId, msg).then((res) => {
               if (res.success) {
                 expiringTickets.forEach((t) => { notifiedMap[t.id] = today; });
