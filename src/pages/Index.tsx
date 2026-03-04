@@ -41,7 +41,7 @@ const Index = () => {
   const [showTagManager, setShowTagManager] = useState(false);
   const [showHealthCheck, setShowHealthCheck] = useState(false);
   const [healthIssueSerials, setHealthIssueSerials] = useState<Set<string>>(new Set());
-  const [invertFilter, setInvertFilter] = useState(false);
+  
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const migrateConfig = (config: any) => ({
