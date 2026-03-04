@@ -127,33 +127,31 @@ const Index = () => {
     return new Set(Object.keys(counts).filter((s) => counts[s] > 1));
   }, [tasks]);
 
+  const toggleTag = (tag: string) => {
+    setActiveTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const matchesTag = (t: Ticket, tag: string): boolean => {
+    if (tag === 'special_expiring') return checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
+    if (tag === 'special_duplicate') return duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
+    if (tag === 'special_has_original') return !!t.originalImage && !t.completed && !t.isDeleted;
+    if (tag === 'special_pinned') return !!t.pinned && !t.completed && !t.isDeleted;
+    return !!(t.tags && t.tags.includes(tag));
+  };
+
   const filteredTasks = useMemo(() => {
     let result = tasks.filter((t) => {
       if (view === 'active' && (t.completed || t.isDeleted)) return false;
       if (view === 'completed' && (!t.completed || t.isDeleted)) return false;
       if (view === 'deleted' && !t.isDeleted) return false;
       
-      // Special filters with invert support
-      if (activeTag === 'special_expiring') {
-        const match = checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
-        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
+      // Multi-select tag filter (OR union)
+      if (activeTags.length > 0) {
+        if (!activeTags.some((tag) => matchesTag(t, tag))) return false;
       }
-      if (activeTag === 'special_duplicate') {
-        const match = duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
-        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
-      }
-      if (activeTag === 'special_has_original') {
-        const match = !!t.originalImage && !t.completed && !t.isDeleted;
-        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
-      }
-      if (activeTag === 'special_pinned') {
-        const match = !!t.pinned && !t.completed && !t.isDeleted;
-        return invertFilter ? !match && !t.completed && !t.isDeleted : match;
-      }
-      if (activeTag !== 'all') {
-        const match = t.tags && t.tags.includes(activeTag);
-        return invertFilter ? !match : match;
-      }
+
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return t.productName.toLowerCase().includes(q) || 
@@ -164,16 +162,13 @@ const Index = () => {
       return true;
     });
     result.sort((a, b) => {
-      // 已使用區：只按核銷時間排序，最近核銷的在最上方
       if (view === 'completed') {
         return (b.completedAt || 0) - (a.completedAt || 0);
       }
-      // 健檢有問題的票券最優先
       const hasHealthIssueA = !a.completed && !a.isDeleted && healthIssueSerials.has(a.serial || '');
       const hasHealthIssueB = !b.completed && !b.isDeleted && healthIssueSerials.has(b.serial || '');
       if (hasHealthIssueA !== hasHealthIssueB) return hasHealthIssueA ? -1 : 1;
       
-      // 置頂票券優先
       const pinnedA = !a.completed && !a.isDeleted && !!a.pinned;
       const pinnedB = !b.completed && !b.isDeleted && !!b.pinned;
       if (pinnedA !== pinnedB) return pinnedA ? -1 : 1;
@@ -191,7 +186,7 @@ const Index = () => {
       return 0;
     });
     return result;
-  }, [tasks, view, activeTag, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials, invertFilter]);
+  }, [tasks, view, activeTags, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials]);
 
   const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
   const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
