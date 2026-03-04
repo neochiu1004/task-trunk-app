@@ -23,7 +23,7 @@ const Index = () => {
   const { isDark, toggleTheme } = useTheme();
   const [tasks, setTasks] = useState<Ticket[]>([]);
   const [view, setView] = useState<ViewType>('active');
-  const [activeTag, setActiveTag] = useState('all');
+  const [activeTags, setActiveTags] = useState<string[]>([]);
   const [sortType, setSortType] = useState<SortType>('expiring');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
