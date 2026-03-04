@@ -461,10 +461,9 @@ const Index = () => {
           onSelectAll={handleSelectAll}
           isCompact={isCompact}
           setIsCompact={setIsCompact}
-          activeTag={activeTag}
-          setActiveTag={(tag) => { setActiveTag(tag); setInvertFilter(false); }}
-          invertFilter={invertFilter}
-          setInvertFilter={setInvertFilter}
+          activeTags={activeTags}
+          toggleTag={toggleTag}
+          clearTags={() => setActiveTags([])}
           allTags={allTags}
           onQuickBgChange={handleQuickBgChange}
           onOpenTagManager={() => setShowTagManager(true)}
