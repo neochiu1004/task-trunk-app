@@ -40,10 +40,9 @@ interface HeaderProps {
   onSelectAll: () => void;
   isCompact: boolean;
   setIsCompact: (compact: boolean) => void;
-  activeTag: string;
-  setActiveTag: (tag: string) => void;
-  invertFilter: boolean;
-  setInvertFilter: (invert: boolean) => void;
+  activeTags: string[];
+  toggleTag: (tag: string) => void;
+  clearTags: () => void;
   allTags: string[];
   onQuickBgChange: () => void;
   onOpenTagManager: () => void;
