@@ -386,7 +386,7 @@ const Index = () => {
   const handleDeleteTag = (tagToDelete: string) => {
     if (window.confirm(`確定刪除標籤「${tagToDelete}」？將從所有票券移除此標籤。`)) {
       setTasks((prev) => prev.map((t) => ({ ...t, tags: (t.tags || []).filter((tag) => tag !== tagToDelete) })));
-      if (activeTag === tagToDelete) setActiveTag('all');
+      setActiveTags((prev) => prev.filter((t) => t !== tagToDelete));
     }
   };
 
