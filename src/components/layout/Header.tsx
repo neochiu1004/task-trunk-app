@@ -275,30 +275,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Tags Row */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2.5 -mx-4 px-4 items-center">
-          <AnimatePresence>
-            {activeTag !== 'all' && (
-              <motion.button
-                initial={{ scale: 0, opacity: 0, width: 0 }}
-                animate={{ scale: 1, opacity: 1, width: 'auto' }}
-                exit={{ scale: 0, opacity: 0, width: 0 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setInvertFilter(!invertFilter)}
-                className={`px-3 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1 flex-shrink-0 ${
-                  invertFilter
-                    ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
-                    : 'glass-button text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <ArrowLeftRight size={11} /> {invertFilter ? '反向中' : '反向'}
-              </motion.button>
-            )}
-          </AnimatePresence>
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => setActiveTag('all')}
+            onClick={clearTags}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
-              activeTag === 'all' 
+              activeTags.length === 0 
                 ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
@@ -308,9 +290,9 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => setActiveTag('special_expiring')}
+            onClick={() => toggleTag('special_expiring')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
-              activeTag === 'special_expiring' 
+              activeTags.includes('special_expiring') 
                 ? 'bg-ticket-warning text-primary-foreground shadow-lg shadow-ticket-warning/30' 
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
@@ -320,9 +302,9 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => setActiveTag('special_duplicate')}
+            onClick={() => toggleTag('special_duplicate')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
-              activeTag === 'special_duplicate' 
+              activeTags.includes('special_duplicate') 
                 ? 'bg-orange-500 text-primary-foreground shadow-lg shadow-orange-500/30' 
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
@@ -332,9 +314,9 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => setActiveTag('special_has_original')}
+            onClick={() => toggleTag('special_has_original')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
-              activeTag === 'special_has_original' 
+              activeTags.includes('special_has_original') 
                 ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
@@ -344,9 +326,9 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => setActiveTag('special_pinned')}
+            onClick={() => toggleTag('special_pinned')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
-              activeTag === 'special_pinned' 
+              activeTags.includes('special_pinned') 
                 ? 'bg-amber-500 text-primary-foreground shadow-lg shadow-amber-500/30' 
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
@@ -358,9 +340,9 @@ export const Header: React.FC<HeaderProps> = ({
               key={tag}
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.02 }}
-              onClick={() => setActiveTag(tag)}
+              onClick={() => toggleTag(tag)}
               className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
-                activeTag === tag 
+                activeTags.includes(tag) 
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
                   : 'glass-button text-muted-foreground hover:text-foreground'
               }`}

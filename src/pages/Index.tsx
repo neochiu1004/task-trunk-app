@@ -482,7 +482,7 @@ const Index = () => {
         <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
-              key={view + activeTag + sortType}
+              key={view + activeTags.join(',') + sortType}
               variants={containerVariants}
               initial="hidden"
               animate="visible"
