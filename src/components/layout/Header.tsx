@@ -411,7 +411,8 @@ export const Header: React.FC<HeaderProps> = ({
               </AnimatePresence>
               {tag}
             </motion.button>
-          ))}
+          );
+          })}
           {allTags.length > 0 && (
             <motion.button
               whileTap={{ scale: 0.95 }}
