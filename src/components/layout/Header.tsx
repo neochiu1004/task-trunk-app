@@ -305,6 +305,8 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
+            animate={activeTags.includes('special_expiring') ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+            transition={{ duration: 0.25, type: 'spring', stiffness: 400 }}
             onClick={() => toggleTag('special_expiring')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
               activeTags.includes('special_expiring') 
@@ -312,11 +314,20 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
           >
-            <AlertCircle size={12} /> 快到期
+            <AnimatePresence mode="wait">
+              {activeTags.includes('special_expiring') ? (
+                <motion.span key="check" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}><Check size={12} strokeWidth={3} /></motion.span>
+              ) : (
+                <motion.span key="icon" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><AlertCircle size={12} /></motion.span>
+              )}
+            </AnimatePresence>
+            快到期
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
+            animate={activeTags.includes('special_duplicate') ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+            transition={{ duration: 0.25, type: 'spring', stiffness: 400 }}
             onClick={() => toggleTag('special_duplicate')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
               activeTags.includes('special_duplicate') 
@@ -324,11 +335,20 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Copy size={12} /> 重複
+            <AnimatePresence mode="wait">
+              {activeTags.includes('special_duplicate') ? (
+                <motion.span key="check" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}><Check size={12} strokeWidth={3} /></motion.span>
+              ) : (
+                <motion.span key="icon" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Copy size={12} /></motion.span>
+              )}
+            </AnimatePresence>
+            重複
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
+            animate={activeTags.includes('special_has_original') ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+            transition={{ duration: 0.25, type: 'spring', stiffness: 400 }}
             onClick={() => toggleTag('special_has_original')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
               activeTags.includes('special_has_original') 
@@ -336,11 +356,20 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
           >
-            <ImageIcon size={12} /> 有原圖
+            <AnimatePresence mode="wait">
+              {activeTags.includes('special_has_original') ? (
+                <motion.span key="check" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}><Check size={12} strokeWidth={3} /></motion.span>
+              ) : (
+                <motion.span key="icon" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><ImageIcon size={12} /></motion.span>
+              )}
+            </AnimatePresence>
+            有原圖
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
+            animate={activeTags.includes('special_pinned') ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+            transition={{ duration: 0.25, type: 'spring', stiffness: 400 }}
             onClick={() => toggleTag('special_pinned')}
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
               activeTags.includes('special_pinned') 
@@ -348,21 +377,39 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'glass-button text-muted-foreground hover:text-foreground'
             }`}
           >
-            📌 優先
+            <AnimatePresence mode="wait">
+              {activeTags.includes('special_pinned') ? (
+                <motion.span key="check" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}><Check size={12} strokeWidth={3} /></motion.span>
+              ) : (
+                <motion.span key="icon" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>📌</motion.span>
+              )}
+            </AnimatePresence>
+            優先
           </motion.button>
-          {allTags.map((tag) => (
+          {allTags.map((tag) => {
+            const isActive = activeTags.includes(tag);
+            return (
             <motion.button
               key={tag}
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.02 }}
+              animate={isActive ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+              transition={{ duration: 0.25, type: 'spring', stiffness: 400 }}
               onClick={() => toggleTag(tag)}
               className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
-                activeTags.includes(tag) 
+                isActive 
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
                   : 'glass-button text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Tag size={11} /> {tag}
+              <AnimatePresence mode="wait">
+                {isActive ? (
+                  <motion.span key="check" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}><Check size={11} strokeWidth={3} /></motion.span>
+                ) : (
+                  <motion.span key="icon" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Tag size={11} /></motion.span>
+                )}
+              </AnimatePresence>
+              {tag}
             </motion.button>
           ))}
           {allTags.length > 0 && (
