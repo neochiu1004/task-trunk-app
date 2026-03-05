@@ -287,6 +287,21 @@ export const Header: React.FC<HeaderProps> = ({
           >
             全部
           </motion.button>
+          <AnimatePresence>
+            {activeTags.length > 0 && (
+              <motion.button
+                initial={{ scale: 0, opacity: 0, width: 0 }}
+                animate={{ scale: 1, opacity: 1, width: 'auto' }}
+                exit={{ scale: 0, opacity: 0, width: 0 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={clearTags}
+                className="px-3 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-destructive/15 text-destructive flex items-center gap-1.5 overflow-hidden"
+              >
+                <X size={12} strokeWidth={2.5} />
+                已選 {activeTags.length} 個
+              </motion.button>
+            )}
+          </AnimatePresence>
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
