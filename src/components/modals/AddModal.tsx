@@ -56,6 +56,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   onRenameTemplate,
   onEditTemplate,
   redeemUrlPresets,
+  onSaveTemplate,
   onAddBatch,
 }) => {
   const { toast } = useToast();
