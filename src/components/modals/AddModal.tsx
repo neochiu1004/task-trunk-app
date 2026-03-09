@@ -24,6 +24,7 @@ interface AddModalProps {
   onRenameTemplate: (id: string, newLabel: string) => void;
   onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
+  onSaveTemplate?: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   onAddBatch: (tickets: Array<{
     id: string;
     productName: string;
@@ -55,6 +56,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   onRenameTemplate,
   onEditTemplate,
   redeemUrlPresets,
+  onSaveTemplate,
   onAddBatch,
 }) => {
   const { toast } = useToast();
@@ -407,6 +409,30 @@ export const AddModal: React.FC<AddModalProps> = ({
             >
               <Pin size={20} className={isPinned ? 'fill-amber-500' : ''} />
             </button>
+            {onSaveTemplate && manualData.name && (
+              <button
+                type="button"
+                onClick={() => {
+                  const name = prompt('請輸入範本名稱', manualData.name);
+                  if (name) {
+                    const matchingPreset = redeemUrlPresets?.find(p => p.url === manualData.redeemUrl);
+                    onSaveTemplate({
+                      label: name,
+                      productName: manualData.name,
+                      image: images[0] || undefined,
+                      tags: manualTags,
+                      serial: manualData.serial,
+                      expiry: manualData.expiry,
+                      redeemUrlPresetId: matchingPreset?.id,
+                    });
+                  }
+                }}
+                className="p-3.5 rounded-2xl bg-ticket-success/10 border border-ticket-success/30 text-ticket-success hover:bg-ticket-success/20 transition-all shadow-sm"
+                title="儲存為範本"
+              >
+                <LayoutDashboard size={20} />
+              </button>
+            )}
             <button
               onClick={handleManualSubmit}
               className="flex-1 bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all active:scale-[0.98]"
