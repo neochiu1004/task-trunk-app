@@ -419,7 +419,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                     onSaveTemplate({
                       label: name,
                       productName: manualData.name,
-                      image: manualData.image,
+                      image: images[0] || undefined,
                       tags: manualTags,
                       serial: manualData.serial,
                       expiry: manualData.expiry,
