@@ -409,9 +409,10 @@ export const AddModal: React.FC<AddModalProps> = ({
             >
               <Pin size={20} className={isPinned ? 'fill-amber-500' : ''} />
             </button>
-            {onSaveTemplate && manualData.name && (
+            {onSaveTemplate && (
               <button
                 type="button"
+                disabled={!manualData.name.trim()}
                 onClick={() => {
                   const name = prompt('請輸入範本名稱', manualData.name);
                   if (name) {
@@ -427,8 +428,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                     });
                   }
                 }}
-                className="p-3.5 rounded-2xl bg-ticket-success/10 border border-ticket-success/30 text-ticket-success hover:bg-ticket-success/20 transition-all shadow-sm"
-                title="儲存為範本"
+                className="p-3.5 rounded-2xl border transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed bg-ticket-success/10 border-ticket-success/30 text-ticket-success hover:bg-ticket-success/20 disabled:hover:bg-ticket-success/10"
+                title={manualData.name.trim() ? '儲存為範本' : '請先輸入票券名稱'}
               >
                 <LayoutDashboard size={20} />
               </button>
