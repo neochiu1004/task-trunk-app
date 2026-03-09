@@ -24,6 +24,7 @@ interface AddModalProps {
   onRenameTemplate: (id: string, newLabel: string) => void;
   onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
+  onSaveTemplate?: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   onAddBatch: (tickets: Array<{
     id: string;
     productName: string;
