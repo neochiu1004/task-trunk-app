@@ -297,8 +297,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={clearTags}
                 className="px-3 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-destructive/15 text-destructive flex items-center gap-1.5 overflow-hidden"
               >
-                <X size={12} strokeWidth={2.5} />
-                已選 {activeTags.length} 個
+                清除 ({activeTags.length})
               </motion.button>
             )}
           </AnimatePresence>
