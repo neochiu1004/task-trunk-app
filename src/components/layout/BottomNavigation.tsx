@@ -24,7 +24,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-md pointer-events-auto">
         {/* Navigation Bar */}
-        <nav className="glass-header border-t border-border/30 px-4 pt-2 pb-6 flex items-center justify-around">
+        <nav className="glass-header border-t border-border/40 px-4 pt-2 pb-6 flex items-center justify-around">
           <NavItem
             icon={navItems[0].icon}
             label={navItems[0].label}
@@ -41,11 +41,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           >
             <div className="relative">
               <motion.div
-                className="absolute -inset-2.5 bg-gradient-to-tr from-primary to-primary/70 rounded-xl shadow-lg shadow-primary/30"
+                className="absolute -inset-2.5 bg-gradient-to-tr from-[#6A9C89] to-[#4f8070] rounded-xl shadow-md"
               />
               <Plus size={22} className="relative z-10 text-primary-foreground" />
             </div>
-            <span className="text-[10px] font-semibold text-primary">新增</span>
+            <span className="text-[10px] font-semibold text-[#4f8070]">新增</span>
           </motion.button>
           
           <NavItem
@@ -80,7 +80,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, isActive, onClick 
       onClick={onClick}
       className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${
         isActive 
-          ? 'text-primary' 
+          ? 'text-[#334A52]' 
           : 'text-muted-foreground hover:text-foreground'
       }`}
     >
@@ -88,7 +88,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, isActive, onClick 
         {isActive && (
           <motion.div
             layoutId="bottomNavIndicator"
-            className="absolute -inset-2 bg-primary/10 rounded-xl"
+            className="absolute -inset-2 bg-[#6A9C89]/15 rounded-xl"
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           />
         )}

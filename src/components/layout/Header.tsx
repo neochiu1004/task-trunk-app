@@ -120,10 +120,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   // 按鈕顏色配置
   const buttonConfigs = [
-    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-pink-500 to-purple-600', hoverClass: 'hover:from-pink-400 hover:to-purple-500', tooltip: '背景' },
-    { icon: isDark ? Sun : Moon, onClick: onToggleTheme || (() => {}), bgClass: isDark ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-violet-600', hoverClass: isDark ? 'hover:from-amber-300 hover:to-orange-400' : 'hover:from-indigo-400 hover:to-violet-500', tooltip: isDark ? '淺色模式' : '深色模式' },
-    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-blue-500 to-cyan-600', hoverClass: 'hover:from-blue-400 hover:to-cyan-500', tooltip: '設定' },
-    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-emerald-500 to-teal-600', hoverClass: 'hover:from-emerald-400 hover:to-teal-500', tooltip: '選單' },
+    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-[#486773] to-[#334A52]', hoverClass: 'hover:from-[#557985] hover:to-[#3D5963]', tooltip: '背景' },
+    { icon: isDark ? Sun : Moon, onClick: onToggleTheme || (() => {}), bgClass: isDark ? 'bg-gradient-to-br from-[#c18f3e] to-[#996f31]' : 'bg-gradient-to-br from-[#5e7f72] to-[#4a6a5e]', hoverClass: isDark ? 'hover:from-[#cf9a45] hover:to-[#a17736]' : 'hover:from-[#6a8e7f] hover:to-[#557769]', tooltip: isDark ? '淺色模式' : '深色模式' },
+    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-[#6A9C89] to-[#4f8070]', hoverClass: 'hover:from-[#76ab97] hover:to-[#5b8e7d]', tooltip: '設定' },
+    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-[#9e7862] to-[#7d5f4f]', hoverClass: 'hover:from-[#ad846c] hover:to-[#8a6a58]', tooltip: '選單' },
   ];
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onPointerUp={handleLogoPointerUp}
                     onPointerLeave={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
                     style={{ width: headerButtonSize, height: headerButtonSize }}
-                    className="rounded-2xl bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-lg border-2 border-border/40 ring-1 ring-white/10"
+                    className="rounded-2xl bg-gradient-to-br from-background/95 to-background/75 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-md border border-border/70"
                   >
                     <img src={displayLogo} alt="Brand" className="w-full h-full object-cover" />
                   </motion.div>
@@ -198,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
             {isEditingTitle ? (
               <input
                 autoFocus
-                className="text-xl font-bold bg-transparent outline-none border-b-2 border-primary w-40 tracking-tight"
+                className="text-xl font-bold bg-transparent outline-none border-b-2 border-primary w-40"
                 value={appTitle}
                 onChange={(e) => onTitleChange(e.target.value)}
                 onBlur={() => setIsEditingTitle(false)}
@@ -210,10 +210,10 @@ export const Header: React.FC<HeaderProps> = ({
                   <TooltipTrigger asChild>
                     <motion.h1
                       whileTap={{ scale: 0.98 }}
-                      className="text-xl font-bold cursor-pointer flex items-center gap-2 tracking-tight"
+                      className="text-xl font-bold cursor-pointer flex items-center gap-2"
                       onClick={() => setIsEditingTitle(true)}
                     >
-                      <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{appTitle}</span>
+                      <span className="bg-gradient-to-r from-[#334A52] to-[#5e7f72] bg-clip-text text-transparent">{appTitle}</span>
                     </motion.h1>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
@@ -233,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
                       whileHover={{ scale: 1.08 }}
                       onClick={config.onClick}
                       style={{ width: headerButtonSize, height: headerButtonSize }}
-                      className={`flex items-center justify-center rounded-2xl text-white shadow-lg ${config.bgClass} ${config.hoverClass} active:scale-95 transition-all duration-200`}
+                      className={`flex items-center justify-center rounded-2xl text-white shadow-md ${config.bgClass} ${config.hoverClass} active:scale-95 transition-all duration-200`}
                     >
                       <config.icon size={iconSize} />
                     </motion.button>
@@ -254,8 +254,8 @@ export const Header: React.FC<HeaderProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜尋票券或標籤..."
-            className="w-full py-3 pl-11 pr-10 glass-card rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/40 focus:shadow-lg focus:shadow-primary/10 transition-all duration-200 placeholder:text-muted-foreground/50"
+            placeholder="搜尋票券、標籤或序號..."
+            className="w-full py-3 pl-11 pr-10 glass-card rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200 placeholder:text-muted-foreground/70"
           />
           <AnimatePresence>
             {searchQuery && (
