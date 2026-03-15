@@ -1,7 +1,7 @@
 import {
   checkIsExpiringSoon,
   escapeHtml,
-  formatDate,
+  formatDateTime,
   parseTags,
   showToast,
   normalizeDateInput,
@@ -1088,6 +1088,7 @@ export class TicketsPage {
     const compactGrid = !!options.compactGrid;
     const ultraCompactCard = !!options.ultraCompactCard;
     const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
+    const cardHeight = clamp(options.cardHeight, 0, 360, 0);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
     if (!tickets.length) {
@@ -1125,7 +1126,7 @@ export class TicketsPage {
       const statusBadge = ticket.isDeleted
         ? ''
         : ticket.completed
-          ? `<span class="text-xs rounded-full px-2 py-1 bg-emerald-100 text-emerald-700">已使用 ${formatDate(ticket.completedAt)}</span>`
+          ? `<span class="text-xs rounded-full px-2 py-1 bg-emerald-100 text-emerald-700">已使用 ${formatDateTime(ticket.completedAt)}</span>`
           : isExpiring
             ? '<span class="text-xs rounded-full px-2 py-1 bg-amber-100 text-amber-700">即將到期</span>'
             : this.view === 'active'
@@ -1154,7 +1155,7 @@ export class TicketsPage {
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
-        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};"`;
+        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
         const compactExpiryCardClass = expiryState === 'expired'
           ? 'ticket-card--expiry-expired'
           : expiryState === 'today'
@@ -1248,8 +1249,14 @@ export class TicketsPage {
         ? ''
         : '<button data-action="edit" class="px-3 py-1 rounded-lg bg-wabi-primary/10 text-wabi-primary text-xs">編輯</button>';
       const cardPaddingClass = compactGrid ? 'p-3' : 'p-4';
-      const imageClass = compactGrid ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2' : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3';
-      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};"`;
+      const imageClass = this.view === 'active'
+        ? (compactGrid
+          ? 'w-full h-24 object-cover rounded-lg border border-wabi-border mb-2'
+          : 'w-full h-32 object-cover rounded-xl border border-wabi-border mb-3')
+        : (compactGrid
+          ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
+          : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
+      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
         active: { left: '核銷', right: '回收' },
         completed: { left: '還原', right: '回收' },
@@ -1374,6 +1381,7 @@ export class TicketsPage {
     const showBackground = viewConfig.showBackground !== false;
     const bgOpacity = clamp(viewConfig.bgOpacity, 0, 1, 1);
     const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, 0.95);
+    const cardHeight = clamp(viewConfig.cardHeight, 0, 360, 0);
     const cardBgColor = viewConfig.cardBgColor || '#ffffff';
     const cardBorderColor = viewConfig.cardBorderColor || '#e2e8f0';
     const ultraCompactCard = viewConfig.ultraCompactCard === true;
@@ -1527,7 +1535,7 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, cardOpacity, cardBgColor, cardBorderColor })}</div>
+        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, cardOpacity, cardHeight, cardBgColor, cardBorderColor })}</div>
       </section>
     `);
 

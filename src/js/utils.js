@@ -18,6 +18,7 @@ export const defaultViewConfig = {
   bgSize: 100,
   cardBgColor: '#ffffff',
   cardBorderColor: '#e2e8f0',
+  cardHeight: 0,
   gridImageHeight: 96,
   gridColumns: 2,
   headerBgSize: 100,

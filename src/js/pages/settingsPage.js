@@ -195,15 +195,26 @@ export class SettingsPage {
       ? Math.max(0, Math.min(1, Number(activeViewConfig.cardOpacity)))
       : 0.95;
     const activeCardTransparencyPercent = Math.round((1 - activeCardOpacity) * 100);
+    const activeCardHeight = Number.isFinite(Number(activeViewConfig.cardHeight))
+      ? Math.max(0, Math.min(360, Number(activeViewConfig.cardHeight)))
+      : 0;
     const quickTagsText = (settings.quickTags || []).join(', ');
     const swipeTriggerDistancePx = Number.isFinite(Number(settings.swipeTriggerDistance))
       ? Math.max(40, Math.min(120, Number(settings.swipeTriggerDistance)))
       : 72;
     this.app.mount(`
       <section class="page active p-4 pb-24 md:pb-8 max-w-4xl mx-auto space-y-4">
-        <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-bold text-wabi-primary">設定</h1>
-          <a href="#active" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-sm">返回</a>
+        <div class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: var(--safe-top);">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h1 class="text-2xl font-bold text-wabi-primary">設定</h1>
+              <p class="text-sm text-wabi-text-secondary">調整票券顯示、通知與資料管理</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="#active" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-sm">返回</a>
+              <button type="submit" form="settings-form" class="px-4 py-2 rounded-lg bg-wabi-primary text-white text-sm">儲存設定</button>
+            </div>
+          </div>
         </div>
 
         <form id="settings-form" class="bg-white border border-wabi-border rounded-2xl p-4 space-y-3">
@@ -291,6 +302,14 @@ export class SettingsPage {
                 <input id="active-card-transparency" type="range" min="0" max="100" step="5" value="${activeCardTransparencyPercent}" class="w-full accent-wabi-primary" />
               </div>
             </div>
+            <div>
+              <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                <label for="active-card-height">卡片高度</label>
+                <span id="active-card-height-value">${activeCardHeight > 0 ? `${activeCardHeight}px` : '自動'}</span>
+              </div>
+              <input id="active-card-height" type="range" min="0" max="360" step="10" value="${activeCardHeight}" class="w-full accent-wabi-primary" />
+              <p class="text-xs text-wabi-text-secondary mt-1">0 代表自動高度；可向右調高卡片高度。</p>
+            </div>
             <div class="flex items-center justify-between gap-2">
               <label class="inline-flex items-center gap-2 text-sm">
                 <input id="active-show-background" type="checkbox" ${activeShowBackground ? 'checked' : ''} />
@@ -313,7 +332,6 @@ export class SettingsPage {
             </div>
           </div>
           <div class="flex gap-2">
-            <button class="px-4 py-2 rounded-lg bg-wabi-primary text-white">儲存設定</button>
             <button type="button" id="send-test-telegram" class="px-4 py-2 rounded-lg bg-wabi-accent/40 text-wabi-primary">發送 Telegram 測試</button>
           </div>
         </form>
@@ -412,6 +430,8 @@ export class SettingsPage {
     const activeBgOpacityValue = root.querySelector('#active-bg-opacity-value');
     const activeCardTransparencyInput = root.querySelector('#active-card-transparency');
     const activeCardTransparencyValue = root.querySelector('#active-card-transparency-value');
+    const activeCardHeightInput = root.querySelector('#active-card-height');
+    const activeCardHeightValue = root.querySelector('#active-card-height-value');
     const swipeGesturesEnabledInput = root.querySelector('#swipe-gestures-enabled');
     const swipeTriggerDistanceInput = root.querySelector('#swipe-trigger-distance');
     const swipeTriggerDistanceValue = root.querySelector('#swipe-trigger-distance-value');
@@ -449,6 +469,10 @@ export class SettingsPage {
       }
       if (activeCardTransparencyValue && activeCardTransparencyInput) {
         activeCardTransparencyValue.textContent = `${Math.max(0, Math.min(100, Number(activeCardTransparencyInput.value) || 0))}%`;
+      }
+      if (activeCardHeightValue && activeCardHeightInput) {
+        const cardHeight = Math.max(0, Math.min(360, Number(activeCardHeightInput.value) || 0));
+        activeCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
       }
     };
     const syncSwipeControls = () => {
@@ -492,9 +516,11 @@ export class SettingsPage {
       const prevActiveViewConfig = prevViewConfigs.active || {};
       const bgOpacityRaw = Number(activeBgOpacityInput?.value);
       const cardTransparencyRaw = Number(activeCardTransparencyInput?.value);
+      const cardHeightRaw = Number(activeCardHeightInput?.value);
       const swipeTriggerDistanceRaw = Number(swipeTriggerDistanceInput?.value);
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
+      const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
         ...prevActiveViewConfig,
@@ -506,6 +532,7 @@ export class SettingsPage {
         showBackground: activeShowBackgroundInput?.checked !== false,
         bgOpacity: bgOpacityPercent / 100,
         cardOpacity: 1 - (cardTransparencyPercent / 100),
+        cardHeight,
       };
       const settings = {
         ...this.app.state.settings,
@@ -536,6 +563,7 @@ export class SettingsPage {
     });
     activeBgOpacityInput?.addEventListener('input', syncOpacityLabels);
     activeCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
+    activeCardHeightInput?.addEventListener('input', syncOpacityLabels);
     swipeGesturesEnabledInput?.addEventListener('change', syncSwipeControls);
     swipeTriggerDistanceInput?.addEventListener('input', syncSwipeControls);
     root.querySelector('#reset-swipe-hint')?.addEventListener('click', () => {
