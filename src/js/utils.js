@@ -11,19 +11,13 @@ export const defaultViewConfig = {
   backgroundImage: '',
   backgroundImages: [],
   showBackground: true,
-  headerBackgroundImage: '',
   cardOpacity: 0.95,
   bgOpacity: 1,
-  bgPosY: 50,
-  bgSize: 100,
   cardBgColor: '#ffffff',
   cardBorderColor: '#e2e8f0',
   cardHeight: 0,
   gridImageHeight: 96,
   gridColumns: 2,
-  headerBgSize: 100,
-  headerBgPosY: 50,
-  headerBgOpacity: 1,
   showThumbnail: true,
   ultraCompactCard: false,
 };
@@ -36,7 +30,6 @@ export const defaultSettings = {
   swipeGesturesEnabled: true,
   swipeTriggerDistance: 72,
   specificViewKeywords: ['MOMO', '85度C'],
-  bgConfigMap: {},
   viewConfigs: {
     active: { ...defaultViewConfig },
     completed: { ...defaultViewConfig },
@@ -45,8 +38,6 @@ export const defaultSettings = {
   redeemUrlPresets: [],
   quickTags: [],
   localBackupFileName: 'ticket_backup',
-  autoCopySerialOnRedeem: false,
-  headerButtonSize: 44,
 };
 
 export const BARCODE_FORMATS = [

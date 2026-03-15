@@ -198,6 +198,9 @@ export class SettingsPage {
     const activeCardHeight = Number.isFinite(Number(activeViewConfig.cardHeight))
       ? Math.max(0, Math.min(360, Number(activeViewConfig.cardHeight)))
       : 0;
+    const activeGridImageHeight = Number.isFinite(Number(activeViewConfig.gridImageHeight))
+      ? Math.max(60, Math.min(220, Number(activeViewConfig.gridImageHeight)))
+      : 96;
     const quickTagsText = (settings.quickTags || []).join(', ');
     const swipeTriggerDistancePx = Number.isFinite(Number(settings.swipeTriggerDistance))
       ? Math.max(40, Math.min(120, Number(settings.swipeTriggerDistance)))
@@ -304,11 +307,19 @@ export class SettingsPage {
             </div>
             <div>
               <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
-                <label for="active-card-height">卡片高度</label>
+                <label for="active-card-height">待使用票券高度</label>
                 <span id="active-card-height-value">${activeCardHeight > 0 ? `${activeCardHeight}px` : '自動'}</span>
               </div>
               <input id="active-card-height" type="range" min="0" max="360" step="10" value="${activeCardHeight}" class="w-full accent-wabi-primary" />
-              <p class="text-xs text-wabi-text-secondary mt-1">0 代表自動高度；可向右調高卡片高度。</p>
+              <p class="text-xs text-wabi-text-secondary mt-1">調整待使用頁票券卡片高度；0 代表自動高度。</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                <label for="active-thumbnail-height">主頁縮圖高度</label>
+                <span id="active-thumbnail-height-value">${activeGridImageHeight}px</span>
+              </div>
+              <input id="active-thumbnail-height" type="range" min="60" max="220" step="4" value="${activeGridImageHeight}" class="w-full accent-wabi-primary" />
+              <p class="text-xs text-wabi-text-secondary mt-1">只影響待使用頁卡片縮圖大小。</p>
             </div>
             <div class="flex items-center justify-between gap-2">
               <label class="inline-flex items-center gap-2 text-sm">
@@ -397,6 +408,7 @@ export class SettingsPage {
           <div class="flex gap-2 flex-wrap">
             <button id="run-health-check" class="px-4 py-2 rounded-lg bg-wabi-primary/10 text-wabi-primary">立即檢查</button>
             <button id="run-barcode-audit" class="px-4 py-2 rounded-lg bg-wabi-primary/10 text-wabi-primary">條碼一致性檢查</button>
+            <button id="cleanup-residual-data" class="px-4 py-2 rounded-lg bg-amber-100 text-amber-800">清理殘留資料</button>
             <button id="request-persistence" class="px-4 py-2 rounded-lg bg-wabi-accent/40 text-wabi-primary">啟用持久化儲存</button>
           </div>
         </section>
@@ -432,6 +444,8 @@ export class SettingsPage {
     const activeCardTransparencyValue = root.querySelector('#active-card-transparency-value');
     const activeCardHeightInput = root.querySelector('#active-card-height');
     const activeCardHeightValue = root.querySelector('#active-card-height-value');
+    const activeThumbnailHeightInput = root.querySelector('#active-thumbnail-height');
+    const activeThumbnailHeightValue = root.querySelector('#active-thumbnail-height-value');
     const swipeGesturesEnabledInput = root.querySelector('#swipe-gestures-enabled');
     const swipeTriggerDistanceInput = root.querySelector('#swipe-trigger-distance');
     const swipeTriggerDistanceValue = root.querySelector('#swipe-trigger-distance-value');
@@ -473,6 +487,10 @@ export class SettingsPage {
       if (activeCardHeightValue && activeCardHeightInput) {
         const cardHeight = Math.max(0, Math.min(360, Number(activeCardHeightInput.value) || 0));
         activeCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
+      }
+      if (activeThumbnailHeightValue && activeThumbnailHeightInput) {
+        const thumbHeight = Math.max(60, Math.min(220, Number(activeThumbnailHeightInput.value) || 96));
+        activeThumbnailHeightValue.textContent = `${thumbHeight}px`;
       }
     };
     const syncSwipeControls = () => {
@@ -517,22 +535,25 @@ export class SettingsPage {
       const bgOpacityRaw = Number(activeBgOpacityInput?.value);
       const cardTransparencyRaw = Number(activeCardTransparencyInput?.value);
       const cardHeightRaw = Number(activeCardHeightInput?.value);
+      const thumbnailHeightRaw = Number(activeThumbnailHeightInput?.value);
       const swipeTriggerDistanceRaw = Number(swipeTriggerDistanceInput?.value);
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
       const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
+      const gridImageHeight = Math.max(60, Math.min(220, Number.isFinite(thumbnailHeightRaw) ? thumbnailHeightRaw : 96));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
         ...prevActiveViewConfig,
         gridColumns: Math.max(1, Math.min(3, Number(root.querySelector('#active-grid-columns')?.value || 2))),
         showThumbnail: !(root.querySelector('#active-hide-thumbnail')?.checked),
         ultraCompactCard: root.querySelector('#active-ultra-compact')?.checked === true,
-        backgroundImage: activeBackgroundImages[0] || '',
+        backgroundImage: '',
         backgroundImages: [...activeBackgroundImages],
         showBackground: activeShowBackgroundInput?.checked !== false,
         bgOpacity: bgOpacityPercent / 100,
         cardOpacity: 1 - (cardTransparencyPercent / 100),
         cardHeight,
+        gridImageHeight,
       };
       const settings = {
         ...this.app.state.settings,
@@ -564,6 +585,7 @@ export class SettingsPage {
     activeBgOpacityInput?.addEventListener('input', syncOpacityLabels);
     activeCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
     activeCardHeightInput?.addEventListener('input', syncOpacityLabels);
+    activeThumbnailHeightInput?.addEventListener('input', syncOpacityLabels);
     swipeGesturesEnabledInput?.addEventListener('change', syncSwipeControls);
     swipeTriggerDistanceInput?.addEventListener('input', syncSwipeControls);
     root.querySelector('#reset-swipe-hint')?.addEventListener('click', () => {
@@ -939,7 +961,6 @@ export class SettingsPage {
       this.app.state.tasks = imported.tasks;
       this.app.state.settings = imported.settings;
       this.app.state.templates = imported.templates;
-      this.app.state.bgHistory = imported.bgHistory;
       this.app.state.expiryNotified = imported.expiryNotified;
 
       this.pendingImport = null;
@@ -970,6 +991,28 @@ export class SettingsPage {
     root.querySelector('#run-health-check')?.addEventListener('click', async () => {
       this.health = await this.app.dataService.checkDataHealth();
       showToast(this.health.isHealthy ? '資料檢查完成：正常' : '資料檢查完成：發現問題', this.health.isHealthy ? 'success' : 'error');
+      this.render();
+    });
+
+    root.querySelector('#cleanup-residual-data')?.addEventListener('click', async () => {
+      const ok = window.confirm('將清理舊版殘留 key 與冗餘設定欄位，不會刪除票券資料。是否繼續？');
+      if (!ok) return;
+
+      const result = await this.app.dataService.cleanupResidualData();
+      const refreshed = await this.app.dataService.loadState();
+      this.app.state.tasks = refreshed.tasks;
+      this.app.state.settings = refreshed.settings;
+      this.app.state.templates = refreshed.templates;
+      this.app.state.expiryNotified = refreshed.expiryNotified;
+
+      const hints = [];
+      if (result.removedKeys.length > 0) hints.push(`清除 ${result.removedKeys.length} 個舊索引`);
+      if (result.settingsCompacted) hints.push('已壓縮設定欄位');
+      if (result.removedExpiryNotifiedCount > 0) hints.push(`移除 ${result.removedExpiryNotifiedCount} 筆無效通知紀錄`);
+      if (result.reclaimedBytes > 0) hints.push(`釋放 ${formatBytes(result.reclaimedBytes)}`);
+
+      showToast(hints.length ? `清理完成：${hints.join('、')}` : '清理完成：未偵測到可清理項目', 'success');
+      this.health = await this.app.dataService.checkDataHealth();
       this.render();
     });
 

@@ -122,6 +122,7 @@ export class TicketsPage {
     this.app = app;
     this.view = view;
     this.toolbarScrollHandler = null;
+    this.backgroundInsetHandler = null;
     this.backgroundRotationTimer = null;
     this.backgroundRotationIndex = 0;
     this.lastSelectedCount = null;
@@ -445,6 +446,28 @@ export class TicketsPage {
     }
   }
 
+  clearBackgroundInsetHandler() {
+    if (this.backgroundInsetHandler) {
+      window.removeEventListener('resize', this.backgroundInsetHandler);
+      window.removeEventListener('orientationchange', this.backgroundInsetHandler);
+      window.visualViewport?.removeEventListener('resize', this.backgroundInsetHandler);
+      this.backgroundInsetHandler = null;
+    }
+  }
+
+  updateBackgroundLayerInset() {
+    const layer = this.app.getRoot()?.querySelector('.ticket-view-bg-layer');
+    if (!layer) return;
+    const topBar = this.app.getRoot()?.querySelector('#tickets-top-bar');
+    if (!topBar) {
+      layer.style.top = '0px';
+      return;
+    }
+    const rect = topBar.getBoundingClientRect();
+    const insetTop = Math.max(0, Math.round(rect.bottom));
+    layer.style.top = `${insetTop}px`;
+  }
+
   startBackgroundRotation(backgroundImages, showBackground) {
     this.clearBackgroundRotationTimer();
     if (!showBackground) return;
@@ -683,7 +706,6 @@ export class TicketsPage {
             <h3 class="text-xl md:text-2xl font-semibold text-wabi-primary">核銷模式</h3>
             <p class="text-base md:text-xl text-wabi-text-primary mt-1 break-words">${escapeHtml(ticket.productName || '未命名票券')}</p>
           </div>
-          <button type="button" data-close-redeem-modal data-redeem-keepopen="1" class="px-3 py-2 rounded-lg border border-wabi-border text-sm md:text-base shrink-0">關閉</button>
         </div>
 
         <div id="redeem-mode-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3">
@@ -700,7 +722,6 @@ export class TicketsPage {
         <div id="redeem-preview-wrap" class="flex-1 min-h-0 rounded-lg border border-wabi-border bg-slate-100 p-0 flex items-center justify-center overflow-hidden"></div>
 
         <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
-          <button type="button" data-cancel-redeem data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border text-sm md:text-base">取消</button>
           <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
         </div>
       </div>
@@ -965,11 +986,7 @@ export class TicketsPage {
       if (suppressNextModalClick) return;
       const keepOpenTarget = event.target.closest('[data-redeem-keepopen]');
       if (keepOpenTarget) return;
-      cleanup();
     });
-
-    modal.querySelector('[data-close-redeem-modal]')?.addEventListener('click', cleanup);
-    modal.querySelector('[data-cancel-redeem]')?.addEventListener('click', cleanup);
 
     modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1087,8 +1104,11 @@ export class TicketsPage {
     const showThumbnail = options.showThumbnail !== false;
     const compactGrid = !!options.compactGrid;
     const ultraCompactCard = !!options.ultraCompactCard;
+    const gridColumns = [1, 2, 3].includes(Number(options.gridColumns)) ? Number(options.gridColumns) : 2;
+    const hideTagAndSerial = this.view === 'active' && gridColumns === 3;
     const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
     const cardHeight = clamp(options.cardHeight, 0, 360, 0);
+    const gridImageHeight = clamp(options.gridImageHeight, 60, 220, compactGrid ? 96 : 128);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
     if (!tickets.length) {
@@ -1168,15 +1188,15 @@ export class TicketsPage {
           : expiryState === 'today'
             ? 'ticket-card-expiry--today ticket-card-expiry--today-pill'
             : expiryState === 'soon'
-              ? 'ticket-card-expiry--soon'
-              : '';
+              ? 'ticket-card-expiry--soon ticket-card-expiry--soon-pill'
+              : 'ticket-card-expiry--normal ticket-card-expiry--normal-pill';
         const compactExpiryPrefix = expiryState === 'expired'
           ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
           : expiryState === 'today'
             ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
             : expiryState === 'soon'
               ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
-              : '';
+              : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
         const swipeMap = {
           active: { left: '核銷', right: '回收' },
           completed: { left: '還原', right: '回收' },
@@ -1204,7 +1224,7 @@ export class TicketsPage {
           </article>
         `;
       }
-      const showTagChips = this.view !== 'deleted' && this.view !== 'completed';
+      const showTagChips = !hideTagAndSerial && this.view !== 'deleted' && this.view !== 'completed';
       const tagBadges = this.view === 'deleted'
         ? `
             ${originalImageBadge}
@@ -1213,7 +1233,7 @@ export class TicketsPage {
             ${originalImageBadge}
             ${activeExpiryBadge}
             ${showTagChips ? tagsHtml : ''}
-            ${isDuplicateSerial ? '<span class="text-xs rounded-full px-2 py-1 bg-orange-100 text-orange-700">重複序號</span>' : ''}
+            ${!hideTagAndSerial && isDuplicateSerial ? '<span class="text-xs rounded-full px-2 py-1 bg-orange-100 text-orange-700">重複序號</span>' : ''}
           `;
       const metaRow = (tagBadges || statusBadge)
         ? `
@@ -1248,14 +1268,31 @@ export class TicketsPage {
       const editButton = this.view === 'completed' || this.view === 'deleted'
         ? ''
         : '<button data-action="edit" class="px-3 py-1 rounded-lg bg-wabi-primary/10 text-wabi-primary text-xs">編輯</button>';
+      const standardExpiryClass = expiryState === 'expired'
+        ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--expired'
+        : expiryState === 'today'
+          ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--today'
+          : expiryState === 'soon'
+            ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--soon'
+            : 'ticket-card-expiry-highlight ticket-card-expiry-highlight--normal';
+      const standardExpiryPrefix = expiryState === 'expired'
+        ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+        : expiryState === 'today'
+          ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+          : expiryState === 'soon'
+            ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+            : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
       const cardPaddingClass = compactGrid ? 'p-3' : 'p-4';
       const imageClass = this.view === 'active'
         ? (compactGrid
-          ? 'w-full h-24 object-cover rounded-lg border border-wabi-border mb-2'
-          : 'w-full h-32 object-cover rounded-xl border border-wabi-border mb-3')
+          ? 'w-full object-cover rounded-lg border border-wabi-border mb-2'
+          : 'w-full object-cover rounded-xl border border-wabi-border mb-3')
         : (compactGrid
           ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
           : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
+      const imageStyle = this.view === 'active'
+        ? ` style="height: ${Math.round(gridImageHeight)}px;"`
+        : '';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
         active: { left: '核銷', right: '回收' },
@@ -1274,8 +1311,8 @@ export class TicketsPage {
               ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4">` : ''}
               <div class="min-w-0">
                 <h3 class="font-semibold text-wabi-primary text-base truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
-                <p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>
-                <p class="text-xs text-wabi-text-secondary">到期：${escapeHtml(ticket.expiry || '無期限')}</p>
+                ${hideTagAndSerial ? '' : `<p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>`}
+                <p class="${standardExpiryClass}">${standardExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
               </div>
             </div>
             <button data-action="toggle-pin" class="text-sm ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
@@ -1283,7 +1320,7 @@ export class TicketsPage {
             </button>
           </div>
 
-          ${showThumbnail && ticket.image ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}" />` : ''}
+          ${showThumbnail && ticket.image ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />` : ''}
 
           ${ticket.note ? `<p class="text-sm text-wabi-text-primary mb-2 break-all">${escapeHtml(ticket.note)}</p>` : ''}
 
@@ -1365,6 +1402,7 @@ export class TicketsPage {
 
   async render() {
     this.clearBackgroundRotationTimer();
+    this.clearBackgroundInsetHandler();
     this.showSwipeHintIfNeeded();
     const meta = VIEW_META[this.view];
     const tickets = this.filterTickets();
@@ -1386,6 +1424,7 @@ export class TicketsPage {
     const cardBorderColor = viewConfig.cardBorderColor || '#e2e8f0';
     const ultraCompactCard = viewConfig.ultraCompactCard === true;
     const compactGrid = gridColumns > 1;
+    const gridImageHeight = clamp(viewConfig.gridImageHeight, 60, 220, compactGrid ? 96 : 128);
     let ticketGridClass = gridColumns === 3
       ? 'grid grid-cols-3 gap-1.5'
       : gridColumns === 2
@@ -1415,6 +1454,7 @@ export class TicketsPage {
       return state === 'expired' || state === 'today' || state === 'soon';
     }).length;
     const completedTotalCount = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted).length;
+    const deletedTotalCount = this.app.state.tasks.filter((ticket) => ticket.isDeleted).length;
     const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
       tag === ORIGINAL_IMAGE_FILTER_TAG
         ? '原圖'
@@ -1443,7 +1483,7 @@ export class TicketsPage {
     this.app.mount(`
       ${backgroundLayerHtml}
       <section class="page active relative z-10 p-4 pb-24 md:pb-8 max-w-5xl mx-auto">
-        <div class="sticky top-0 z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]">
+        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: var(--safe-top);">
           <header class="flex items-center justify-between mb-4 gap-2">
             <div>
               <h1 class="text-2xl font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
@@ -1459,6 +1499,9 @@ export class TicketsPage {
             <button id="toggle-ultra-compact-btn" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${ultraCompactCard ? '標準卡片' : '超精簡卡片'}</button>
             ${this.view === 'completed'
               ? `<button id="quick-clear-completed-to-trash" class="px-3 py-2 rounded-lg bg-red-100 border border-red-200 text-red-700 text-xs ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}>全部回收 (${completedTotalCount})</button>`
+              : ''}
+            ${this.view === 'deleted'
+              ? `<button id="quick-purge-deleted" class="px-3 py-2 rounded-lg bg-red-100 border border-red-200 text-red-700 text-xs ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}>全部刪除 (${deletedTotalCount})</button>`
               : ''}
             ${this.view === 'active' && backgroundImages.length > 0
               ? `<button id="toggle-active-background" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${showBackground ? '一鍵隱藏背景' : '一鍵顯示背景'}</button>`
@@ -1535,11 +1578,16 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, cardOpacity, cardHeight, cardBgColor, cardBorderColor })}</div>
+        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, gridImageHeight, cardBgColor, cardBorderColor })}</div>
       </section>
     `);
 
     this.bindEvents();
+    this.updateBackgroundLayerInset();
+    this.backgroundInsetHandler = () => this.updateBackgroundLayerInset();
+    window.addEventListener('resize', this.backgroundInsetHandler);
+    window.addEventListener('orientationchange', this.backgroundInsetHandler);
+    window.visualViewport?.addEventListener('resize', this.backgroundInsetHandler);
     this.startBackgroundRotation(backgroundImages, showBackground);
   }
 
@@ -1646,6 +1694,23 @@ export class TicketsPage {
       this.app.state.ui.selectedIds.clear();
       await this.app.persistTasks();
       showToast(`已將 ${targets.length} 張票券移至回收桶`, 'success');
+      this.render();
+    });
+
+    root.querySelector('#quick-purge-deleted')?.addEventListener('click', async () => {
+      if (this.view !== 'deleted') return;
+      const targets = this.app.state.tasks.filter((ticket) => ticket.isDeleted);
+      if (!targets.length) {
+        showToast('回收桶沒有可刪除票券', 'error');
+        return;
+      }
+      const ok = window.confirm(`確定永久刪除回收桶內 ${targets.length} 張票券？`);
+      if (!ok) return;
+
+      this.app.state.tasks = this.app.state.tasks.filter((ticket) => !ticket.isDeleted);
+      this.app.state.ui.selectedIds.clear();
+      await this.app.persistTasks();
+      showToast(`已永久刪除 ${targets.length} 張票券`, 'success');
       this.render();
     });
 

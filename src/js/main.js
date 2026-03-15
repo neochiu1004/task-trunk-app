@@ -22,7 +22,6 @@ class TicketTrunkJijunApp {
       tasks: [],
       settings: { ...defaultSettings },
       templates: [],
-      bgHistory: [],
       expiryNotified: {},
       ui: {
         search: '',
@@ -163,7 +162,6 @@ class TicketTrunkJijunApp {
     if (!keys.includes(DB_KEYS.TASKS)) jobs.push(this.dataService.setItem(DB_KEYS.TASKS, []));
     if (!keys.includes(DB_KEYS.SETTINGS)) jobs.push(this.dataService.setItem(DB_KEYS.SETTINGS, this.state.settings));
     if (!keys.includes(DB_KEYS.TEMPLATES)) jobs.push(this.dataService.setItem(DB_KEYS.TEMPLATES, this.state.templates));
-    if (!keys.includes(DB_KEYS.BG_HISTORY)) jobs.push(this.dataService.setItem(DB_KEYS.BG_HISTORY, this.state.bgHistory));
     if (!keys.includes(DB_KEYS.EXPIRY_NOTIFIED)) jobs.push(this.dataService.setItem(DB_KEYS.EXPIRY_NOTIFIED, this.state.expiryNotified));
     await Promise.all(jobs);
   }

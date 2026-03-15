@@ -7,6 +7,94 @@ export class DataService {
     this.db = null;
   }
 
+  compactViewConfig(input = {}, fallback = {}) {
+    const normalizedInput = input && typeof input === 'object' ? input : {};
+    const normalizedFallback = fallback && typeof fallback === 'object' ? fallback : {};
+    const backgroundImages = Array.isArray(normalizedInput.backgroundImages)
+      ? normalizedInput.backgroundImages.filter(Boolean)
+      : [];
+    const legacyBackgroundImage = typeof normalizedInput.backgroundImage === 'string'
+      ? normalizedInput.backgroundImage.trim()
+      : '';
+    if (!backgroundImages.length && legacyBackgroundImage) {
+      backgroundImages.push(legacyBackgroundImage);
+    }
+
+    return {
+      ...normalizedFallback,
+      showBackground: normalizedInput.showBackground !== false,
+      bgOpacity: Number.isFinite(Number(normalizedInput.bgOpacity))
+        ? Math.max(0, Math.min(1, Number(normalizedInput.bgOpacity)))
+        : Number.isFinite(Number(normalizedFallback.bgOpacity))
+          ? Number(normalizedFallback.bgOpacity)
+          : 1,
+      cardOpacity: Number.isFinite(Number(normalizedInput.cardOpacity))
+        ? Math.max(0, Math.min(1, Number(normalizedInput.cardOpacity)))
+        : Number.isFinite(Number(normalizedFallback.cardOpacity))
+          ? Number(normalizedFallback.cardOpacity)
+          : 0.95,
+      cardBgColor: normalizedInput.cardBgColor || normalizedFallback.cardBgColor || '#ffffff',
+      cardBorderColor: normalizedInput.cardBorderColor || normalizedFallback.cardBorderColor || '#e2e8f0',
+      cardHeight: Number.isFinite(Number(normalizedInput.cardHeight))
+        ? Math.max(0, Math.min(360, Number(normalizedInput.cardHeight)))
+        : Number.isFinite(Number(normalizedFallback.cardHeight))
+          ? Number(normalizedFallback.cardHeight)
+          : 0,
+      gridImageHeight: Number.isFinite(Number(normalizedInput.gridImageHeight))
+        ? Math.max(60, Math.min(220, Number(normalizedInput.gridImageHeight)))
+        : Number.isFinite(Number(normalizedFallback.gridImageHeight))
+          ? Number(normalizedFallback.gridImageHeight)
+          : 96,
+      gridColumns: [1, 2, 3].includes(Number(normalizedInput.gridColumns))
+        ? Number(normalizedInput.gridColumns)
+        : [1, 2, 3].includes(Number(normalizedFallback.gridColumns))
+          ? Number(normalizedFallback.gridColumns)
+          : 2,
+      showThumbnail: normalizedInput.showThumbnail !== false,
+      ultraCompactCard: normalizedInput.ultraCompactCard === true,
+      // Keep legacy key for import compatibility but avoid duplicated large image payload.
+      backgroundImage: '',
+      backgroundImages: [...new Set(backgroundImages)],
+    };
+  }
+
+  compactSettings(inputSettings = {}) {
+    const source = inputSettings && typeof inputSettings === 'object'
+      ? inputSettings
+      : {};
+    const base = defaultSettings;
+    const sourceViewConfigs = source.viewConfigs && typeof source.viewConfigs === 'object'
+      ? source.viewConfigs
+      : {};
+    const baseViewConfigs = base.viewConfigs || {};
+
+    return {
+      tgToken: source.tgToken || '',
+      tgChatId: source.tgChatId || '',
+      notifyDays: Math.max(1, Number(source.notifyDays || base.notifyDays || 7)),
+      appTitle: source.appTitle || base.appTitle || '輕鬆票券',
+      swipeGesturesEnabled: source.swipeGesturesEnabled !== false,
+      swipeTriggerDistance: Number.isFinite(Number(source.swipeTriggerDistance))
+        ? Math.max(40, Math.min(120, Number(source.swipeTriggerDistance)))
+        : base.swipeTriggerDistance,
+      specificViewKeywords: Array.isArray(source.specificViewKeywords) && source.specificViewKeywords.length
+        ? source.specificViewKeywords.filter(Boolean).map((item) => String(item))
+        : [...(base.specificViewKeywords || [])],
+      redeemUrlPresets: Array.isArray(source.redeemUrlPresets)
+        ? source.redeemUrlPresets
+        : [],
+      quickTags: Array.isArray(source.quickTags)
+        ? source.quickTags.filter(Boolean).map((item) => String(item))
+        : [],
+      localBackupFileName: source.localBackupFileName || base.localBackupFileName || 'ticket_backup',
+      viewConfigs: {
+        active: this.compactViewConfig(sourceViewConfigs.active || {}, baseViewConfigs.active || {}),
+        completed: this.compactViewConfig(sourceViewConfigs.completed || {}, baseViewConfigs.completed || {}),
+        deleted: this.compactViewConfig(sourceViewConfigs.deleted || {}, baseViewConfigs.deleted || {}),
+      },
+    };
+  }
+
   async init() {
     if (this.db) return this.db;
     this.db = await new Promise((resolve, reject) => {
@@ -21,6 +109,8 @@ export class DataService {
       request.onerror = () => reject(request.error);
     });
     await this.migrateFromLegacyLocalStorage();
+    // Remove obsolete key to reclaim storage from legacy background history payloads.
+    await this.removeItem(DB_KEYS.BG_HISTORY);
     return this.db;
   }
 
@@ -146,29 +236,20 @@ export class DataService {
   }
 
   async loadState() {
-    const [tasks, settings, templates, bgHistory, expiryNotified] = await Promise.all([
+    const [tasks, settings, templates, expiryNotified] = await Promise.all([
       this.getItem(DB_KEYS.TASKS),
       this.getItem(DB_KEYS.SETTINGS),
       this.getItem(DB_KEYS.TEMPLATES),
-      this.getItem(DB_KEYS.BG_HISTORY),
       this.getItem(DB_KEYS.EXPIRY_NOTIFIED),
     ]);
 
     const normalizedTasks = Array.isArray(tasks) ? tasks.map(normalizeTicket) : [];
-    const mergedSettings = {
-      ...defaultSettings,
-      ...(settings || {}),
-      viewConfigs: {
-        ...defaultSettings.viewConfigs,
-        ...(settings?.viewConfigs || {}),
-      },
-    };
+    const mergedSettings = this.compactSettings(settings || defaultSettings);
 
     return {
       tasks: normalizedTasks,
       settings: mergedSettings,
       templates: Array.isArray(templates) ? templates : [],
-      bgHistory: Array.isArray(bgHistory) ? bgHistory : [],
       expiryNotified: expiryNotified && typeof expiryNotified === 'object' ? expiryNotified : {},
     };
   }
@@ -181,26 +262,25 @@ export class DataService {
       jobs.push(this.setItem(DB_KEYS.TASKS, (partialState.tasks || []).map(normalizeTicket)));
     }
     if (hasOwn('settings')) {
-      jobs.push(this.setItem(DB_KEYS.SETTINGS, partialState.settings || defaultSettings));
+      jobs.push(this.setItem(DB_KEYS.SETTINGS, this.compactSettings(partialState.settings || defaultSettings)));
     }
     if (hasOwn('templates')) {
       jobs.push(this.setItem(DB_KEYS.TEMPLATES, partialState.templates || []));
     }
-    if (hasOwn('bgHistory')) {
-      jobs.push(this.setItem(DB_KEYS.BG_HISTORY, partialState.bgHistory || []));
-    }
     if (hasOwn('expiryNotified')) {
       jobs.push(this.setItem(DB_KEYS.EXPIRY_NOTIFIED, partialState.expiryNotified || {}));
+    }
+    if (hasOwn('bgHistory')) {
+      jobs.push(this.removeItem(DB_KEYS.BG_HISTORY));
     }
     await Promise.all(jobs);
   }
 
   async exportAllData() {
-    const [tasks, settings, templates, bgHistory, expiryNotified] = await Promise.all([
+    const [tasks, settings, templates, expiryNotified] = await Promise.all([
       this.getItem(DB_KEYS.TASKS),
       this.getItem(DB_KEYS.SETTINGS),
       this.getItem(DB_KEYS.TEMPLATES),
-      this.getItem(DB_KEYS.BG_HISTORY),
       this.getItem(DB_KEYS.EXPIRY_NOTIFIED),
     ]);
 
@@ -208,9 +288,8 @@ export class DataService {
       version: 3,
       timestamp: Date.now(),
       tasks: Array.isArray(tasks) ? tasks : [],
-      settings: settings || defaultSettings,
+      settings: this.compactSettings(settings || defaultSettings),
       templates: Array.isArray(templates) ? templates : [],
-      bgHistory: Array.isArray(bgHistory) ? bgHistory : [],
       expiryNotified: expiryNotified || {},
     };
   }
@@ -271,25 +350,22 @@ export class DataService {
       templates: Array.isArray(rawData.templates)
         ? rawData.templates
         : current.templates,
-      bgHistory: Array.isArray(rawData.bgHistory)
-        ? rawData.bgHistory
-        : current.bgHistory,
       expiryNotified: rawData.expiryNotified && typeof rawData.expiryNotified === 'object'
         ? rawData.expiryNotified
         : current.expiryNotified,
     };
 
     if (restoreSettings && rawData.settings && typeof rawData.settings === 'object') {
-      nextState.settings = {
+      nextState.settings = this.compactSettings({
         ...current.settings,
         ...rawData.settings,
         viewConfigs: {
           ...current.settings.viewConfigs,
           ...(rawData.settings.viewConfigs || {}),
         },
-      };
+      });
     } else {
-      nextState.settings = current.settings;
+      nextState.settings = this.compactSettings(current.settings);
     }
 
     await this.saveState(nextState);
@@ -383,6 +459,65 @@ export class DataService {
       isPersisted,
       issues,
       recommendations,
+    };
+  }
+
+  async cleanupResidualData() {
+    await this.init();
+    const beforeEstimate = await navigator.storage?.estimate?.();
+    const beforeUsage = Number(beforeEstimate?.usage || 0);
+    const beforeKeys = await this.getAllKeys();
+
+    const removedKeys = [];
+    if (beforeKeys.includes(DB_KEYS.BG_HISTORY)) {
+      await this.removeItem(DB_KEYS.BG_HISTORY);
+      removedKeys.push(DB_KEYS.BG_HISTORY);
+    }
+
+    const [tasksRaw, settingsRaw, templatesRaw, expiryRaw] = await Promise.all([
+      this.getItem(DB_KEYS.TASKS),
+      this.getItem(DB_KEYS.SETTINGS),
+      this.getItem(DB_KEYS.TEMPLATES),
+      this.getItem(DB_KEYS.EXPIRY_NOTIFIED),
+    ]);
+
+    const tasks = Array.isArray(tasksRaw) ? tasksRaw.map(normalizeTicket) : [];
+    const validTaskIds = new Set(tasks.map((ticket) => ticket.id).filter(Boolean));
+    const expiryNotified = expiryRaw && typeof expiryRaw === 'object' ? expiryRaw : {};
+    const compactedExpiryNotified = {};
+    let removedExpiryNotifiedCount = 0;
+    Object.entries(expiryNotified).forEach(([ticketId, value]) => {
+      if (!validTaskIds.has(ticketId)) {
+        removedExpiryNotifiedCount += 1;
+        return;
+      }
+      compactedExpiryNotified[ticketId] = value;
+    });
+
+    const compactedSettings = this.compactSettings(settingsRaw || defaultSettings);
+    const settingsCompacted = JSON.stringify(settingsRaw || {}) !== JSON.stringify(compactedSettings);
+    const expiryCompacted = JSON.stringify(expiryNotified) !== JSON.stringify(compactedExpiryNotified);
+
+    const writeJobs = [];
+    if (settingsCompacted) {
+      writeJobs.push(this.setItem(DB_KEYS.SETTINGS, compactedSettings));
+    }
+    if (expiryCompacted) {
+      writeJobs.push(this.setItem(DB_KEYS.EXPIRY_NOTIFIED, compactedExpiryNotified));
+    }
+    await Promise.all(writeJobs);
+
+    const afterEstimate = await navigator.storage?.estimate?.();
+    const afterUsage = Number(afterEstimate?.usage || 0);
+
+    return {
+      removedKeys,
+      removedExpiryNotifiedCount,
+      settingsCompacted,
+      templateCount: Array.isArray(templatesRaw) ? templatesRaw.length : 0,
+      beforeUsage,
+      afterUsage,
+      reclaimedBytes: Math.max(0, beforeUsage - afterUsage),
     };
   }
 
