@@ -1112,6 +1112,9 @@ export class TicketsPage {
       const hasOriginalImage = !!ticket.originalImage;
       const selected = this.app.state.ui.selectedIds.has(ticket.id);
       const selectedVisual = this.app.state.ui.selectionMode && selected;
+      const selectionA11yAttrs = this.app.state.ui.selectionMode
+        ? `tabindex="0" role="checkbox" aria-checked="${selected ? 'true' : 'false'}" aria-label="切換票券選取"`
+        : '';
       const tagChipClass = this.view === 'active'
         ? 'ticket-tag ticket-tag--active px-2.5 py-1 rounded-lg text-xs border font-medium'
         : 'ticket-tag px-2 py-0.5 rounded-full text-xs bg-wabi-primary/10 text-wabi-primary hover:bg-wabi-primary/20';
@@ -1244,9 +1247,6 @@ export class TicketsPage {
       const editButton = this.view === 'completed' || this.view === 'deleted'
         ? ''
         : '<button data-action="edit" class="px-3 py-1 rounded-lg bg-wabi-primary/10 text-wabi-primary text-xs">編輯</button>';
-      const selectionA11yAttrs = this.app.state.ui.selectionMode
-        ? `tabindex="0" role="checkbox" aria-checked="${selected ? 'true' : 'false'}" aria-label="切換票券選取"`
-        : '';
       const cardPaddingClass = compactGrid ? 'p-3' : 'p-4';
       const imageClass = compactGrid ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2' : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};"`;
@@ -1379,7 +1379,7 @@ export class TicketsPage {
     const ultraCompactCard = viewConfig.ultraCompactCard === true;
     const compactGrid = gridColumns > 1;
     let ticketGridClass = gridColumns === 3
-      ? 'grid grid-cols-2 md:grid-cols-3 gap-2'
+      ? 'grid grid-cols-3 gap-1.5'
       : gridColumns === 2
         ? 'grid grid-cols-2 gap-2'
         : 'grid gap-3';
