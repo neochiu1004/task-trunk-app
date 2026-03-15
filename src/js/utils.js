@@ -16,7 +16,7 @@ export const defaultViewConfig = {
   cardBgColor: '#ffffff',
   cardBorderColor: '#e2e8f0',
   cardHeight: 0,
-  gridImageHeight: 96,
+  gridImageHeight: 84,
   gridColumns: 2,
   showThumbnail: true,
   ultraCompactCard: false,

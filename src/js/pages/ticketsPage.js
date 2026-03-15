@@ -128,6 +128,7 @@ export class TicketsPage {
     this.lastSelectedCount = null;
     this.continueBatchHint = false;
     this.continueBatchHintTimer = null;
+    this.searchIsComposing = false;
   }
 
   isTouchGestureAvailable() {
@@ -1108,7 +1109,7 @@ export class TicketsPage {
     const hideTagAndSerial = this.view === 'active' && gridColumns === 3;
     const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
     const cardHeight = clamp(options.cardHeight, 0, 360, 0);
-    const gridImageHeight = clamp(options.gridImageHeight, 60, 220, compactGrid ? 96 : 128);
+    const gridImageHeight = clamp(options.gridImageHeight, 44, 220, compactGrid ? 84 : 112);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
     if (!tickets.length) {
@@ -1282,11 +1283,14 @@ export class TicketsPage {
           : expiryState === 'soon'
             ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
             : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
-      const cardPaddingClass = compactGrid ? 'p-3' : 'p-4';
+      const cardPaddingClass = this.view === 'active'
+        ? (compactGrid ? 'p-2.5' : 'p-3')
+        : (compactGrid ? 'p-3' : 'p-4');
+      const headerMarginClass = this.view === 'active' ? 'mb-2' : 'mb-3';
       const imageClass = this.view === 'active'
         ? (compactGrid
-          ? 'w-full object-cover rounded-lg border border-wabi-border mb-2'
-          : 'w-full object-cover rounded-xl border border-wabi-border mb-3')
+          ? 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--compact'
+          : 'ticket-card-thumbnail ticket-card-thumbnail--active')
         : (compactGrid
           ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
           : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
@@ -1306,7 +1310,7 @@ export class TicketsPage {
 
       return `
         <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
-          <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="flex items-start justify-between gap-3 ${headerMarginClass}">
             <div class="flex items-start gap-3 min-w-0">
               ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4">` : ''}
               <div class="min-w-0">
@@ -1424,7 +1428,7 @@ export class TicketsPage {
     const cardBorderColor = viewConfig.cardBorderColor || '#e2e8f0';
     const ultraCompactCard = viewConfig.ultraCompactCard === true;
     const compactGrid = gridColumns > 1;
-    const gridImageHeight = clamp(viewConfig.gridImageHeight, 60, 220, compactGrid ? 96 : 128);
+    const gridImageHeight = clamp(viewConfig.gridImageHeight, 44, 220, compactGrid ? 84 : 112);
     let ticketGridClass = gridColumns === 3
       ? 'grid grid-cols-3 gap-1.5'
       : gridColumns === 2
@@ -1482,8 +1486,8 @@ export class TicketsPage {
 
     this.app.mount(`
       ${backgroundLayerHtml}
-      <section class="page active relative z-10 p-4 pb-24 md:pb-8 max-w-5xl mx-auto">
-        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: var(--safe-top);">
+      <section class="page active relative z-10 px-4 pt-5 pb-24 md:pb-8 max-w-5xl mx-auto">
+        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: calc(var(--safe-top) + 1.25rem);">
           <header class="flex items-center justify-between mb-4 gap-2">
             <div>
               <h1 class="text-2xl font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
@@ -1618,11 +1622,39 @@ export class TicketsPage {
       return before - this.app.state.ui.selectedIds.size;
     };
 
-    root.querySelector('#ticket-search')?.addEventListener('input', (event) => {
+    const rerenderWithSearchFocus = async (cursorStart = null, cursorEnd = null) => {
+      await this.render();
+      const nextSearchInput = this.app.getRoot().querySelector('#ticket-search');
+      if (!nextSearchInput) return;
+      nextSearchInput.focus({ preventScroll: true });
+      const valueLength = nextSearchInput.value.length;
+      const safeStart = Number.isFinite(cursorStart)
+        ? Math.max(0, Math.min(valueLength, cursorStart))
+        : valueLength;
+      const safeEnd = Number.isFinite(cursorEnd)
+        ? Math.max(0, Math.min(valueLength, cursorEnd))
+        : safeStart;
+      nextSearchInput.setSelectionRange(safeStart, safeEnd);
+    };
+
+    const handleSearchValueChange = async (event) => {
       this.app.state.ui.search = event.target.value;
       const pruned = pruneSelectionToVisible();
       if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-      this.render();
+      await rerenderWithSearchFocus(event.target.selectionStart, event.target.selectionEnd);
+    };
+
+    const searchInput = root.querySelector('#ticket-search');
+    searchInput?.addEventListener('compositionstart', () => {
+      this.searchIsComposing = true;
+    });
+    searchInput?.addEventListener('compositionend', async (event) => {
+      this.searchIsComposing = false;
+      await handleSearchValueChange(event);
+    });
+    searchInput?.addEventListener('input', async (event) => {
+      if (this.searchIsComposing || event.isComposing) return;
+      await handleSearchValueChange(event);
     });
 
     root.querySelector('#ticket-sort')?.addEventListener('change', (event) => {

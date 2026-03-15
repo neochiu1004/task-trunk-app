@@ -41,10 +41,10 @@ export class DataService {
           ? Number(normalizedFallback.cardHeight)
           : 0,
       gridImageHeight: Number.isFinite(Number(normalizedInput.gridImageHeight))
-        ? Math.max(60, Math.min(220, Number(normalizedInput.gridImageHeight)))
+        ? Math.max(44, Math.min(220, Number(normalizedInput.gridImageHeight)))
         : Number.isFinite(Number(normalizedFallback.gridImageHeight))
           ? Number(normalizedFallback.gridImageHeight)
-          : 96,
+          : 84,
       gridColumns: [1, 2, 3].includes(Number(normalizedInput.gridColumns))
         ? Number(normalizedInput.gridColumns)
         : [1, 2, 3].includes(Number(normalizedFallback.gridColumns))

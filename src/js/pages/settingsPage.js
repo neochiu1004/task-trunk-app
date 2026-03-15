@@ -199,15 +199,15 @@ export class SettingsPage {
       ? Math.max(0, Math.min(360, Number(activeViewConfig.cardHeight)))
       : 0;
     const activeGridImageHeight = Number.isFinite(Number(activeViewConfig.gridImageHeight))
-      ? Math.max(60, Math.min(220, Number(activeViewConfig.gridImageHeight)))
-      : 96;
+      ? Math.max(44, Math.min(220, Number(activeViewConfig.gridImageHeight)))
+      : 84;
     const quickTagsText = (settings.quickTags || []).join(', ');
     const swipeTriggerDistancePx = Number.isFinite(Number(settings.swipeTriggerDistance))
       ? Math.max(40, Math.min(120, Number(settings.swipeTriggerDistance)))
       : 72;
     this.app.mount(`
-      <section class="page active p-4 pb-24 md:pb-8 max-w-4xl mx-auto space-y-4">
-        <div class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: var(--safe-top);">
+      <section class="page active px-4 pt-5 pb-24 md:pb-8 max-w-4xl mx-auto space-y-4">
+        <div class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: calc(var(--safe-top) + 1.25rem);">
           <div class="flex items-center justify-between gap-2">
             <div>
               <h1 class="text-2xl font-bold text-wabi-primary">設定</h1>
@@ -318,7 +318,7 @@ export class SettingsPage {
                 <label for="active-thumbnail-height">主頁縮圖高度</label>
                 <span id="active-thumbnail-height-value">${activeGridImageHeight}px</span>
               </div>
-              <input id="active-thumbnail-height" type="range" min="60" max="220" step="4" value="${activeGridImageHeight}" class="w-full accent-wabi-primary" />
+              <input id="active-thumbnail-height" type="range" min="44" max="220" step="2" value="${activeGridImageHeight}" class="w-full accent-wabi-primary" />
               <p class="text-xs text-wabi-text-secondary mt-1">只影響待使用頁卡片縮圖大小。</p>
             </div>
             <div class="flex items-center justify-between gap-2">
@@ -540,7 +540,7 @@ export class SettingsPage {
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
       const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
-      const gridImageHeight = Math.max(60, Math.min(220, Number.isFinite(thumbnailHeightRaw) ? thumbnailHeightRaw : 96));
+      const gridImageHeight = Math.max(44, Math.min(220, Number.isFinite(thumbnailHeightRaw) ? thumbnailHeightRaw : 84));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
         ...prevActiveViewConfig,
