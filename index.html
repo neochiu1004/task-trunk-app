@@ -1,43 +1,74 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-TW">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    
-    <!-- Basic Meta -->
-    <title>Vouchy - 票券管理</title>
-    <meta name="description" content="Vouchy - 輕鬆管理你的票券、優惠券和序號" />
-    <meta name="author" content="Vouchy" />
-    
-    <!-- Theme Color -->
-    <meta name="theme-color" content="#F97316" />
-    
-    <!-- PWA Meta Tags -->
-    <link rel="manifest" href="/manifest.webmanifest" />
-    
-    <!-- Apple PWA Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Vouchy" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="Vouchy - 票券管理" />
-    <meta property="og:description" content="Vouchy - 輕鬆管理你的票券、優惠券和序號" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>輕鬆票券</title>
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Vouchy" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-  </head>
+  <meta name="description" content="輕鬆票券：以 jijun 風格打造的票券管理 PWA，支援票券新增、核銷、回收、範本、條碼與資料備份。">
+  <meta name="keywords" content="票券管理, PWA, 優惠券, 條碼, 範本, 輕鬆票券">
+  <meta name="author" content="Task Trunk App">
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="輕鬆票券">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#F5F5F3">
+
+  <link rel="apple-touch-icon" sizes="192x192" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/src/css/main.css">
+</head>
+<body class="font-display bg-wabi-bg text-wabi-text-primary">
+  <div id="app-container" class="relative min-h-screen w-full md:pl-64"></div>
+
+  <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-wabi-surface/90 backdrop-blur-sm border-t border-wabi-border h-20 z-40 flex justify-around items-center md:top-0 md:w-64 md:h-screen md:flex-col md:justify-start md:border-t-0 md:border-r md:pt-8 md:items-stretch md:overflow-y-auto">
+    <div class="hidden md:flex items-center justify-center mb-8 px-4">
+      <img src="/jijun-icon.png" alt="輕鬆票券" class="w-8 h-8 mr-2 rounded-lg shadow-sm">
+      <h1 class="text-xl font-bold text-wabi-primary">輕鬆票券</h1>
+    </div>
+
+    <a href="#active" data-page="active" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 hover:bg-black/5">
+      <i class="fa-solid fa-ticket text-xl md:w-6 md:text-center"></i>
+      <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium">待使用</span>
+    </a>
+
+    <a href="#add" data-page="add" class="nav-item add-nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-3 md:px-8 hover:bg-black/5">
+      <span class="add-nav-pill flex items-center justify-center w-11 h-11 rounded-2xl bg-wabi-accent text-wabi-primary shadow-sm border border-[#d9b079] md:w-10 md:h-10 md:rounded-xl md:mr-4">
+        <i class="fa-solid fa-plus text-lg"></i>
+      </span>
+      <span class="text-xs mt-1 md:mt-0 md:text-base font-medium">新增</span>
+    </a>
+
+    <a href="#completed" data-page="completed" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 hover:bg-black/5">
+      <i class="fa-solid fa-circle-check text-xl md:w-6 md:text-center"></i>
+      <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium">已使用</span>
+    </a>
+
+    <a href="#deleted" data-page="deleted" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 hover:bg-black/5">
+      <i class="fa-solid fa-trash text-xl md:w-6 md:text-center"></i>
+      <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium">回收桶</span>
+    </a>
+
+    <a href="#settings" data-page="settings" class="hidden md:flex nav-item md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 text-wabi-text-secondary hover:bg-black/5">
+      <i class="fa-solid fa-gear text-xl md:w-6 md:text-center"></i>
+      <span class="md:ml-4 md:text-base font-medium">設定</span>
+    </a>
+
+    <div class="hidden md:flex mt-auto pb-4 pt-8 px-8 flex-col text-wabi-text-secondary text-xs opacity-70 cursor-default">
+      <span id="sidebar-version-info">輕鬆票券 PWA</span>
+      <span class="mt-1">&copy; 2026 Task Trunk</span>
+    </div>
+  </nav>
+
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-wabi-primary text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-all duration-300 z-50 pointer-events-none">
+    <span id="toast-message"></span>
+  </div>
+
+  <script type="module" src="/src/js/main.js"></script>
+</body>
 </html>

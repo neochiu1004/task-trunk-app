@@ -2,7 +2,13 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./index.html",
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -14,9 +20,19 @@ export default {
     },
     extend: {
       fontFamily: {
+        display: ["Inter", "Noto Sans TC", "sans-serif"],
         sans: ['Inter', 'Noto Sans TC', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       colors: {
+        "wabi-bg": "#F5F5F3",
+        "wabi-primary": "#334A52",
+        "wabi-expense": "#B95A5A",
+        "wabi-income": "#6A9C89",
+        "wabi-accent": "#E2B67A",
+        "wabi-text-primary": "#2D3748",
+        "wabi-text-secondary": "#718096",
+        "wabi-surface": "#FFFFFF",
+        "wabi-border": "#E2E8F0",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
