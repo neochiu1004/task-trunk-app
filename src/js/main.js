@@ -37,6 +37,7 @@ class TicketTrunkJijunApp {
     };
 
     this.router = new Router(this);
+    this.mobileViewportBound = false;
     this.pages = {
       active: new TicketsPage(this, 'active'),
       completed: new TicketsPage(this, 'completed'),
@@ -69,6 +70,7 @@ class TicketTrunkJijunApp {
 
     this.router.start();
     this.bindGlobalNavEvents();
+    this.bindMobileViewportHandlers();
     showToast('輕鬆票券已就緒', 'success');
   }
 
@@ -92,6 +94,67 @@ class TicketTrunkJijunApp {
       this.state.ui.editingTicketId = null;
       this.state.ui.editingFromRoute = null;
     });
+  }
+
+  bindMobileViewportHandlers() {
+    if (this.mobileViewportBound) return;
+    this.mobileViewportBound = true;
+
+    const updateKeyboardInset = () => {
+      if (typeof window === 'undefined') return;
+      const viewport = window.visualViewport;
+      if (!viewport) {
+        document.documentElement.style.setProperty('--keyboard-inset-height', '0px');
+        document.body.classList.remove('keyboard-open');
+        return;
+      }
+      const inset = Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop));
+      document.documentElement.style.setProperty('--keyboard-inset-height', `${inset}px`);
+      document.body.classList.toggle('keyboard-open', inset > 80);
+    };
+
+    const scrollFocusedFieldIntoView = (target) => {
+      if (!(target instanceof HTMLElement)) return;
+      if (!target.matches('input, textarea, select, [contenteditable="true"]')) return;
+      if (window.matchMedia('(min-width: 768px)').matches) return;
+
+      window.setTimeout(() => {
+        target.scrollIntoView({
+          block: 'center',
+          inline: 'nearest',
+          behavior: 'smooth',
+        });
+      }, 150);
+
+      const primaryAction = target.closest('form')
+        ?.querySelector('button[type="submit"], button:not([type]), #add-cancel-link');
+      if (primaryAction instanceof HTMLElement) {
+        window.setTimeout(() => {
+          primaryAction.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest',
+            behavior: 'smooth',
+          });
+        }, 260);
+      }
+    };
+
+    document.addEventListener('focusin', (event) => {
+      scrollFocusedFieldIntoView(event.target);
+      updateKeyboardInset();
+    }, true);
+
+    document.addEventListener('focusout', () => {
+      window.setTimeout(updateKeyboardInset, 120);
+    }, true);
+
+    window.visualViewport?.addEventListener('resize', updateKeyboardInset);
+    window.visualViewport?.addEventListener('scroll', updateKeyboardInset);
+    window.addEventListener('orientationchange', () => {
+      window.setTimeout(updateKeyboardInset, 200);
+    });
+
+    updateKeyboardInset();
   }
 
   async ensureRequiredKeys() {

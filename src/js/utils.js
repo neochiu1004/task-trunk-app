@@ -24,6 +24,7 @@ export const defaultViewConfig = {
   headerBgPosY: 50,
   headerBgOpacity: 1,
   showThumbnail: true,
+  ultraCompactCard: false,
 };
 
 export const defaultSettings = {
@@ -31,6 +32,8 @@ export const defaultSettings = {
   tgChatId: '',
   notifyDays: 7,
   appTitle: '輕鬆票券',
+  swipeGesturesEnabled: true,
+  swipeTriggerDistance: 72,
   specificViewKeywords: ['MOMO', '85度C'],
   bgConfigMap: {},
   viewConfigs: {

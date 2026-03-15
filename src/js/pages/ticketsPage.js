@@ -15,6 +15,9 @@ const VIEW_META = {
   deleted: { title: '回收桶', empty: '回收桶是空的', icon: 'fa-trash' },
 };
 const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
+const EXPIRY_URGENT_FILTER_TAG = '__expiry_urgent__';
+const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
+let swipeHintShownInSession = false;
 
 function parseExpiryToTime(expiry) {
   if (!expiry) return Number.MAX_SAFE_INTEGER;
@@ -27,6 +30,39 @@ function parseExpiryToTime(expiry) {
   if (!year || month < 1 || month > 12 || day < 1 || day > 31) return Number.MAX_SAFE_INTEGER;
   const date = new Date(year, month - 1, day);
   return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+}
+
+function getExpiryState(expiry, notifyDays = 7) {
+  if (!expiry) return 'normal';
+  const expiryTime = parseExpiryToTime(expiry);
+  if (!Number.isFinite(expiryTime) || expiryTime === Number.MAX_SAFE_INTEGER) return 'normal';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiryDate = new Date(expiryTime);
+  expiryDate.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return 'expired';
+  if (diffDays === 0) return 'today';
+  if (checkIsExpiringSoon(expiry, notifyDays)) return 'soon';
+  return 'normal';
+}
+
+function getExpiryCountdownLabel(expiry) {
+  if (!expiry) return '';
+  const expiryTime = parseExpiryToTime(expiry);
+  if (!Number.isFinite(expiryTime) || expiryTime === Number.MAX_SAFE_INTEGER) return '';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiryDate = new Date(expiryTime);
+  expiryDate.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'D-day';
+  if (diffDays > 0) return `D-${diffDays}`;
+  return `逾期${Math.abs(diffDays)}天`;
 }
 
 function getSortComparator(sortType) {
@@ -91,6 +127,315 @@ export class TicketsPage {
     this.lastSelectedCount = null;
     this.continueBatchHint = false;
     this.continueBatchHintTimer = null;
+  }
+
+  isTouchGestureAvailable() {
+    return (
+      typeof window !== 'undefined'
+      && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+    );
+  }
+
+  isSwipeGestureEnabled() {
+    return this.app?.state?.settings?.swipeGesturesEnabled !== false;
+  }
+
+  getSwipeTriggerDistance() {
+    const configured = Number(this.app?.state?.settings?.swipeTriggerDistance);
+    if (!Number.isFinite(configured)) return 72;
+    return Math.max(40, Math.min(120, configured));
+  }
+
+  triggerHapticFeedback(pattern = 12) {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+    try {
+      navigator.vibrate(pattern);
+    } catch (_error) {
+      // Ignore unsupported vibration errors on some browsers.
+    }
+  }
+
+  showSwipeHintIfNeeded() {
+    if (swipeHintShownInSession) {
+      try {
+        if (window.localStorage?.getItem(SWIPE_HINT_STORAGE_KEY) !== '1') {
+          swipeHintShownInSession = false;
+        }
+      } catch (_error) {
+        // Ignore storage errors.
+      }
+    }
+    if (swipeHintShownInSession) return;
+    if (!this.isTouchGestureAvailable()) return;
+    if (!this.isSwipeGestureEnabled()) return;
+    if (!['active', 'completed', 'deleted'].includes(this.view)) return;
+
+    let seen = false;
+    try {
+      seen = window.localStorage?.getItem(SWIPE_HINT_STORAGE_KEY) === '1';
+    } catch (_error) {
+      seen = false;
+    }
+    if (seen) {
+      swipeHintShownInSession = true;
+      return;
+    }
+
+    swipeHintShownInSession = true;
+    try {
+      window.localStorage?.setItem(SWIPE_HINT_STORAGE_KEY, '1');
+    } catch (_error) {
+      // Ignore storage errors (private mode / storage disabled).
+    }
+
+    const hints = {
+      active: '手勢快捷：左滑核銷、右滑回收、長按多選',
+      completed: '手勢快捷：左滑還原、右滑回收、長按多選',
+      deleted: '手勢快捷：左滑清除、右滑還原、長按多選',
+    };
+    showToast(hints[this.view] || '已啟用手勢快捷操作', 'success', 1600);
+  }
+
+  async handleSwipeAction(ticket, direction) {
+    if (!ticket) return false;
+
+    if (this.view === 'active') {
+      if (ticket.isDeleted || ticket.completed) return false;
+
+      if (direction === 'left') {
+        this.openRedeemModeModal(ticket);
+        this.triggerHapticFeedback(14);
+        return true;
+      }
+
+      if (direction === 'right') {
+        const ok = window.confirm(`確定將「${ticket.productName || '未命名票券'}」移至回收桶？`);
+        if (!ok) return false;
+        ticket.isDeleted = true;
+        ticket.deletedAt = Date.now();
+        await this.app.persistTasks();
+        this.triggerHapticFeedback([14, 28, 14]);
+        showToast('已移至回收桶', 'success');
+        this.render();
+        return true;
+      }
+    }
+
+    if (this.view === 'completed') {
+      if (ticket.isDeleted || !ticket.completed) return false;
+
+      if (direction === 'left') {
+        const ok = window.confirm(`確定將「${ticket.productName || '未命名票券'}」改回待使用？`);
+        if (!ok) return false;
+        ticket.completed = false;
+        ticket.completedAt = undefined;
+        await this.app.persistTasks();
+        this.triggerHapticFeedback(14);
+        showToast('已改回待使用', 'success');
+        this.render();
+        return true;
+      }
+
+      if (direction === 'right') {
+        const ok = window.confirm(`確定將「${ticket.productName || '未命名票券'}」移至回收桶？`);
+        if (!ok) return false;
+        ticket.isDeleted = true;
+        ticket.deletedAt = Date.now();
+        await this.app.persistTasks();
+        this.triggerHapticFeedback([14, 28, 14]);
+        showToast('已移至回收桶', 'success');
+        this.render();
+        return true;
+      }
+    }
+
+    if (this.view === 'deleted') {
+      if (!ticket.isDeleted) return false;
+
+      if (direction === 'right') {
+        const ok = window.confirm(`確定還原「${ticket.productName || '未命名票券'}」？`);
+        if (!ok) return false;
+        ticket.isDeleted = false;
+        ticket.deletedAt = undefined;
+        await this.app.persistTasks();
+        this.triggerHapticFeedback(14);
+        showToast('已還原票券', 'success');
+        this.render();
+        return true;
+      }
+
+      if (direction === 'left') {
+        const ok = window.confirm(`確定永久刪除「${ticket.productName || '未命名票券'}」？此操作無法復原。`);
+        if (!ok) return false;
+        this.app.state.tasks = this.app.state.tasks.filter((item) => item.id !== ticket.id);
+        await this.app.persistTasks();
+        this.triggerHapticFeedback([22, 40, 22]);
+        showToast('已永久刪除', 'success');
+        this.render();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bindCardSwipeGesture(card) {
+    if (!this.isTouchGestureAvailable()) return;
+    if (!this.isSwipeGestureEnabled()) return;
+    if (!card.dataset.swipeEnabled) return;
+
+    const interactiveSelector = 'button, a, input, textarea, select, label, [data-no-swipe], .ticket-card-actions';
+    const SWIPE_LOCK_DISTANCE = 10;
+    const SWIPE_TRIGGER_DISTANCE = this.getSwipeTriggerDistance();
+    const SWIPE_HINT_DISTANCE = Math.max(24, Math.floor(SWIPE_TRIGGER_DISTANCE * 0.55));
+    const SWIPE_CLAMP_DISTANCE = 92;
+    const SWIPE_PREVENT_CLICK_DISTANCE = 16;
+    const LONG_PRESS_MS = 430;
+    const LONG_PRESS_MOVE_TOLERANCE = 10;
+    let tracking = false;
+    let horizontalSwipe = false;
+    let startX = 0;
+    let startY = 0;
+    let currentOffset = 0;
+    let swipeHintNotified = false;
+    let longPressTriggered = false;
+    let longPressTimer = null;
+
+    const clearLongPressTimer = () => {
+      if (!longPressTimer) return;
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    };
+
+    const resetSwipeVisual = (animated = true) => {
+      card.classList.remove('ticket-card--swiping', 'ticket-card--swipe-left', 'ticket-card--swipe-right', 'ticket-card--swipe-ready');
+      if (animated) {
+        card.classList.add('ticket-card--swipe-release');
+      } else {
+        card.classList.remove('ticket-card--swipe-release');
+      }
+      card.style.removeProperty('--ticket-swipe-offset');
+      swipeHintNotified = false;
+    };
+
+    const setSwipeOffset = (offset) => {
+      const limited = Math.max(-SWIPE_CLAMP_DISTANCE, Math.min(SWIPE_CLAMP_DISTANCE, offset));
+      currentOffset = limited;
+      const absOffset = Math.abs(limited);
+      card.style.setProperty('--ticket-swipe-offset', `${limited}px`);
+      card.classList.add('ticket-card--swiping');
+      card.classList.toggle('ticket-card--swipe-left', limited < -18);
+      card.classList.toggle('ticket-card--swipe-right', limited > 18);
+      const ready = absOffset >= SWIPE_HINT_DISTANCE;
+      card.classList.toggle('ticket-card--swipe-ready', ready);
+      if (ready && !swipeHintNotified) {
+        swipeHintNotified = true;
+        this.triggerHapticFeedback(8);
+      }
+    };
+
+    card.addEventListener('transitionend', () => {
+      if (Math.abs(currentOffset) > 0.5) return;
+      card.classList.remove('ticket-card--swipe-release');
+    });
+
+    card.addEventListener('touchstart', (event) => {
+      if (event.touches.length !== 1) return;
+      if (event.target.closest(interactiveSelector)) return;
+      const inSelectionMode = this.app.state.ui.selectionMode;
+      tracking = true;
+      horizontalSwipe = false;
+      longPressTriggered = false;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      currentOffset = 0;
+      swipeHintNotified = false;
+      card.dataset.swipeSuppressClick = '0';
+      card.classList.remove('ticket-card--swipe-release');
+
+      clearLongPressTimer();
+      if (!inSelectionMode) {
+        longPressTimer = setTimeout(() => {
+          longPressTimer = null;
+          if (!tracking) return;
+          const ticketId = card.dataset.ticketId;
+          if (!ticketId) return;
+          longPressTriggered = true;
+          tracking = false;
+          horizontalSwipe = false;
+          currentOffset = 0;
+          card.dataset.swipeSuppressClick = '1';
+          resetSwipeVisual(false);
+          this.app.state.ui.selectionMode = true;
+          this.app.state.ui.selectedIds.add(ticketId);
+          this.hideContinueBatchHint();
+          this.triggerHapticFeedback([12, 30, 12]);
+          showToast('已進入多選模式', 'success', 900);
+          this.render();
+        }, LONG_PRESS_MS);
+      }
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (event) => {
+      if (!tracking || event.touches.length !== 1) return;
+      const dx = event.touches[0].clientX - startX;
+      const dy = event.touches[0].clientY - startY;
+      if (Math.abs(dx) > LONG_PRESS_MOVE_TOLERANCE || Math.abs(dy) > LONG_PRESS_MOVE_TOLERANCE) {
+        clearLongPressTimer();
+      }
+
+      if (!horizontalSwipe) {
+        if (Math.abs(dx) < SWIPE_LOCK_DISTANCE && Math.abs(dy) < SWIPE_LOCK_DISTANCE) return;
+        horizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.15;
+        if (!horizontalSwipe) {
+          tracking = false;
+          resetSwipeVisual(false);
+          return;
+        }
+      }
+
+      event.preventDefault();
+      setSwipeOffset(dx);
+      if (Math.abs(dx) >= SWIPE_PREVENT_CLICK_DISTANCE) {
+        card.dataset.swipeSuppressClick = '1';
+      }
+    }, { passive: false });
+
+    card.addEventListener('touchcancel', () => {
+      clearLongPressTimer();
+      tracking = false;
+      horizontalSwipe = false;
+      longPressTriggered = false;
+      currentOffset = 0;
+      resetSwipeVisual(true);
+    });
+
+    card.addEventListener('touchend', async () => {
+      clearLongPressTimer();
+      if (longPressTriggered) {
+        longPressTriggered = false;
+        return;
+      }
+      if (!tracking) return;
+      tracking = false;
+      const finalOffset = currentOffset;
+      const ticketId = card.dataset.ticketId;
+      const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
+      const shouldTrigger = horizontalSwipe && Math.abs(finalOffset) >= SWIPE_TRIGGER_DISTANCE;
+      horizontalSwipe = false;
+      currentOffset = 0;
+      if (!shouldTrigger || !ticket) {
+        resetSwipeVisual(true);
+        return;
+      }
+
+      const direction = finalOffset < 0 ? 'left' : 'right';
+      try {
+        await this.handleSwipeAction(ticket, direction);
+      } finally {
+        resetSwipeVisual(true);
+      }
+    }, { passive: true });
   }
 
   clearBackgroundRotationTimer() {
@@ -565,6 +910,8 @@ export class TicketsPage {
     };
 
     let redeeming = false;
+    let suppressNextModalClick = false;
+    let suppressPreviewClick = false;
 
     const cleanup = () => {
       window.removeEventListener('keydown', onKeydown);
@@ -615,6 +962,7 @@ export class TicketsPage {
     };
 
     modal.addEventListener('click', (event) => {
+      if (suppressNextModalClick) return;
       const keepOpenTarget = event.target.closest('[data-redeem-keepopen]');
       if (keepOpenTarget) return;
       cleanup();
@@ -647,6 +995,10 @@ export class TicketsPage {
     });
 
     previewWrap?.addEventListener('click', (event) => {
+      if (suppressPreviewClick) {
+        suppressPreviewClick = false;
+        return;
+      }
       const trigger = event.target.closest('[data-original-redeem-trigger]');
       if (!trigger) return;
       event.preventDefault();
@@ -654,6 +1006,77 @@ export class TicketsPage {
       if (mode !== 'original') return;
       redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true, closeOnCancel: true });
     });
+
+    if (shell) {
+      const SWIPE_LOCK_DISTANCE = 12;
+      const SWIPE_TRIGGER_DISTANCE = 72;
+      let tracking = false;
+      let startX = 0;
+      let startY = 0;
+      let lastDx = 0;
+      let horizontalSwipe = false;
+
+      shell.addEventListener('touchstart', (event) => {
+        if (event.touches.length !== 1) return;
+        if (event.target.closest('button, a, input, textarea, select, label, [data-redeem-ignore-swipe]')) return;
+        tracking = true;
+        horizontalSwipe = false;
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+        lastDx = 0;
+      }, { passive: true });
+
+      shell.addEventListener('touchmove', (event) => {
+        if (!tracking || event.touches.length !== 1) return;
+        const dx = event.touches[0].clientX - startX;
+        const dy = event.touches[0].clientY - startY;
+        lastDx = dx;
+
+        if (!horizontalSwipe) {
+          if (Math.abs(dx) < SWIPE_LOCK_DISTANCE && Math.abs(dy) < SWIPE_LOCK_DISTANCE) return;
+          horizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.15;
+          if (!horizontalSwipe) {
+            tracking = false;
+            return;
+          }
+        }
+
+        event.preventDefault();
+      }, { passive: false });
+
+      shell.addEventListener('touchcancel', () => {
+        tracking = false;
+        horizontalSwipe = false;
+        lastDx = 0;
+      });
+
+      shell.addEventListener('touchend', () => {
+        if (!tracking) return;
+        tracking = false;
+        if (!horizontalSwipe) return;
+
+        const dx = lastDx;
+        horizontalSwipe = false;
+        lastDx = 0;
+        if (Math.abs(dx) < SWIPE_TRIGGER_DISTANCE) return;
+
+        suppressNextModalClick = true;
+        suppressPreviewClick = true;
+        setTimeout(() => {
+          suppressNextModalClick = false;
+          suppressPreviewClick = false;
+        }, 320);
+
+        if (dx < 0) {
+          showToast('已取消核銷', 'success', 700);
+          cleanup();
+          this.render();
+          return;
+        }
+
+        redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true });
+      }, { passive: true });
+    }
 
     document.body.appendChild(modal);
     window.addEventListener('keydown', onKeydown);
@@ -663,6 +1086,7 @@ export class TicketsPage {
   buildCards(tickets, options = {}) {
     const showThumbnail = options.showThumbnail !== false;
     const compactGrid = !!options.compactGrid;
+    const ultraCompactCard = !!options.ultraCompactCard;
     const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
@@ -678,12 +1102,21 @@ export class TicketsPage {
 
     return tickets.map((ticket) => {
       const isExpiring = !ticket.completed && !ticket.isDeleted && checkIsExpiringSoon(ticket.expiry, this.app.state.settings.notifyDays);
+      const expiryState = !ticket.completed && !ticket.isDeleted
+        ? getExpiryState(ticket.expiry, this.app.state.settings.notifyDays)
+        : 'normal';
+      const expiryCountdown = !ticket.completed && !ticket.isDeleted
+        ? getExpiryCountdownLabel(ticket.expiry)
+        : '';
       const isDuplicateSerial = !!ticket.serial && this.app.state.tasks.filter((t) => !t.isDeleted && t.serial === ticket.serial).length > 1;
       const hasOriginalImage = !!ticket.originalImage;
       const selected = this.app.state.ui.selectedIds.has(ticket.id);
       const selectedVisual = this.app.state.ui.selectionMode && selected;
+      const tagChipClass = this.view === 'active'
+        ? 'ticket-tag ticket-tag--active px-2.5 py-1 rounded-lg text-xs border font-medium'
+        : 'ticket-tag px-2 py-0.5 rounded-full text-xs bg-wabi-primary/10 text-wabi-primary hover:bg-wabi-primary/20';
       const tagsHtml = (ticket.tags || []).map((tag) => `
-        <button type="button" data-tag="${escapeHtml(tag)}" class="ticket-tag px-2 py-0.5 rounded-full text-xs bg-wabi-primary/10 text-wabi-primary hover:bg-wabi-primary/20">#${escapeHtml(tag)}</button>
+        <button type="button" data-tag="${escapeHtml(tag)}" class="${tagChipClass}">#${escapeHtml(tag)}</button>
       `).join('');
 
       const statusBadge = ticket.isDeleted
@@ -698,6 +1131,75 @@ export class TicketsPage {
       const originalImageBadge = hasOriginalImage
         ? '<span class="text-xs rounded-full px-2 py-1 bg-sky-100 text-sky-700"><i class="fa-regular fa-image mr-1"></i>原圖</span>'
         : '';
+      const activeExpiryClass = expiryState === 'expired'
+        ? 'ticket-expiry-chip ticket-expiry-chip--expired'
+        : expiryState === 'today'
+          ? 'ticket-expiry-chip ticket-expiry-chip--today'
+          : expiryState === 'soon'
+            ? 'ticket-expiry-chip ticket-expiry-chip--soon'
+            : 'ticket-expiry-chip ticket-expiry-chip--normal';
+      const activeExpiryPrefix = expiryState === 'expired'
+        ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+        : expiryState === 'today'
+          ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+          : expiryState === 'soon'
+            ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+            : '<i class="fa-regular fa-calendar mr-1"></i>';
+      const activeExpiryBadge = this.view === 'active' && !ticket.completed && !ticket.isDeleted
+        ? `<span class="${activeExpiryClass}">${activeExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}</span>`
+        : '';
+      const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
+      if (ultraCompactCard) {
+        const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
+        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};"`;
+        const compactExpiryCardClass = expiryState === 'expired'
+          ? 'ticket-card--expiry-expired'
+          : expiryState === 'today'
+            ? 'ticket-card--expiry-today'
+            : expiryState === 'soon'
+              ? 'ticket-card--expiry-soon'
+              : '';
+        const compactExpiryClass = expiryState === 'expired'
+          ? 'ticket-card-expiry--expired ticket-card-expiry--expired-pill'
+          : expiryState === 'today'
+            ? 'ticket-card-expiry--today ticket-card-expiry--today-pill'
+            : expiryState === 'soon'
+              ? 'ticket-card-expiry--soon'
+              : '';
+        const compactExpiryPrefix = expiryState === 'expired'
+          ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+          : expiryState === 'today'
+            ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+            : expiryState === 'soon'
+              ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+              : '';
+        const swipeMap = {
+          active: { left: '核銷', right: '回收' },
+          completed: { left: '還原', right: '回收' },
+          deleted: { left: '清除', right: '還原' },
+        };
+        const swipeConfig = swipeMap[this.view];
+        const swipeAttrs = swipeConfig
+          ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
+          : '';
+        return `
+          <article class="ticket-card ticket-card--ultra ${originalFrameClass} ${compactExpiryCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${compactPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+            <div class="flex items-start justify-between gap-1.5">
+              <div class="flex items-start gap-2 min-w-0">
+                ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
+                <div class="min-w-0">
+                  <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
+                  <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1">${compactExpiryPrefix}到：${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                ${ticket.pinned ? '<span class="ticket-card-pin-pill text-[10px] rounded-full px-1.5 py-0.5 bg-amber-100 text-amber-700 whitespace-nowrap" title="置頂票券"><i class="fa-solid fa-thumbtack"></i></span>' : ''}
+                ${hasOriginalImage ? '<span class="ticket-card-original-pill text-[10px] rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700 whitespace-nowrap"><i class="fa-regular fa-image mr-1"></i>原圖</span>' : ''}
+              </div>
+            </div>
+          </article>
+        `;
+      }
       const showTagChips = this.view !== 'deleted' && this.view !== 'completed';
       const tagBadges = this.view === 'deleted'
         ? `
@@ -705,6 +1207,7 @@ export class TicketsPage {
           `
         : `
             ${originalImageBadge}
+            ${activeExpiryBadge}
             ${showTagChips ? tagsHtml : ''}
             ${isDuplicateSerial ? '<span class="text-xs rounded-full px-2 py-1 bg-orange-100 text-orange-700">重複序號</span>' : ''}
           `;
@@ -747,9 +1250,18 @@ export class TicketsPage {
       const cardPaddingClass = compactGrid ? 'p-3' : 'p-4';
       const imageClass = compactGrid ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2' : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};"`;
+      const swipeMap = {
+        active: { left: '核銷', right: '回收' },
+        completed: { left: '還原', right: '回收' },
+        deleted: { left: '清除', right: '還原' },
+      };
+      const swipeConfig = swipeMap[this.view];
+      const swipeAttrs = swipeConfig
+        ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
+        : '';
 
       return `
-        <article class="ticket-card ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${cardStyle}>
+        <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="flex items-start gap-3 min-w-0">
               ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4">` : ''}
@@ -770,7 +1282,7 @@ export class TicketsPage {
 
           ${metaRow}
 
-          <div class="flex flex-wrap gap-2">
+          <div class="ticket-card-actions flex flex-wrap gap-2" data-no-swipe="1">
             ${editButton}
             ${primaryAction}
             ${secondaryAction}
@@ -785,6 +1297,7 @@ export class TicketsPage {
     const search = this.app.state.ui.search.trim().toLowerCase();
     const sortType = this.app.state.ui.sort;
     const activeTags = this.app.state.ui.activeTags;
+    const notifyDays = this.app.state.settings.notifyDays;
 
     let list = this.app.state.tasks.filter((ticket) => {
       if (this.view === 'active' && (ticket.completed || ticket.isDeleted)) return false;
@@ -793,6 +1306,11 @@ export class TicketsPage {
 
       if (activeTags.length > 0 && !activeTags.some((tag) => {
         if (tag === ORIGINAL_IMAGE_FILTER_TAG) return !!ticket.originalImage;
+        if (tag === EXPIRY_URGENT_FILTER_TAG) {
+          if (this.view !== 'active') return false;
+          const state = getExpiryState(ticket.expiry, notifyDays);
+          return ['expired', 'today', 'soon'].includes(state);
+        }
         return (ticket.tags || []).includes(tag);
       })) {
         return false;
@@ -819,10 +1337,18 @@ export class TicketsPage {
         if (sortType === 'oldest') return (a.createdAt || 0) - (b.createdAt || 0);
         return (b.completedAt || 0) - (a.completedAt || 0);
       }
-      if (this.view !== 'deleted') {
-        const expA = checkIsExpiringSoon(a.expiry, this.app.state.settings.notifyDays);
-        const expB = checkIsExpiringSoon(b.expiry, this.app.state.settings.notifyDays);
-        if (expA !== expB) return expA ? -1 : 1;
+      if (this.view === 'active') {
+        const urgencyRank = {
+          expired: 0,
+          today: 1,
+          soon: 2,
+          normal: 3,
+        };
+        const stateA = getExpiryState(a.expiry, this.app.state.settings.notifyDays);
+        const stateB = getExpiryState(b.expiry, this.app.state.settings.notifyDays);
+        const rankA = urgencyRank[stateA] ?? urgencyRank.normal;
+        const rankB = urgencyRank[stateB] ?? urgencyRank.normal;
+        if (rankA !== rankB) return rankA - rankB;
       }
       return getSortComparator(sortType)(a, b);
     });
@@ -832,6 +1358,7 @@ export class TicketsPage {
 
   async render() {
     this.clearBackgroundRotationTimer();
+    this.showSwipeHintIfNeeded();
     const meta = VIEW_META[this.view];
     const tickets = this.filterTickets();
     const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
@@ -849,12 +1376,20 @@ export class TicketsPage {
     const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, 0.95);
     const cardBgColor = viewConfig.cardBgColor || '#ffffff';
     const cardBorderColor = viewConfig.cardBorderColor || '#e2e8f0';
+    const ultraCompactCard = viewConfig.ultraCompactCard === true;
     const compactGrid = gridColumns > 1;
-    const ticketGridClass = gridColumns === 3
+    let ticketGridClass = gridColumns === 3
       ? 'grid grid-cols-2 md:grid-cols-3 gap-2'
       : gridColumns === 2
         ? 'grid grid-cols-2 gap-2'
         : 'grid gap-3';
+    if (ultraCompactCard) {
+      ticketGridClass = gridColumns === 3
+        ? 'grid grid-cols-3 gap-1.5'
+        : gridColumns === 2
+          ? 'grid grid-cols-2 gap-1.5'
+          : 'grid gap-1.5';
+    }
     if (backgroundImages.length > 0) {
       this.backgroundRotationIndex = this.backgroundRotationIndex % backgroundImages.length;
       if (this.backgroundRotationIndex < 0) this.backgroundRotationIndex = 0;
@@ -866,9 +1401,18 @@ export class TicketsPage {
       ? `<div class="ticket-view-bg-layer" style="background-image: url('${escapeHtml(initialBackgroundImage)}'); opacity: ${bgOpacity};"></div>`
       : '';
     const allTags = [...new Set(this.app.state.tasks.flatMap((t) => t.tags || []))].sort();
+    const urgentActiveCount = this.app.state.tasks.filter((ticket) => {
+      if (ticket.completed || ticket.isDeleted) return false;
+      const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
+      return state === 'expired' || state === 'today' || state === 'soon';
+    }).length;
     const completedTotalCount = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted).length;
     const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
-      tag === ORIGINAL_IMAGE_FILTER_TAG ? '原圖' : `#${escapeHtml(tag)}`
+      tag === ORIGINAL_IMAGE_FILTER_TAG
+        ? '原圖'
+        : tag === EXPIRY_URGENT_FILTER_TAG
+          ? '到期警示'
+          : `#${escapeHtml(tag)}`
     ));
     const selectedCount = this.app.state.ui.selectedIds.size;
     const visibleTicketIds = new Set(tickets.map((ticket) => ticket.id));
@@ -904,6 +1448,7 @@ export class TicketsPage {
             ${this.view === 'active'
               ? `<button id="quick-grid-columns" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${gridColumns}欄</button>`
               : ''}
+            <button id="toggle-ultra-compact-btn" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${ultraCompactCard ? '標準卡片' : '超精簡卡片'}</button>
             ${this.view === 'completed'
               ? `<button id="quick-clear-completed-to-trash" class="px-3 py-2 rounded-lg bg-red-100 border border-red-200 text-red-700 text-xs ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}>全部回收 (${completedTotalCount})</button>`
               : ''}
@@ -936,6 +1481,9 @@ export class TicketsPage {
 
           <div class="flex flex-wrap gap-2">
             <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${this.app.state.ui.activeTags.length === 0 ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">全部</button>
+            ${this.view === 'active'
+              ? `<button data-filter-tag="${EXPIRY_URGENT_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>到期警示<span class="ml-1 ${urgentActiveCount > 0 ? '' : 'opacity-60'}">(${urgentActiveCount})</span></button>`
+              : ''}
             <button data-filter-tag="${ORIGINAL_IMAGE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-regular fa-image mr-1"></i>原圖</button>
             ${allTags.map((tag) => `
               <button data-filter-tag="${escapeHtml(tag)}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(tag) ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(tag) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">#${escapeHtml(tag)}</button>
@@ -979,7 +1527,7 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div class="${ticketGridClass}">${this.buildCards(tickets, { showThumbnail, compactGrid, cardOpacity, cardBgColor, cardBorderColor })}</div>
+        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, cardOpacity, cardBgColor, cardBorderColor })}</div>
       </section>
     `);
 
@@ -1046,6 +1594,25 @@ export class TicketsPage {
       };
       await this.app.persistSettings();
       showToast(`已切換為 ${next} 欄排列`, 'success', 700);
+      this.render();
+    });
+
+    root.querySelector('#toggle-ultra-compact-btn')?.addEventListener('click', async () => {
+      const prevViewConfigs = this.app.state.settings.viewConfigs || {};
+      const prevViewConfig = prevViewConfigs[this.view] || {};
+      const nextUltraCompact = prevViewConfig.ultraCompactCard !== true;
+      this.app.state.settings = {
+        ...this.app.state.settings,
+        viewConfigs: {
+          ...prevViewConfigs,
+          [this.view]: {
+            ...prevViewConfig,
+            ultraCompactCard: nextUltraCompact,
+          },
+        },
+      };
+      await this.app.persistSettings();
+      showToast(nextUltraCompact ? '已切換超精簡卡片模式' : '已切換標準卡片模式', 'success', 900);
       this.render();
     });
 
@@ -1183,6 +1750,10 @@ export class TicketsPage {
       card.addEventListener('click', (event) => {
         const target = event.target;
         if (target.closest('button, a, input, textarea, select, label')) return;
+        if (card.dataset.swipeSuppressClick === '1') {
+          card.dataset.swipeSuppressClick = '0';
+          return;
+        }
         const ticketId = card.dataset.ticketId;
         if (!ticketId) return;
 
@@ -1208,6 +1779,8 @@ export class TicketsPage {
         event.preventDefault();
         toggleCardSelection(card.dataset.ticketId);
       });
+
+      this.bindCardSwipeGesture(card);
     });
 
     root.querySelectorAll('[data-tag]').forEach((btn) => {

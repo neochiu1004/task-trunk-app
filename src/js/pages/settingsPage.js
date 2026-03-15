@@ -11,6 +11,8 @@ import {
 } from '../utils.js';
 import { scanMultipleBarcodesFromImage } from '../services/barcodeService.js';
 
+const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
+
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -172,6 +174,7 @@ export class SettingsPage {
       ? Number(activeViewConfig.gridColumns)
       : 2;
     const activeHideThumbnail = activeViewConfig.showThumbnail === false;
+    const activeUltraCompactCard = activeViewConfig.ultraCompactCard === true;
     const activeBackgroundImages = Array.isArray(activeViewConfig.backgroundImages)
       ? activeViewConfig.backgroundImages.filter(Boolean)
       : [];
@@ -193,6 +196,9 @@ export class SettingsPage {
       : 0.95;
     const activeCardTransparencyPercent = Math.round((1 - activeCardOpacity) * 100);
     const quickTagsText = (settings.quickTags || []).join(', ');
+    const swipeTriggerDistancePx = Number.isFinite(Number(settings.swipeTriggerDistance))
+      ? Math.max(40, Math.min(120, Number(settings.swipeTriggerDistance)))
+      : 72;
     this.app.mount(`
       <section class="page active p-4 pb-24 md:pb-8 max-w-4xl mx-auto space-y-4">
         <div class="flex items-center justify-between">
@@ -230,6 +236,23 @@ export class SettingsPage {
             <label class="block text-sm text-wabi-text-secondary mb-1">新增票券快速標籤（逗號分隔）</label>
             <input id="quick-tags" value="${escapeHtml(quickTagsText)}" placeholder="例如：超商,咖啡,餐券" class="w-full rounded-lg border border-wabi-border px-3 py-2" />
           </div>
+          <div class="rounded-lg border border-wabi-border/70 p-3">
+            <label class="inline-flex items-center gap-2 text-sm">
+              <input id="swipe-gestures-enabled" type="checkbox" ${settings.swipeGesturesEnabled !== false ? 'checked' : ''} />
+              啟用票券手勢操作（左滑 / 右滑）
+            </label>
+            <div class="mt-3">
+              <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                <label for="swipe-trigger-distance">手勢觸發距離</label>
+                <span id="swipe-trigger-distance-value">${swipeTriggerDistancePx}px</span>
+              </div>
+              <input id="swipe-trigger-distance" type="range" min="40" max="120" step="4" value="${swipeTriggerDistancePx}" class="w-full accent-wabi-primary" ${settings.swipeGesturesEnabled !== false ? '' : 'disabled'} />
+              <p class="text-xs text-wabi-text-secondary mt-1">數值越小越靈敏，越大越不容易誤觸。</p>
+              <button type="button" id="reset-swipe-hint" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">
+                重設手勢提示
+              </button>
+            </div>
+          </div>
           <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
             <h3 class="text-sm font-semibold text-wabi-primary">待使用視圖版面</h3>
             <div class="grid md:grid-cols-2 gap-3">
@@ -241,10 +264,14 @@ export class SettingsPage {
                   <option value="3" ${activeGridColumns === 3 ? 'selected' : ''}>3 欄</option>
                 </select>
               </div>
-              <div class="flex items-end">
+              <div class="space-y-2">
                 <label class="inline-flex items-center gap-2 text-sm">
                   <input id="active-hide-thumbnail" type="checkbox" ${activeHideThumbnail ? 'checked' : ''} />
                   不顯示縮圖（主頁卡片）
+                </label>
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="active-ultra-compact" type="checkbox" ${activeUltraCompactCard ? 'checked' : ''} />
+                  超精簡卡片模式（手機）
                 </label>
               </div>
             </div>
@@ -385,6 +412,9 @@ export class SettingsPage {
     const activeBgOpacityValue = root.querySelector('#active-bg-opacity-value');
     const activeCardTransparencyInput = root.querySelector('#active-card-transparency');
     const activeCardTransparencyValue = root.querySelector('#active-card-transparency-value');
+    const swipeGesturesEnabledInput = root.querySelector('#swipe-gestures-enabled');
+    const swipeTriggerDistanceInput = root.querySelector('#swipe-trigger-distance');
+    const swipeTriggerDistanceValue = root.querySelector('#swipe-trigger-distance-value');
     const activeBgPreviewWrap = root.querySelector('#active-bg-preview-wrap');
     const activeBgPreviewList = root.querySelector('#active-bg-preview-list');
     const activeBgCount = root.querySelector('#active-bg-count');
@@ -421,12 +451,21 @@ export class SettingsPage {
         activeCardTransparencyValue.textContent = `${Math.max(0, Math.min(100, Number(activeCardTransparencyInput.value) || 0))}%`;
       }
     };
+    const syncSwipeControls = () => {
+      const enabled = swipeGesturesEnabledInput?.checked !== false;
+      if (swipeTriggerDistanceInput) swipeTriggerDistanceInput.disabled = !enabled;
+      if (swipeTriggerDistanceValue && swipeTriggerDistanceInput) {
+        const nextDistance = Math.max(40, Math.min(120, Number(swipeTriggerDistanceInput.value) || 72));
+        swipeTriggerDistanceValue.textContent = `${nextDistance}px`;
+      }
+    };
     if (this.importKeydownHandler) {
       window.removeEventListener('keydown', this.importKeydownHandler);
       this.importKeydownHandler = null;
     }
     syncBackgroundControls();
     syncOpacityLabels();
+    syncSwipeControls();
     renderActiveBackgroundList();
 
     if (this.pendingImport) {
@@ -453,12 +492,15 @@ export class SettingsPage {
       const prevActiveViewConfig = prevViewConfigs.active || {};
       const bgOpacityRaw = Number(activeBgOpacityInput?.value);
       const cardTransparencyRaw = Number(activeCardTransparencyInput?.value);
+      const swipeTriggerDistanceRaw = Number(swipeTriggerDistanceInput?.value);
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
+      const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
         ...prevActiveViewConfig,
         gridColumns: Math.max(1, Math.min(3, Number(root.querySelector('#active-grid-columns')?.value || 2))),
         showThumbnail: !(root.querySelector('#active-hide-thumbnail')?.checked),
+        ultraCompactCard: root.querySelector('#active-ultra-compact')?.checked === true,
         backgroundImage: activeBackgroundImages[0] || '',
         backgroundImages: [...activeBackgroundImages],
         showBackground: activeShowBackgroundInput?.checked !== false,
@@ -473,6 +515,8 @@ export class SettingsPage {
         tgChatId: root.querySelector('#tg-chat-id').value.trim(),
         localBackupFileName: root.querySelector('#backup-file-name').value.trim() || 'ticket_backup',
         quickTags: parseTags(root.querySelector('#quick-tags')?.value || ''),
+        swipeGesturesEnabled: root.querySelector('#swipe-gestures-enabled')?.checked !== false,
+        swipeTriggerDistance,
         viewConfigs: {
           ...prevViewConfigs,
           active: nextActiveViewConfig,
@@ -492,6 +536,16 @@ export class SettingsPage {
     });
     activeBgOpacityInput?.addEventListener('input', syncOpacityLabels);
     activeCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
+    swipeGesturesEnabledInput?.addEventListener('change', syncSwipeControls);
+    swipeTriggerDistanceInput?.addEventListener('input', syncSwipeControls);
+    root.querySelector('#reset-swipe-hint')?.addEventListener('click', () => {
+      try {
+        window.localStorage?.removeItem(SWIPE_HINT_STORAGE_KEY);
+      } catch (_error) {
+        // Ignore storage errors.
+      }
+      showToast('已重設手勢提示，下次進入票券頁會再次顯示', 'success');
+    });
 
     root.querySelector('#active-bg-file')?.addEventListener('change', async (event) => {
       const files = Array.from(event.target.files || []);

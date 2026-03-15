@@ -15,6 +15,23 @@ export class AddPage {
     this.app = app;
   }
 
+  getDefaultExpiryAfterMonths(months = 6) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthIndex = now.getMonth();
+    const day = now.getDate();
+
+    const targetMonthTotal = monthIndex + months;
+    const targetYear = year + Math.floor(targetMonthTotal / 12);
+    const targetMonth = targetMonthTotal % 12;
+    const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const targetDay = Math.min(day, lastDayOfTargetMonth);
+
+    const mm = String(targetMonth + 1).padStart(2, '0');
+    const dd = String(targetDay).padStart(2, '0');
+    return `${targetYear}/${mm}/${dd}`;
+  }
+
   getEditingTicket() {
     const id = this.app.state.ui.editingTicketId;
     if (!id) return null;
@@ -78,6 +95,7 @@ export class AddPage {
 
   async render() {
     const editing = this.getEditingTicket();
+    const defaultExpiry = this.getDefaultExpiryAfterMonths(6);
     const quickTags = (this.app.state.settings.quickTags || []).filter(Boolean);
     const selectedQuickTagSet = new Set(editing?.tags || []);
     const selectableTags = [...new Set([...quickTags, ...(editing?.tags || [])])];
@@ -117,7 +135,7 @@ export class AddPage {
             </div>
             <div>
               <label class="block text-sm text-wabi-text-secondary mb-1">到期日 (YYYY/MM/DD)</label>
-              <input id="expiry" class="w-full rounded-lg border border-wabi-border px-3 py-2" placeholder="2026/12/31" value="${escapeHtml(editing?.expiry || '')}" />
+              <input id="expiry" class="w-full rounded-lg border border-wabi-border px-3 py-2" placeholder="2026/12/31" value="${escapeHtml(editing?.expiry || defaultExpiry)}" />
             </div>
           </div>
 
