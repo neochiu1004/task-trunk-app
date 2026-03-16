@@ -121,42 +121,70 @@ body.keyboard-open #bottom-nav {
   box-shadow: 0 12px 24px -16px rgba(37, 52, 64, 0.48);
 }
 
-.ticket-resize-handle {
-  display: flex;
+.ticket-size-tools {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--wabi-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.ticket-size-tool {
+  display: grid;
+  grid-template-columns: 74px 1fr auto;
+  gap: 8px;
   align-items: center;
-  justify-content: center;
-  width: calc(100% + 12px);
-  margin: 2px -6px 4px;
-  height: 16px;
-  border: 0;
-  background: transparent;
-  cursor: ns-resize;
-  touch-action: none;
-  padding: 0;
 }
 
-.ticket-resize-handle::before {
-  content: '';
-  width: 42px;
-  height: 4px;
+.ticket-size-label {
+  font-size: 12px;
+  color: var(--wabi-text-secondary);
+  font-weight: 600;
+}
+
+.ticket-size-value {
+  font-size: 11px;
+  color: #2f4550;
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  text-align: right;
+}
+
+.ticket-size-track {
+  position: relative;
+  height: 14px;
   border-radius: 999px;
-  background: rgba(100, 116, 139, 0.38);
-  transition: background-color 0.14s ease, width 0.14s ease;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.28), rgba(148, 163, 184, 0.18));
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  cursor: ew-resize;
+  touch-action: none;
 }
 
-.ticket-resize-handle:hover::before,
-.ticket-resize-handle:active::before {
-  width: 52px;
-  background: rgba(51, 74, 82, 0.58);
+.ticket-size-track-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(51, 74, 82, 0.38), rgba(51, 74, 82, 0.6));
 }
 
-.ticket-resize-handle--thumb {
-  margin-top: -2px;
+.ticket-size-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid rgba(51, 74, 82, 0.55);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 6px rgba(22, 34, 43, 0.24);
 }
 
-.ticket-resize-handle--card {
-  margin-top: 4px;
-  margin-bottom: -2px;
+.ticket-size-track:focus-visible {
+  outline: 2px solid rgba(51, 74, 82, 0.45);
+  outline-offset: 2px;
 }
 
 .ticket-card[tabindex]:focus-visible {
