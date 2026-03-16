@@ -820,7 +820,7 @@ export class TicketsPage {
         return;
       }
       previewWrap.innerHTML = `
-        <div class="w-full h-full flex flex-col items-center justify-center gap-4 p-3 md:p-5">
+        <div class="w-full h-full flex flex-col items-center justify-center gap-4 p-3 md:p-5 cursor-pointer" data-redeem-tap-trigger="1">
           <div class="w-full max-w-4xl bg-white border border-wabi-border rounded-xl p-2 shadow-sm">
             <canvas id="redeem-barcode-canvas" class="w-full"></canvas>
           </div>
@@ -847,7 +847,7 @@ export class TicketsPage {
         return;
       }
       previewWrap.innerHTML = `
-        <div class="w-full h-full p-2 md:p-4">
+        <div class="w-full h-full p-2 md:p-4 cursor-pointer" data-redeem-tap-trigger="1">
           <div class="w-full h-full flex flex-col bg-white border border-wabi-border rounded-2xl overflow-hidden shadow-xl">
             <div class="bg-pink-500 px-4 py-2.5 flex justify-between items-center text-white shrink-0">
               <span class="text-[11px] font-black tracking-widest opacity-95">電子票券明細</span>
@@ -1017,11 +1017,10 @@ export class TicketsPage {
         suppressPreviewClick = false;
         return;
       }
-      const trigger = event.target.closest('[data-original-redeem-trigger]');
+      const trigger = event.target.closest('[data-original-redeem-trigger], [data-redeem-tap-trigger]');
       if (!trigger) return;
       event.preventDefault();
       event.stopPropagation();
-      if (mode !== 'original') return;
       redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true, closeOnCancel: true });
     });
 
@@ -1174,6 +1173,11 @@ export class TicketsPage {
         ? `<span class="${activeExpiryClass}">${activeExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}</span>`
         : '';
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
+      const enableDragResize = true;
+      const enableThumbnailResize = this.view === 'active';
+      const cardResizeHandleHtml = enableDragResize
+        ? '<button type="button" data-resize-handle="card" data-no-swipe="1" class="ticket-resize-handle ticket-resize-handle--card" title="拖曳調整全部卡片高度" aria-label="拖曳調整全部卡片高度"></button>'
+        : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
         const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
@@ -1222,6 +1226,7 @@ export class TicketsPage {
                 ${hasOriginalImage ? '<span class="ticket-card-original-pill text-[10px] rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700 whitespace-nowrap"><i class="fa-regular fa-image mr-1"></i>原圖</span>' : ''}
               </div>
             </div>
+            ${cardResizeHandleHtml}
           </article>
         `;
       }
@@ -1297,6 +1302,9 @@ export class TicketsPage {
       const imageStyle = this.view === 'active'
         ? ` style="height: ${Math.round(gridImageHeight)}px;"`
         : '';
+      const thumbnailResizeHandleHtml = enableThumbnailResize && showThumbnail && ticket.image
+        ? '<button type="button" data-resize-handle="thumbnail" data-no-swipe="1" class="ticket-resize-handle ticket-resize-handle--thumb" title="拖曳調整全部縮圖高度" aria-label="拖曳調整全部縮圖高度"></button>'
+        : '';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
         active: { left: '核銷', right: '回收' },
@@ -1325,6 +1333,7 @@ export class TicketsPage {
           </div>
 
           ${showThumbnail && ticket.image ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />` : ''}
+          ${thumbnailResizeHandleHtml}
 
           ${ticket.note ? `<p class="text-sm text-wabi-text-primary mb-2 break-all">${escapeHtml(ticket.note)}</p>` : ''}
 
@@ -1336,6 +1345,7 @@ export class TicketsPage {
             ${secondaryAction}
             ${redeemButton}
           </div>
+          ${cardResizeHandleHtml}
         </article>
       `;
     }).join('');
@@ -1486,8 +1496,8 @@ export class TicketsPage {
 
     this.app.mount(`
       ${backgroundLayerHtml}
-      <section class="page active relative z-10 px-4 pt-5 pb-24 md:pb-8 max-w-5xl mx-auto">
-        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: calc(var(--safe-top) + 1.25rem);">
+      <section class="page active relative z-10 px-4 pt-0 pb-24 md:pb-8 max-w-5xl mx-auto">
+        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.5rem);">
           <header class="flex items-center justify-between mb-4 gap-2">
             <div>
               <h1 class="text-2xl font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
@@ -1507,8 +1517,8 @@ export class TicketsPage {
             ${this.view === 'deleted'
               ? `<button id="quick-purge-deleted" class="px-3 py-2 rounded-lg bg-red-100 border border-red-200 text-red-700 text-xs ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}>全部刪除 (${deletedTotalCount})</button>`
               : ''}
-            ${this.view === 'active' && backgroundImages.length > 0
-              ? `<button id="toggle-active-background" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${showBackground ? '一鍵隱藏背景' : '一鍵顯示背景'}</button>`
+            ${backgroundImages.length > 0
+              ? `<button id="toggle-view-background" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${showBackground ? '一鍵隱藏背景' : '一鍵顯示背景'}</button>`
               : ''}
               <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-sm">${this.app.state.ui.selectionMode ? '取消多選' : '多選'}</button>
               <a href="#settings" class="px-3 py-2 rounded-lg bg-white border border-wabi-border"><i class="fa-solid fa-gear"></i></a>
@@ -1746,16 +1756,16 @@ export class TicketsPage {
       this.render();
     });
 
-    root.querySelector('#toggle-active-background')?.addEventListener('click', async () => {
+    root.querySelector('#toggle-view-background')?.addEventListener('click', async () => {
       const prevViewConfigs = this.app.state.settings.viewConfigs || {};
-      const prevActiveConfig = prevViewConfigs.active || {};
-      const nextShowBackground = prevActiveConfig.showBackground === false;
+      const prevConfig = prevViewConfigs[this.view] || {};
+      const nextShowBackground = prevConfig.showBackground === false;
       this.app.state.settings = {
         ...this.app.state.settings,
         viewConfigs: {
           ...prevViewConfigs,
-          active: {
-            ...prevActiveConfig,
+          [this.view]: {
+            ...prevConfig,
             showBackground: nextShowBackground,
           },
         },
@@ -1886,6 +1896,91 @@ export class TicketsPage {
       });
 
       this.bindCardSwipeGesture(card);
+    });
+
+    root.querySelectorAll('[data-resize-handle]').forEach((handle) => {
+      handle.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const resizeType = handle.dataset.resizeHandle;
+        if (!resizeType) return;
+
+        const viewConfigs = this.app.state.settings.viewConfigs || {};
+        const viewConfig = viewConfigs[this.view] || {};
+        const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
+        const defaultThumbHeight = gridColumns > 1 ? 84 : 112;
+        const startValue = resizeType === 'thumbnail'
+          ? clamp(viewConfig.gridImageHeight, 44, 220, defaultThumbHeight)
+          : clamp(viewConfig.cardHeight, 0, 360, 0);
+        const startY = event.clientY;
+        let currentValue = startValue;
+
+        const applyPreview = (value) => {
+          if (resizeType === 'thumbnail') {
+            root.querySelectorAll('.ticket-card-thumbnail--active').forEach((img) => {
+              img.style.height = `${value}px`;
+            });
+            return;
+          }
+          root.querySelectorAll('.ticket-card').forEach((card) => {
+            if (value > 0) card.style.minHeight = `${value}px`;
+            else card.style.removeProperty('min-height');
+          });
+        };
+
+        const onPointerMove = (moveEvent) => {
+          moveEvent.preventDefault();
+          const deltaY = moveEvent.clientY - startY;
+          if (resizeType === 'thumbnail') {
+            currentValue = clamp(Math.round((startValue + deltaY) / 2) * 2, 44, 220, defaultThumbHeight);
+          } else {
+            const nextCardHeight = clamp(Math.round((startValue + deltaY) / 2) * 2, 0, 360, 0);
+            currentValue = nextCardHeight < 28 ? 0 : nextCardHeight;
+          }
+          applyPreview(currentValue);
+        };
+
+        const finishResize = async () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', finishResize);
+          window.removeEventListener('pointercancel', finishResize);
+
+          if (currentValue === startValue) return;
+
+          const prevViewConfigs = this.app.state.settings.viewConfigs || {};
+          const prevConfig = prevViewConfigs[this.view] || {};
+          const nextConfig = {
+            ...prevConfig,
+            ...(resizeType === 'thumbnail'
+              ? { gridImageHeight: currentValue }
+              : { cardHeight: currentValue }),
+          };
+
+          this.app.state.settings = {
+            ...this.app.state.settings,
+            viewConfigs: {
+              ...prevViewConfigs,
+              [this.view]: nextConfig,
+            },
+          };
+
+          await this.app.persistSettings();
+          showToast(
+            resizeType === 'thumbnail'
+              ? `已套用全部縮圖高度 ${currentValue}px`
+              : currentValue > 0
+                ? `已套用全部卡片高度 ${currentValue}px`
+                : '已恢復全部卡片自動高度',
+            'success',
+            800
+          );
+          this.render();
+        };
+
+        window.addEventListener('pointermove', onPointerMove, { passive: false });
+        window.addEventListener('pointerup', finishResize);
+        window.addEventListener('pointercancel', finishResize);
+      });
     });
 
     root.querySelectorAll('[data-tag]').forEach((btn) => {

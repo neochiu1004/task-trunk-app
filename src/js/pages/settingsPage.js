@@ -170,6 +170,8 @@ export class SettingsPage {
   async render() {
     const settings = this.app.state.settings;
     const activeViewConfig = settings.viewConfigs?.active || {};
+    const completedViewConfig = settings.viewConfigs?.completed || {};
+    const deletedViewConfig = settings.viewConfigs?.deleted || {};
     const activeGridColumns = [1, 2, 3].includes(Number(activeViewConfig.gridColumns))
       ? Number(activeViewConfig.gridColumns)
       : 2;
@@ -187,6 +189,32 @@ export class SettingsPage {
         <button type="button" data-active-bg-remove="${index}" class="absolute top-1 right-1 px-2 py-1 rounded-md bg-black/65 text-white text-[11px]">移除</button>
       </div>
     `).join('');
+    const completedBackgroundImages = Array.isArray(completedViewConfig.backgroundImages)
+      ? completedViewConfig.backgroundImages.filter(Boolean)
+      : [];
+    if (!completedBackgroundImages.length && completedViewConfig.backgroundImage) {
+      completedBackgroundImages.push(completedViewConfig.backgroundImage);
+    }
+    const completedBackgroundPreviewHtml = completedBackgroundImages.map((img, index) => `
+      <div class="relative rounded-xl overflow-hidden border border-wabi-border">
+        <img src="${escapeHtml(img)}" class="w-full h-24 object-cover bg-slate-50" />
+        <button type="button" data-completed-bg-remove="${index}" class="absolute top-1 right-1 px-2 py-1 rounded-md bg-black/65 text-white text-[11px]">移除</button>
+      </div>
+    `).join('');
+    const completedShowBackground = completedViewConfig.showBackground !== false;
+    const deletedBackgroundImages = Array.isArray(deletedViewConfig.backgroundImages)
+      ? deletedViewConfig.backgroundImages.filter(Boolean)
+      : [];
+    if (!deletedBackgroundImages.length && deletedViewConfig.backgroundImage) {
+      deletedBackgroundImages.push(deletedViewConfig.backgroundImage);
+    }
+    const deletedBackgroundPreviewHtml = deletedBackgroundImages.map((img, index) => `
+      <div class="relative rounded-xl overflow-hidden border border-wabi-border">
+        <img src="${escapeHtml(img)}" class="w-full h-24 object-cover bg-slate-50" />
+        <button type="button" data-deleted-bg-remove="${index}" class="absolute top-1 right-1 px-2 py-1 rounded-md bg-black/65 text-white text-[11px]">移除</button>
+      </div>
+    `).join('');
+    const deletedShowBackground = deletedViewConfig.showBackground !== false;
     const activeShowBackground = activeViewConfig.showBackground !== false;
     const activeBgOpacity = Number.isFinite(Number(activeViewConfig.bgOpacity))
       ? Math.max(0, Math.min(1, Number(activeViewConfig.bgOpacity)))
@@ -206,8 +234,8 @@ export class SettingsPage {
       ? Math.max(40, Math.min(120, Number(settings.swipeTriggerDistance)))
       : 72;
     this.app.mount(`
-      <section class="page active px-4 pt-5 pb-24 md:pb-8 max-w-4xl mx-auto space-y-4">
-        <div class="sticky z-30 -mx-4 px-4 pt-2 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: calc(var(--safe-top) + 1.25rem);">
+      <section class="page active px-4 pt-0 pb-24 md:pb-8 max-w-4xl mx-auto space-y-4">
+        <div class="sticky z-30 -mx-4 px-4 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.5rem);">
           <div class="flex items-center justify-between gap-2">
             <div>
               <h1 class="text-2xl font-bold text-wabi-primary">設定</h1>
@@ -342,6 +370,52 @@ export class SettingsPage {
               </div>
             </div>
           </div>
+          <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
+            <h3 class="text-sm font-semibold text-wabi-primary">已使用視圖背景</h3>
+            <div class="flex items-center justify-between gap-2">
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input id="completed-show-background" type="checkbox" ${completedShowBackground ? 'checked' : ''} />
+                顯示背景圖片
+              </label>
+              <button id="completed-toggle-background" type="button" class="px-3 py-1.5 rounded-lg border border-wabi-border text-xs">
+                ${completedShowBackground ? '一鍵關閉背景' : '一鍵顯示背景'}
+              </button>
+            </div>
+            <div>
+              <label class="block text-sm text-wabi-text-secondary mb-1">已使用背景圖片（可多選）</label>
+              <input id="completed-bg-file" type="file" accept="image/*" multiple class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
+              <p id="completed-bg-count" class="text-xs text-wabi-text-secondary mt-1">${completedBackgroundImages.length ? `已加入 ${completedBackgroundImages.length} 張，已使用頁會輪流顯示` : '尚未加入背景圖片'}</p>
+              <div id="completed-bg-preview-wrap" class="mt-2 ${completedBackgroundImages.length ? '' : 'hidden'} space-y-2">
+                <div id="completed-bg-preview-list" class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  ${completedBackgroundPreviewHtml}
+                </div>
+                <button id="completed-bg-clear" type="button" class="px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除全部背景</button>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
+            <h3 class="text-sm font-semibold text-wabi-primary">回收桶視圖背景</h3>
+            <div class="flex items-center justify-between gap-2">
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input id="deleted-show-background" type="checkbox" ${deletedShowBackground ? 'checked' : ''} />
+                顯示背景圖片
+              </label>
+              <button id="deleted-toggle-background" type="button" class="px-3 py-1.5 rounded-lg border border-wabi-border text-xs">
+                ${deletedShowBackground ? '一鍵關閉背景' : '一鍵顯示背景'}
+              </button>
+            </div>
+            <div>
+              <label class="block text-sm text-wabi-text-secondary mb-1">回收桶背景圖片（可多選）</label>
+              <input id="deleted-bg-file" type="file" accept="image/*" multiple class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
+              <p id="deleted-bg-count" class="text-xs text-wabi-text-secondary mt-1">${deletedBackgroundImages.length ? `已加入 ${deletedBackgroundImages.length} 張，回收桶頁會輪流顯示` : '尚未加入背景圖片'}</p>
+              <div id="deleted-bg-preview-wrap" class="mt-2 ${deletedBackgroundImages.length ? '' : 'hidden'} space-y-2">
+                <div id="deleted-bg-preview-list" class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  ${deletedBackgroundPreviewHtml}
+                </div>
+                <button id="deleted-bg-clear" type="button" class="px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除全部背景</button>
+              </div>
+            </div>
+          </div>
           <div class="flex gap-2">
             <button type="button" id="send-test-telegram" class="px-4 py-2 rounded-lg bg-wabi-accent/40 text-wabi-primary">發送 Telegram 測試</button>
           </div>
@@ -436,8 +510,24 @@ export class SettingsPage {
     if (!activeBackgroundImages.length && this.app.state.settings.viewConfigs?.active?.backgroundImage) {
       activeBackgroundImages = [this.app.state.settings.viewConfigs.active.backgroundImage];
     }
+    let completedBackgroundImages = Array.isArray(this.app.state.settings.viewConfigs?.completed?.backgroundImages)
+      ? this.app.state.settings.viewConfigs.completed.backgroundImages.filter(Boolean)
+      : [];
+    if (!completedBackgroundImages.length && this.app.state.settings.viewConfigs?.completed?.backgroundImage) {
+      completedBackgroundImages = [this.app.state.settings.viewConfigs.completed.backgroundImage];
+    }
+    let deletedBackgroundImages = Array.isArray(this.app.state.settings.viewConfigs?.deleted?.backgroundImages)
+      ? this.app.state.settings.viewConfigs.deleted.backgroundImages.filter(Boolean)
+      : [];
+    if (!deletedBackgroundImages.length && this.app.state.settings.viewConfigs?.deleted?.backgroundImage) {
+      deletedBackgroundImages = [this.app.state.settings.viewConfigs.deleted.backgroundImage];
+    }
     const activeShowBackgroundInput = root.querySelector('#active-show-background');
     const activeToggleBackgroundButton = root.querySelector('#active-toggle-background');
+    const completedShowBackgroundInput = root.querySelector('#completed-show-background');
+    const completedToggleBackgroundButton = root.querySelector('#completed-toggle-background');
+    const deletedShowBackgroundInput = root.querySelector('#deleted-show-background');
+    const deletedToggleBackgroundButton = root.querySelector('#deleted-toggle-background');
     const activeBgOpacityInput = root.querySelector('#active-bg-opacity');
     const activeBgOpacityValue = root.querySelector('#active-bg-opacity-value');
     const activeCardTransparencyInput = root.querySelector('#active-card-transparency');
@@ -452,6 +542,12 @@ export class SettingsPage {
     const activeBgPreviewWrap = root.querySelector('#active-bg-preview-wrap');
     const activeBgPreviewList = root.querySelector('#active-bg-preview-list');
     const activeBgCount = root.querySelector('#active-bg-count');
+    const completedBgPreviewWrap = root.querySelector('#completed-bg-preview-wrap');
+    const completedBgPreviewList = root.querySelector('#completed-bg-preview-list');
+    const completedBgCount = root.querySelector('#completed-bg-count');
+    const deletedBgPreviewWrap = root.querySelector('#deleted-bg-preview-wrap');
+    const deletedBgPreviewList = root.querySelector('#deleted-bg-preview-list');
+    const deletedBgCount = root.querySelector('#deleted-bg-count');
     const renderActiveBackgroundList = () => {
       if (activeBgPreviewList) {
         activeBgPreviewList.innerHTML = activeBackgroundImages.map((img, index) => `
@@ -470,11 +566,59 @@ export class SettingsPage {
           : '尚未加入背景圖片';
       }
     };
+    const renderCompletedBackgroundList = () => {
+      if (completedBgPreviewList) {
+        completedBgPreviewList.innerHTML = completedBackgroundImages.map((img, index) => `
+          <div class="relative rounded-xl overflow-hidden border border-wabi-border">
+            <img src="${escapeHtml(img)}" class="w-full h-24 object-cover bg-slate-50" />
+            <button type="button" data-completed-bg-remove="${index}" class="absolute top-1 right-1 px-2 py-1 rounded-md bg-black/65 text-white text-[11px]">移除</button>
+          </div>
+        `).join('');
+      }
+      if (completedBgPreviewWrap) {
+        completedBgPreviewWrap.classList.toggle('hidden', completedBackgroundImages.length === 0);
+      }
+      if (completedBgCount) {
+        completedBgCount.textContent = completedBackgroundImages.length
+          ? `已加入 ${completedBackgroundImages.length} 張，已使用頁會輪流顯示`
+          : '尚未加入背景圖片';
+      }
+    };
+    const renderDeletedBackgroundList = () => {
+      if (deletedBgPreviewList) {
+        deletedBgPreviewList.innerHTML = deletedBackgroundImages.map((img, index) => `
+          <div class="relative rounded-xl overflow-hidden border border-wabi-border">
+            <img src="${escapeHtml(img)}" class="w-full h-24 object-cover bg-slate-50" />
+            <button type="button" data-deleted-bg-remove="${index}" class="absolute top-1 right-1 px-2 py-1 rounded-md bg-black/65 text-white text-[11px]">移除</button>
+          </div>
+        `).join('');
+      }
+      if (deletedBgPreviewWrap) {
+        deletedBgPreviewWrap.classList.toggle('hidden', deletedBackgroundImages.length === 0);
+      }
+      if (deletedBgCount) {
+        deletedBgCount.textContent = deletedBackgroundImages.length
+          ? `已加入 ${deletedBackgroundImages.length} 張，回收桶頁會輪流顯示`
+          : '尚未加入背景圖片';
+      }
+    };
     const syncBackgroundControls = () => {
       const showBackground = activeShowBackgroundInput?.checked !== false;
       if (activeBgOpacityInput) activeBgOpacityInput.disabled = !showBackground;
       if (activeToggleBackgroundButton) {
         activeToggleBackgroundButton.textContent = showBackground ? '一鍵關閉背景' : '一鍵顯示背景';
+      }
+    };
+    const syncCompletedBackgroundControls = () => {
+      const showBackground = completedShowBackgroundInput?.checked !== false;
+      if (completedToggleBackgroundButton) {
+        completedToggleBackgroundButton.textContent = showBackground ? '一鍵關閉背景' : '一鍵顯示背景';
+      }
+    };
+    const syncDeletedBackgroundControls = () => {
+      const showBackground = deletedShowBackgroundInput?.checked !== false;
+      if (deletedToggleBackgroundButton) {
+        deletedToggleBackgroundButton.textContent = showBackground ? '一鍵關閉背景' : '一鍵顯示背景';
       }
     };
     const syncOpacityLabels = () => {
@@ -489,7 +633,7 @@ export class SettingsPage {
         activeCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
       }
       if (activeThumbnailHeightValue && activeThumbnailHeightInput) {
-        const thumbHeight = Math.max(60, Math.min(220, Number(activeThumbnailHeightInput.value) || 96));
+        const thumbHeight = Math.max(44, Math.min(220, Number(activeThumbnailHeightInput.value) || 84));
         activeThumbnailHeightValue.textContent = `${thumbHeight}px`;
       }
     };
@@ -506,9 +650,13 @@ export class SettingsPage {
       this.importKeydownHandler = null;
     }
     syncBackgroundControls();
+    syncCompletedBackgroundControls();
+    syncDeletedBackgroundControls();
     syncOpacityLabels();
     syncSwipeControls();
     renderActiveBackgroundList();
+    renderCompletedBackgroundList();
+    renderDeletedBackgroundList();
 
     if (this.pendingImport) {
       this.importKeydownHandler = (event) => {
@@ -532,6 +680,8 @@ export class SettingsPage {
       event.preventDefault();
       const prevViewConfigs = this.app.state.settings.viewConfigs || {};
       const prevActiveViewConfig = prevViewConfigs.active || {};
+      const prevCompletedViewConfig = prevViewConfigs.completed || {};
+      const prevDeletedViewConfig = prevViewConfigs.deleted || {};
       const bgOpacityRaw = Number(activeBgOpacityInput?.value);
       const cardTransparencyRaw = Number(activeCardTransparencyInput?.value);
       const cardHeightRaw = Number(activeCardHeightInput?.value);
@@ -555,6 +705,18 @@ export class SettingsPage {
         cardHeight,
         gridImageHeight,
       };
+      const nextCompletedViewConfig = {
+        ...prevCompletedViewConfig,
+        backgroundImage: '',
+        backgroundImages: [...completedBackgroundImages],
+        showBackground: completedShowBackgroundInput?.checked !== false,
+      };
+      const nextDeletedViewConfig = {
+        ...prevDeletedViewConfig,
+        backgroundImage: '',
+        backgroundImages: [...deletedBackgroundImages],
+        showBackground: deletedShowBackgroundInput?.checked !== false,
+      };
       const settings = {
         ...this.app.state.settings,
         appTitle: root.querySelector('#app-title').value.trim() || '輕鬆票券',
@@ -568,6 +730,8 @@ export class SettingsPage {
         viewConfigs: {
           ...prevViewConfigs,
           active: nextActiveViewConfig,
+          completed: nextCompletedViewConfig,
+          deleted: nextDeletedViewConfig,
         },
       };
       this.app.state.settings = settings;
@@ -581,6 +745,18 @@ export class SettingsPage {
       if (!activeShowBackgroundInput) return;
       activeShowBackgroundInput.checked = !activeShowBackgroundInput.checked;
       syncBackgroundControls();
+    });
+    completedShowBackgroundInput?.addEventListener('change', syncCompletedBackgroundControls);
+    completedToggleBackgroundButton?.addEventListener('click', () => {
+      if (!completedShowBackgroundInput) return;
+      completedShowBackgroundInput.checked = !completedShowBackgroundInput.checked;
+      syncCompletedBackgroundControls();
+    });
+    deletedShowBackgroundInput?.addEventListener('change', syncDeletedBackgroundControls);
+    deletedToggleBackgroundButton?.addEventListener('click', () => {
+      if (!deletedShowBackgroundInput) return;
+      deletedShowBackgroundInput.checked = !deletedShowBackgroundInput.checked;
+      syncDeletedBackgroundControls();
     });
     activeBgOpacityInput?.addEventListener('input', syncOpacityLabels);
     activeCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
@@ -635,6 +811,85 @@ export class SettingsPage {
       activeBackgroundImages = [];
       renderActiveBackgroundList();
       showToast('背景圖片已清除（記得按儲存設定）', 'success');
+    });
+    root.querySelector('#completed-bg-file')?.addEventListener('change', async (event) => {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      let addedCount = 0;
+      try {
+        for (const file of files) {
+          const compressed = await compressImage(file, 'thumbnail');
+          completedBackgroundImages.push(compressed);
+          addedCount += 1;
+        }
+        completedBackgroundImages = [...new Set(completedBackgroundImages)];
+        if (completedShowBackgroundInput) {
+          completedShowBackgroundInput.checked = true;
+          syncCompletedBackgroundControls();
+        }
+        renderCompletedBackgroundList();
+        showToast(`已使用背景已加入 ${addedCount} 張（記得按儲存設定）`, 'success');
+      } catch (error) {
+        showToast(`已使用背景處理失敗：${error.message}`, 'error');
+      } finally {
+        event.target.value = '';
+      }
+    });
+
+    root.querySelector('#completed-bg-preview-list')?.addEventListener('click', (event) => {
+      const removeBtn = event.target.closest('[data-completed-bg-remove]');
+      if (!removeBtn) return;
+      const index = Number(removeBtn.dataset.completedBgRemove);
+      if (!Number.isFinite(index)) return;
+      completedBackgroundImages.splice(index, 1);
+      renderCompletedBackgroundList();
+      showToast('已移除已使用背景（記得按儲存設定）', 'success');
+    });
+
+    root.querySelector('#completed-bg-clear')?.addEventListener('click', () => {
+      completedBackgroundImages = [];
+      renderCompletedBackgroundList();
+      showToast('已使用背景已清除（記得按儲存設定）', 'success');
+    });
+
+    root.querySelector('#deleted-bg-file')?.addEventListener('change', async (event) => {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      let addedCount = 0;
+      try {
+        for (const file of files) {
+          const compressed = await compressImage(file, 'thumbnail');
+          deletedBackgroundImages.push(compressed);
+          addedCount += 1;
+        }
+        deletedBackgroundImages = [...new Set(deletedBackgroundImages)];
+        if (deletedShowBackgroundInput) {
+          deletedShowBackgroundInput.checked = true;
+          syncDeletedBackgroundControls();
+        }
+        renderDeletedBackgroundList();
+        showToast(`回收桶背景已加入 ${addedCount} 張（記得按儲存設定）`, 'success');
+      } catch (error) {
+        showToast(`回收桶背景處理失敗：${error.message}`, 'error');
+      } finally {
+        event.target.value = '';
+      }
+    });
+
+    root.querySelector('#deleted-bg-preview-list')?.addEventListener('click', (event) => {
+      const removeBtn = event.target.closest('[data-deleted-bg-remove]');
+      if (!removeBtn) return;
+      const index = Number(removeBtn.dataset.deletedBgRemove);
+      if (!Number.isFinite(index)) return;
+      deletedBackgroundImages.splice(index, 1);
+      renderDeletedBackgroundList();
+      showToast('已移除回收桶背景（記得按儲存設定）', 'success');
+    });
+
+    root.querySelector('#deleted-bg-clear')?.addEventListener('click', () => {
+      deletedBackgroundImages = [];
+      renderDeletedBackgroundList();
+      showToast('回收桶背景已清除（記得按儲存設定）', 'success');
     });
 
     root.querySelector('#send-test-telegram')?.addEventListener('click', async () => {

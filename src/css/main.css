@@ -121,6 +121,44 @@ body.keyboard-open #bottom-nav {
   box-shadow: 0 12px 24px -16px rgba(37, 52, 64, 0.48);
 }
 
+.ticket-resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% + 12px);
+  margin: 2px -6px 4px;
+  height: 16px;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+  padding: 0;
+}
+
+.ticket-resize-handle::before {
+  content: '';
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.38);
+  transition: background-color 0.14s ease, width 0.14s ease;
+}
+
+.ticket-resize-handle:hover::before,
+.ticket-resize-handle:active::before {
+  width: 52px;
+  background: rgba(51, 74, 82, 0.58);
+}
+
+.ticket-resize-handle--thumb {
+  margin-top: -2px;
+}
+
+.ticket-resize-handle--card {
+  margin-top: 4px;
+  margin-bottom: -2px;
+}
+
 .ticket-card[tabindex]:focus-visible {
   outline: 2px solid rgba(51, 74, 82, 0.45);
   outline-offset: 2px;
