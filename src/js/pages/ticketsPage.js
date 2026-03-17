@@ -1108,7 +1108,7 @@ export class TicketsPage {
     const hideTagAndSerial = this.view === 'active' && gridColumns === 3;
     const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
     const cardHeight = clamp(options.cardHeight, 0, 360, 0);
-    const gridImageHeight = clamp(options.gridImageHeight, 44, 220, compactGrid ? 84 : 112);
+    const thumbnailScale = clamp(options.thumbnailScale, 60, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
     if (!tickets.length) {
@@ -1287,14 +1287,17 @@ export class TicketsPage {
         : (compactGrid ? 'p-3' : 'p-4');
       const headerMarginClass = this.view === 'active' ? 'mb-2' : 'mb-3';
       const imageClass = this.view === 'active'
-        ? (compactGrid
-          ? 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--compact'
-          : 'ticket-card-thumbnail ticket-card-thumbnail--active')
+        ? 'ticket-card-thumbnail ticket-card-thumbnail--active'
         : (compactGrid
           ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
           : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
+      const imageWrapperClass = this.view === 'active'
+        ? (compactGrid
+          ? 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--compact'
+          : 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active')
+        : '';
       const imageStyle = this.view === 'active'
-        ? ` style="height: ${Math.round(gridImageHeight)}px;"`
+        ? ` style="width: ${Math.round(thumbnailScale)}%;"`
         : '';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
@@ -1323,7 +1326,11 @@ export class TicketsPage {
             </button>
           </div>
 
-          ${showThumbnail && ticket.image ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />` : ''}
+          ${showThumbnail && ticket.image ? (
+            this.view === 'active'
+              ? `<div class="${imageWrapperClass}"><img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} /></div>`
+              : `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
+          ) : ''}
 
           ${ticket.note ? `<p class="text-sm text-wabi-text-primary mb-2 break-all">${escapeHtml(ticket.note)}</p>` : ''}
 
@@ -1427,7 +1434,11 @@ export class TicketsPage {
     const cardBorderColor = viewConfig.cardBorderColor || '#e2e8f0';
     const ultraCompactCard = viewConfig.ultraCompactCard === true;
     const compactGrid = gridColumns > 1;
-    const gridImageHeight = clamp(viewConfig.gridImageHeight, 44, 220, compactGrid ? 84 : 112);
+    const thumbnailScale = Number.isFinite(Number(viewConfig.thumbnailScale))
+      ? clamp(viewConfig.thumbnailScale, 60, 100, 100)
+      : Number.isFinite(Number(viewConfig.gridImageHeight))
+        ? clamp(Math.round((Number(viewConfig.gridImageHeight) / 84) * 100), 60, 100, 100)
+        : 100;
     let ticketGridClass = gridColumns === 3
       ? 'grid grid-cols-3 gap-1.5'
       : gridColumns === 2
@@ -1479,10 +1490,6 @@ export class TicketsPage {
     if (searchKeyword) scopeParts.push(`關鍵字「${escapeHtml(searchKeyword)}」`);
     if (tagScope) scopeParts.push(`標籤 ${tagScope}`);
     const compactScopeText = scopeParts.length ? `目前範圍：${scopeParts.join('、')}` : '目前範圍：全部票券';
-    const cardHeightLabel = cardHeight > 0 ? `${Math.round(cardHeight)}px` : '自動';
-    const cardHeightPercent = Math.max(0, Math.min(100, Math.round((cardHeight / 360) * 100)));
-    const thumbHeightLabel = `${Math.round(gridImageHeight)}px`;
-    const thumbHeightPercent = Math.max(0, Math.min(100, Math.round(((gridImageHeight - 44) / (220 - 44)) * 100)));
     const batchButton = (action, label, baseClass, enabled = hasSelection) => `
       <button type="button" data-batch="${action}" class="${baseClass} ${enabled ? '' : 'opacity-50 cursor-not-allowed'}" ${enabled ? '' : 'disabled aria-disabled="true"'}>${label}</button>
     `;
@@ -1537,29 +1544,6 @@ export class TicketsPage {
             </select>
           </div>
 
-          <div class="ticket-size-tools mb-3">
-            <div class="ticket-size-tool">
-              <span class="ticket-size-label">卡片高度</span>
-              <div class="ticket-size-track" data-size-track="card" role="slider" aria-label="拖曳調整卡片高度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${Math.round(cardHeight)}" tabindex="0">
-                <div class="ticket-size-track-fill" data-size-fill="card" style="width: ${cardHeightPercent}%"></div>
-                <div class="ticket-size-thumb" data-size-thumb="card" style="left: ${cardHeightPercent}%"></div>
-              </div>
-              <span class="ticket-size-value" data-size-value="card">${cardHeightLabel}</span>
-            </div>
-            ${this.view === 'active' && showThumbnail
-              ? `
-                <div class="ticket-size-tool">
-                  <span class="ticket-size-label">縮圖高度</span>
-                  <div class="ticket-size-track" data-size-track="thumbnail" role="slider" aria-label="拖曳調整縮圖高度" aria-valuemin="44" aria-valuemax="220" aria-valuenow="${Math.round(gridImageHeight)}" tabindex="0">
-                    <div class="ticket-size-track-fill" data-size-fill="thumbnail" style="width: ${thumbHeightPercent}%"></div>
-                    <div class="ticket-size-thumb" data-size-thumb="thumbnail" style="left: ${thumbHeightPercent}%"></div>
-                  </div>
-                  <span class="ticket-size-value" data-size-value="thumbnail">${thumbHeightLabel}</span>
-                </div>
-              `
-              : ''}
-          </div>
-
           <div class="flex flex-wrap gap-2">
             <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${this.app.state.ui.activeTags.length === 0 ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">全部</button>
             ${this.view === 'active'
@@ -1608,7 +1592,7 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, gridImageHeight, cardBgColor, cardBorderColor })}</div>
+        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor })}</div>
       </section>
     `);
 
@@ -1912,125 +1896,6 @@ export class TicketsPage {
       });
 
       this.bindCardSwipeGesture(card);
-    });
-
-    root.querySelectorAll('[data-size-track]').forEach((track) => {
-      const resizeType = track.dataset.sizeTrack;
-      if (!resizeType) return;
-
-      const thumb = root.querySelector(`[data-size-thumb="${resizeType}"]`);
-      const fill = root.querySelector(`[data-size-fill="${resizeType}"]`);
-      const valueLabel = root.querySelector(`[data-size-value="${resizeType}"]`);
-      if (!thumb || !fill || !valueLabel) return;
-
-      const viewConfigs = this.app.state.settings.viewConfigs || {};
-      const viewConfig = viewConfigs[this.view] || {};
-      const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
-      const defaultThumbHeight = gridColumns > 1 ? 84 : 112;
-      const limits = resizeType === 'thumbnail'
-        ? { min: 44, max: 220, step: 2 }
-        : { min: 0, max: 360, step: 2 };
-      const getCurrentValue = () => (
-        resizeType === 'thumbnail'
-          ? clamp(viewConfig.gridImageHeight, 44, 220, defaultThumbHeight)
-          : clamp(viewConfig.cardHeight, 0, 360, 0)
-      );
-      const formatValue = (value) => (
-        resizeType === 'thumbnail'
-          ? `${value}px`
-          : value > 0 ? `${value}px` : '自動'
-      );
-
-      const updateTrackVisual = (value) => {
-        const percent = Math.max(0, Math.min(100, ((value - limits.min) / (limits.max - limits.min)) * 100));
-        thumb.style.left = `${percent}%`;
-        fill.style.width = `${percent}%`;
-        valueLabel.textContent = formatValue(value);
-        track.setAttribute('aria-valuenow', String(value));
-      };
-
-      const applyPreview = (value) => {
-        if (resizeType === 'thumbnail') {
-          root.querySelectorAll('.ticket-card-thumbnail--active').forEach((img) => {
-            img.style.height = `${value}px`;
-          });
-          return;
-        }
-        root.querySelectorAll('.ticket-card').forEach((card) => {
-          if (value > 0) card.style.minHeight = `${value}px`;
-          else card.style.removeProperty('min-height');
-        });
-      };
-
-      const valueFromClientX = (clientX) => {
-        const rect = track.getBoundingClientRect();
-        if (!rect.width) return getCurrentValue();
-        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const raw = limits.min + (limits.max - limits.min) * ratio;
-        const stepped = Math.round(raw / limits.step) * limits.step;
-        if (resizeType === 'card') {
-          const cardValue = clamp(stepped, limits.min, limits.max, 0);
-          return cardValue < 28 ? 0 : cardValue;
-        }
-        return clamp(stepped, limits.min, limits.max, defaultThumbHeight);
-      };
-
-      const startDrag = (startEvent) => {
-        startEvent.preventDefault();
-        startEvent.stopPropagation();
-
-        const startValue = getCurrentValue();
-        let currentValue = valueFromClientX(startEvent.clientX);
-        updateTrackVisual(currentValue);
-        applyPreview(currentValue);
-
-        const onPointerMove = (moveEvent) => {
-          moveEvent.preventDefault();
-          currentValue = valueFromClientX(moveEvent.clientX);
-          updateTrackVisual(currentValue);
-          applyPreview(currentValue);
-        };
-
-        const finishDrag = async () => {
-          window.removeEventListener('pointermove', onPointerMove);
-          window.removeEventListener('pointerup', finishDrag);
-          window.removeEventListener('pointercancel', finishDrag);
-          if (currentValue === startValue) return;
-
-          const prevViewConfigs = this.app.state.settings.viewConfigs || {};
-          const prevConfig = prevViewConfigs[this.view] || {};
-          const nextConfig = {
-            ...prevConfig,
-            ...(resizeType === 'thumbnail'
-              ? { gridImageHeight: currentValue }
-              : { cardHeight: currentValue }),
-          };
-          this.app.state.settings = {
-            ...this.app.state.settings,
-            viewConfigs: {
-              ...prevViewConfigs,
-              [this.view]: nextConfig,
-            },
-          };
-          await this.app.persistSettings();
-          showToast(
-            resizeType === 'thumbnail'
-              ? `已套用全部縮圖高度 ${currentValue}px`
-              : currentValue > 0
-                ? `已套用全部卡片高度 ${currentValue}px`
-                : '已恢復全部卡片自動高度',
-            'success',
-            800
-          );
-          this.render();
-        };
-
-        window.addEventListener('pointermove', onPointerMove, { passive: false });
-        window.addEventListener('pointerup', finishDrag);
-        window.addEventListener('pointercancel', finishDrag);
-      };
-
-      track.addEventListener('pointerdown', startDrag);
     });
 
     root.querySelectorAll('[data-tag]').forEach((btn) => {

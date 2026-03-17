@@ -226,9 +226,11 @@ export class SettingsPage {
     const activeCardHeight = Number.isFinite(Number(activeViewConfig.cardHeight))
       ? Math.max(0, Math.min(360, Number(activeViewConfig.cardHeight)))
       : 0;
-    const activeGridImageHeight = Number.isFinite(Number(activeViewConfig.gridImageHeight))
-      ? Math.max(44, Math.min(220, Number(activeViewConfig.gridImageHeight)))
-      : 84;
+    const activeThumbnailScale = Number.isFinite(Number(activeViewConfig.thumbnailScale))
+      ? Math.max(60, Math.min(100, Number(activeViewConfig.thumbnailScale)))
+      : Number.isFinite(Number(activeViewConfig.gridImageHeight))
+        ? Math.max(60, Math.min(100, Math.round((Number(activeViewConfig.gridImageHeight) / 84) * 100)))
+        : 100;
     const quickTagsText = (settings.quickTags || []).join(', ');
     const swipeTriggerDistancePx = Number.isFinite(Number(settings.swipeTriggerDistance))
       ? Math.max(40, Math.min(120, Number(settings.swipeTriggerDistance)))
@@ -343,11 +345,11 @@ export class SettingsPage {
             </div>
             <div>
               <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
-                <label for="active-thumbnail-height">主頁縮圖高度</label>
-                <span id="active-thumbnail-height-value">${activeGridImageHeight}px</span>
+                <label for="active-thumbnail-scale">主頁縮圖比例</label>
+                <span id="active-thumbnail-scale-value">${activeThumbnailScale}%</span>
               </div>
-              <input id="active-thumbnail-height" type="range" min="44" max="220" step="2" value="${activeGridImageHeight}" class="w-full accent-wabi-primary" />
-              <p class="text-xs text-wabi-text-secondary mt-1">只影響待使用頁卡片縮圖大小。</p>
+              <input id="active-thumbnail-scale" type="range" min="60" max="100" step="2" value="${activeThumbnailScale}" class="w-full accent-wabi-primary" />
+              <p class="text-xs text-wabi-text-secondary mt-1">依原圖長寬比例縮小或放大，不再強制固定縮圖高度。</p>
             </div>
             <div class="flex items-center justify-between gap-2">
               <label class="inline-flex items-center gap-2 text-sm">
@@ -534,8 +536,8 @@ export class SettingsPage {
     const activeCardTransparencyValue = root.querySelector('#active-card-transparency-value');
     const activeCardHeightInput = root.querySelector('#active-card-height');
     const activeCardHeightValue = root.querySelector('#active-card-height-value');
-    const activeThumbnailHeightInput = root.querySelector('#active-thumbnail-height');
-    const activeThumbnailHeightValue = root.querySelector('#active-thumbnail-height-value');
+    const activeThumbnailScaleInput = root.querySelector('#active-thumbnail-scale');
+    const activeThumbnailScaleValue = root.querySelector('#active-thumbnail-scale-value');
     const swipeGesturesEnabledInput = root.querySelector('#swipe-gestures-enabled');
     const swipeTriggerDistanceInput = root.querySelector('#swipe-trigger-distance');
     const swipeTriggerDistanceValue = root.querySelector('#swipe-trigger-distance-value');
@@ -632,9 +634,9 @@ export class SettingsPage {
         const cardHeight = Math.max(0, Math.min(360, Number(activeCardHeightInput.value) || 0));
         activeCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
       }
-      if (activeThumbnailHeightValue && activeThumbnailHeightInput) {
-        const thumbHeight = Math.max(44, Math.min(220, Number(activeThumbnailHeightInput.value) || 84));
-        activeThumbnailHeightValue.textContent = `${thumbHeight}px`;
+      if (activeThumbnailScaleValue && activeThumbnailScaleInput) {
+        const thumbScale = Math.max(60, Math.min(100, Number(activeThumbnailScaleInput.value) || 100));
+        activeThumbnailScaleValue.textContent = `${thumbScale}%`;
       }
     };
     const syncSwipeControls = () => {
@@ -685,12 +687,12 @@ export class SettingsPage {
       const bgOpacityRaw = Number(activeBgOpacityInput?.value);
       const cardTransparencyRaw = Number(activeCardTransparencyInput?.value);
       const cardHeightRaw = Number(activeCardHeightInput?.value);
-      const thumbnailHeightRaw = Number(activeThumbnailHeightInput?.value);
+      const thumbnailScaleRaw = Number(activeThumbnailScaleInput?.value);
       const swipeTriggerDistanceRaw = Number(swipeTriggerDistanceInput?.value);
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
       const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
-      const gridImageHeight = Math.max(44, Math.min(220, Number.isFinite(thumbnailHeightRaw) ? thumbnailHeightRaw : 84));
+      const thumbnailScale = Math.max(60, Math.min(100, Number.isFinite(thumbnailScaleRaw) ? thumbnailScaleRaw : 100));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
         ...prevActiveViewConfig,
@@ -703,7 +705,7 @@ export class SettingsPage {
         bgOpacity: bgOpacityPercent / 100,
         cardOpacity: 1 - (cardTransparencyPercent / 100),
         cardHeight,
-        gridImageHeight,
+        thumbnailScale,
       };
       const nextCompletedViewConfig = {
         ...prevCompletedViewConfig,
@@ -761,7 +763,7 @@ export class SettingsPage {
     activeBgOpacityInput?.addEventListener('input', syncOpacityLabels);
     activeCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
     activeCardHeightInput?.addEventListener('input', syncOpacityLabels);
-    activeThumbnailHeightInput?.addEventListener('input', syncOpacityLabels);
+    activeThumbnailScaleInput?.addEventListener('input', syncOpacityLabels);
     swipeGesturesEnabledInput?.addEventListener('change', syncSwipeControls);
     swipeTriggerDistanceInput?.addEventListener('input', syncSwipeControls);
     root.querySelector('#reset-swipe-hint')?.addEventListener('click', () => {
