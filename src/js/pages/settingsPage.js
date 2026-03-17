@@ -227,9 +227,9 @@ export class SettingsPage {
       ? Math.max(0, Math.min(360, Number(activeViewConfig.cardHeight)))
       : 0;
     const activeThumbnailScale = Number.isFinite(Number(activeViewConfig.thumbnailScale))
-      ? Math.max(60, Math.min(100, Number(activeViewConfig.thumbnailScale)))
+      ? Math.max(10, Math.min(100, Number(activeViewConfig.thumbnailScale)))
       : Number.isFinite(Number(activeViewConfig.gridImageHeight))
-        ? Math.max(60, Math.min(100, Math.round((Number(activeViewConfig.gridImageHeight) / 84) * 100)))
+        ? Math.max(10, Math.min(100, Math.round((Number(activeViewConfig.gridImageHeight) / 84) * 100)))
         : 100;
     const quickTagsText = (settings.quickTags || []).join(', ');
     const swipeTriggerDistancePx = Number.isFinite(Number(settings.swipeTriggerDistance))
@@ -348,7 +348,7 @@ export class SettingsPage {
                 <label for="active-thumbnail-scale">主頁縮圖比例</label>
                 <span id="active-thumbnail-scale-value">${activeThumbnailScale}%</span>
               </div>
-              <input id="active-thumbnail-scale" type="range" min="60" max="100" step="2" value="${activeThumbnailScale}" class="w-full accent-wabi-primary" />
+              <input id="active-thumbnail-scale" type="range" min="10" max="100" step="2" value="${activeThumbnailScale}" class="w-full accent-wabi-primary" />
               <p class="text-xs text-wabi-text-secondary mt-1">依原圖長寬比例縮小或放大，不再強制固定縮圖高度。</p>
             </div>
             <div class="flex items-center justify-between gap-2">
@@ -635,7 +635,7 @@ export class SettingsPage {
         activeCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
       }
       if (activeThumbnailScaleValue && activeThumbnailScaleInput) {
-        const thumbScale = Math.max(60, Math.min(100, Number(activeThumbnailScaleInput.value) || 100));
+        const thumbScale = Math.max(10, Math.min(100, Number(activeThumbnailScaleInput.value) || 100));
         activeThumbnailScaleValue.textContent = `${thumbScale}%`;
       }
     };
@@ -692,7 +692,7 @@ export class SettingsPage {
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
       const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
-      const thumbnailScale = Math.max(60, Math.min(100, Number.isFinite(thumbnailScaleRaw) ? thumbnailScaleRaw : 100));
+      const thumbnailScale = Math.max(10, Math.min(100, Number.isFinite(thumbnailScaleRaw) ? thumbnailScaleRaw : 100));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
         ...prevActiveViewConfig,

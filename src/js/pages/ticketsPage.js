@@ -1108,7 +1108,7 @@ export class TicketsPage {
     const hideTagAndSerial = this.view === 'active' && gridColumns === 3;
     const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
     const cardHeight = clamp(options.cardHeight, 0, 360, 0);
-    const thumbnailScale = clamp(options.thumbnailScale, 60, 100, 100);
+    const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
     if (!tickets.length) {
@@ -1435,9 +1435,9 @@ export class TicketsPage {
     const ultraCompactCard = viewConfig.ultraCompactCard === true;
     const compactGrid = gridColumns > 1;
     const thumbnailScale = Number.isFinite(Number(viewConfig.thumbnailScale))
-      ? clamp(viewConfig.thumbnailScale, 60, 100, 100)
+      ? clamp(viewConfig.thumbnailScale, 10, 100, 100)
       : Number.isFinite(Number(viewConfig.gridImageHeight))
-        ? clamp(Math.round((Number(viewConfig.gridImageHeight) / 84) * 100), 60, 100, 100)
+        ? clamp(Math.round((Number(viewConfig.gridImageHeight) / 84) * 100), 10, 100, 100)
         : 100;
     let ticketGridClass = gridColumns === 3
       ? 'grid grid-cols-3 gap-1.5'

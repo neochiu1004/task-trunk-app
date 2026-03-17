@@ -46,9 +46,9 @@ export class DataService {
           ? Number(normalizedFallback.gridImageHeight)
           : 84,
       thumbnailScale: Number.isFinite(Number(normalizedInput.thumbnailScale))
-        ? Math.max(60, Math.min(100, Number(normalizedInput.thumbnailScale)))
+        ? Math.max(10, Math.min(100, Number(normalizedInput.thumbnailScale)))
         : Number.isFinite(Number(normalizedInput.gridImageHeight))
-          ? Math.max(60, Math.min(100, Math.round((Number(normalizedInput.gridImageHeight) / 84) * 100)))
+          ? Math.max(10, Math.min(100, Math.round((Number(normalizedInput.gridImageHeight) / 84) * 100)))
           : Number.isFinite(Number(normalizedFallback.thumbnailScale))
             ? Number(normalizedFallback.thumbnailScale)
             : 100,
