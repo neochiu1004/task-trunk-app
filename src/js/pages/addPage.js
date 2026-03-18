@@ -15,6 +15,14 @@ export class AddPage {
     this.app = app;
   }
 
+  toDateInputValue(value) {
+    const normalized = normalizeDateInput(value || '').trim();
+    if (!normalized) return '';
+    const [year, month, day] = normalized.split('/');
+    if (!year || !month || !day) return '';
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
   getDefaultExpiryAfterMonths(months = 6) {
     const now = new Date();
     const year = now.getFullYear();
@@ -96,6 +104,7 @@ export class AddPage {
   async render() {
     const editing = this.getEditingTicket();
     const defaultExpiry = this.getDefaultExpiryAfterMonths(6);
+    const defaultExpiryInputValue = this.toDateInputValue(editing?.expiry || defaultExpiry);
     const quickTags = (this.app.state.settings.quickTags || []).filter(Boolean);
     const selectedQuickTagSet = new Set(editing?.tags || []);
     const selectableTags = [...new Set([...quickTags, ...(editing?.tags || [])])];
@@ -134,8 +143,8 @@ export class AddPage {
               <p id="serial-duplicate-warning" class="hidden text-xs text-amber-700 mt-1">此序號已存在於其他待用/已用票券</p>
             </div>
             <div>
-              <label class="block text-sm text-wabi-text-secondary mb-1">到期日 (YYYY/MM/DD)</label>
-              <input id="expiry" class="w-full rounded-lg border border-wabi-border px-3 py-2" placeholder="2026/12/31" value="${escapeHtml(editing?.expiry || defaultExpiry)}" />
+              <label class="block text-sm text-wabi-text-secondary mb-1">到期日</label>
+              <input id="expiry" type="date" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" value="${escapeHtml(defaultExpiryInputValue)}" />
             </div>
           </div>
 
@@ -166,11 +175,6 @@ export class AddPage {
               </div>
             ` : '<p class="text-xs text-wabi-text-secondary">尚未設定預設標籤，請先到「設定」填寫快速標籤。</p>'}
             <p id="selected-tags-preview" class="mt-2 text-xs text-wabi-text-secondary"></p>
-          </div>
-
-          <div>
-            <label class="block text-sm text-wabi-text-secondary mb-1">備註</label>
-            <textarea id="note" rows="3" class="w-full rounded-lg border border-wabi-border px-3 py-2">${escapeHtml(editing?.note || '')}</textarea>
           </div>
 
           <div class="space-y-3">
@@ -210,6 +214,7 @@ export class AddPage {
   }
 
   bindEvents(editing) {
+    const defaultExpiry = this.getDefaultExpiryAfterMonths(6);
     const root = this.app.getRoot();
     const form = root.querySelector('#ticket-form');
     const thumbImageInput = root.querySelector('#thumb-image-file');
@@ -269,7 +274,7 @@ export class AddPage {
 
       root.querySelector('#product-name').value = tpl.productName || '';
       root.querySelector('#serial').value = tpl.serial || '';
-      root.querySelector('#expiry').value = tpl.expiry || '';
+      root.querySelector('#expiry').value = this.toDateInputValue(tpl.expiry || defaultExpiry);
       root.querySelector('#tags').value = tagsToText(tpl.tags || []);
       root.querySelector('#barcode-format').value = tpl.barcodeFormat || '';
       updateDuplicateSerialHint();
@@ -448,7 +453,7 @@ export class AddPage {
         image: imageData,
         originalImage,
         tags: parseTags(root.querySelector('#tags').value),
-        note: root.querySelector('#note').value.trim(),
+        note: editing?.note || '',
         barcodeFormat: root.querySelector('#barcode-format').value || '',
         completed: editing?.completed || false,
         completedAt: editing?.completedAt,

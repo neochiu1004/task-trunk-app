@@ -108,38 +108,13 @@ class TicketTrunkJijunApp {
         return;
       }
       const inset = Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop));
-      document.documentElement.style.setProperty('--keyboard-inset-height', `${inset}px`);
+      // On iPhone we keep the layout stable and let the keyboard float over the page,
+      // so only the bottom nav reacts to keyboard visibility.
+      document.documentElement.style.setProperty('--keyboard-inset-height', '0px');
       document.body.classList.toggle('keyboard-open', inset > 80);
     };
 
-    const scrollFocusedFieldIntoView = (target) => {
-      if (!(target instanceof HTMLElement)) return;
-      if (!target.matches('input, textarea, select, [contenteditable="true"]')) return;
-      if (window.matchMedia('(min-width: 768px)').matches) return;
-
-      window.setTimeout(() => {
-        target.scrollIntoView({
-          block: 'center',
-          inline: 'nearest',
-          behavior: 'smooth',
-        });
-      }, 150);
-
-      const primaryAction = target.closest('form')
-        ?.querySelector('button[type="submit"], button:not([type]), #add-cancel-link');
-      if (primaryAction instanceof HTMLElement) {
-        window.setTimeout(() => {
-          primaryAction.scrollIntoView({
-            block: 'nearest',
-            inline: 'nearest',
-            behavior: 'smooth',
-          });
-        }, 260);
-      }
-    };
-
     document.addEventListener('focusin', (event) => {
-      scrollFocusedFieldIntoView(event.target);
       updateKeyboardInset();
     }, true);
 
