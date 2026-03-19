@@ -17,6 +17,7 @@ import {
   Loader2,
   Download,
   Link,
+  Pin,
 } from 'lucide-react';
 import { Ticket, Template, Settings, RedeemUrlPreset } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
@@ -81,6 +82,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [editOriginalImage, setEditOriginalImage] = useState('');
   const [editBarcodeFormat, setEditBarcodeFormat] = useState<string | undefined>(undefined);
   const [editRedeemUrl, setEditRedeemUrl] = useState('');
+  const [editPinned, setEditPinned] = useState(false);
   const [viewMode, setViewMode] = useState<ViewModeType>('standard');
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
@@ -112,6 +114,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditOriginalImage(ticket.originalImage || '');
       setEditBarcodeFormat(ticket.barcodeFormat);
       setEditRedeemUrl(ticket.redeemUrl || '');
+      setEditPinned(!!ticket.pinned);
       setViewMode(getInitialViewMode());
       if (ticket.originalImage) {
         setShowFullScreen(true);
@@ -180,6 +183,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       images: editImage ? [editImage] : [],
       barcodeFormat: editBarcodeFormat,
       redeemUrl: editRedeemUrl,
+      pinned: editPinned || undefined,
     });
     setIsEditing(false);
   };
@@ -489,6 +493,21 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           placeholder="留空則不跳轉"
                         />
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditPinned((prev) => !prev)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border ${
+                          editPinned
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
+                            : 'glass-card border-border/50 text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-sm font-medium">置頂顯示</span>
+                        <span className="flex items-center gap-2 text-sm font-semibold">
+                          <Pin size={16} className={editPinned ? 'fill-amber-500' : ''} />
+                          {editPinned ? '已置頂' : '未置頂'}
+                        </span>
+                      </button>
                     </motion.div>
                   )}
                 </div>

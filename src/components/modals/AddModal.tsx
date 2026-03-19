@@ -396,19 +396,25 @@ export const AddModal: React.FC<AddModalProps> = ({
           </div>
 
           {/* Pin + Submit */}
-          <div className="flex gap-3">
+          <div className="space-y-3">
             <button
               type="button"
               onClick={() => setIsPinned(!isPinned)}
-              className={`p-3.5 rounded-2xl transition-all shadow-sm border ${
+              className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all shadow-sm border ${
                 isPinned
                   ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
                   : 'glass-card border-border/50 text-muted-foreground'
               }`}
-              title="設為優先使用"
+              title="設定是否置頂"
             >
-              <Pin size={20} className={isPinned ? 'fill-amber-500' : ''} />
+              <span className="text-sm font-medium">置頂顯示</span>
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Pin size={18} className={isPinned ? 'fill-amber-500' : ''} />
+                {isPinned ? '已置頂' : '未置頂'}
+              </span>
             </button>
+
+            <div className="flex gap-3">
             {onSaveTemplate && (
               <button
                 type="button"
@@ -440,6 +446,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             >
               確認新增
             </button>
+            </div>
           </div>
         </div>
       </ResponsiveModal>

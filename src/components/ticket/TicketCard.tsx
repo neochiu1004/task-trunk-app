@@ -143,27 +143,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         )}
         
         {/* Content layer */}
-        <div className="relative z-10 flex flex-col flex-1">
-          {/* Image header area */}
-          <div 
-            className="rounded-xl mb-3 flex items-center justify-center overflow-hidden shadow-inner"
-            style={{ height: `${gridImageHeight}px` }}
-          >
-            {ticket.image ? (
-              <img
-                src={ticket.image}
-                className="w-full h-full object-cover"
-                alt=""
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                <TicketIcon size={28} className="text-primary-foreground" />
-              </div>
-            )}
-          </div>
-          
-          {/* Main content */}
-          <div className="flex-1">
+        <div className="relative z-10 flex flex-1 gap-3">
+          {/* Main content (left) */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between">
+            <div>
             <h3 className="font-bold text-foreground leading-tight line-clamp-1 text-sm">
               {ticket.pinned && <Pin size={10} className="inline mr-1 text-amber-500" />}
               {ticket.productName}
@@ -197,10 +180,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 </span>
               )}
             </div>
-          </div>
+            </div>
           
           {/* Footer with serial and pin toggle */}
-          <div className="mt-3 pt-3 border-t border-border/50 flex justify-between items-center">
+          <div className="mt-2 pt-2 border-t border-border/50 flex justify-between items-center">
             <span className="text-[10px] text-muted-foreground font-mono tracking-wider line-clamp-1">
               #{ticket.serial?.slice(0, 8) || 'N/A'}
             </span>
@@ -215,6 +198,21 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               )}
               <QrCode size={18} className="text-muted-foreground/40 flex-shrink-0" />
             </div>
+          </div>
+          </div>
+
+          {/* Thumbnail (right) */}
+          <div
+            className="flex-shrink-0 rounded-xl overflow-hidden shadow-inner"
+            style={{ width: `${gridImageHeight}px`, height: `${gridImageHeight}px` }}
+          >
+            {ticket.image ? (
+              <img src={ticket.image} className="w-full h-full object-cover" alt="" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                <TicketIcon size={22} className="text-primary-foreground" />
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
