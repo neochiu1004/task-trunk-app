@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link, MousePointer2 } from 'lucide-react';
+import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link, MousePointer2, RefreshCcw } from 'lucide-react';
 import { Settings, ViewConfig, RedeemUrlPreset } from '../../types/ticket';
 import { generateId } from '../../lib/helpers';
 import { defaultViewConfig } from '../../lib/constants';
 import { compressImage, sendTelegramMessage } from '../../lib/helpers';
+import { forceRefreshToLatest } from '../../lib/pwa';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const [currentTab, setCurrentTab] = useState<'active' | 'completed' | 'deleted'>('active');
   const [testStatus, setTestStatus] = useState<'sending' | 'success' | 'error' | null>(null);
+  const [isForceUpdating, setIsForceUpdating] = useState(false);
   const [newKw, setNewKw] = useState('');
   const [newPresetLabel, setNewPresetLabel] = useState('');
   const [newPresetUrl, setNewPresetUrl] = useState('');
@@ -147,6 +149,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     } else {
       setTestStatus('error');
       alert(`發送失敗: ${result.error}`);
+    }
+  };
+
+  const handleForceUpdate = async () => {
+    const hasUnsavedChanges = JSON.stringify(localSettings) !== JSON.stringify(settings);
+    const shouldContinue = window.confirm(
+      hasUnsavedChanges
+        ? '這會重新下載最新版並重新整理頁面，尚未儲存的設定會遺失。要繼續嗎？'
+        : '這會重新下載最新版並重新整理頁面。要繼續嗎？'
+    );
+    if (!shouldContinue) return;
+
+    setIsForceUpdating(true);
+    try {
+      await forceRefreshToLatest();
+    } catch (error) {
+      setIsForceUpdating(false);
+      alert(error instanceof Error ? error.message : '強制更新失敗，請稍後再試。');
     }
   };
 
@@ -947,6 +967,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   : '測試傳送'}
               </button>
             </div>
+          </div>
+        </div>
+        <div className="border-t border-border pt-4 mt-5">
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+            <RefreshCcw size={14} /> 版本更新
+          </label>
+          <div className="space-y-3 bg-muted p-3 rounded-xl">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              遇到離線快取仍停留在舊版時，可使用強制更新重新抓取最新程式，不會清除票券資料。
+            </p>
+            <button
+              onClick={handleForceUpdate}
+              disabled={isForceUpdating}
+              className="w-full py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 bg-card text-foreground hover:bg-card/80 border border-border disabled:opacity-60 disabled:cursor-wait transition-all"
+            >
+              {isForceUpdating ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <RefreshCcw size={14} />
+              )}
+              {isForceUpdating ? '更新中...' : '強制更新到最新版'}
+            </button>
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
