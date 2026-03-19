@@ -6,6 +6,7 @@ import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
+import { forceRefreshToLatest } from '@/lib/pwa';
 import { validateImportData } from '@/lib/validation';
 import { Header } from '@/components/layout/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
@@ -390,6 +391,17 @@ const Index = () => {
     }
   };
 
+  const handleForceUpdate = async () => {
+    const shouldContinue = window.confirm('這會重新下載最新版並重新整理頁面。要繼續嗎？');
+    if (!shouldContinue) return;
+
+    try {
+      await forceRefreshToLatest();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '強制更新失敗，請稍後再試。');
+    }
+  };
+
   if (!isDataLoaded) return (
     <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4">
       <motion.div
@@ -477,6 +489,7 @@ const Index = () => {
           isDark={isDark}
           onToggleTheme={toggleTheme}
           currentView={view}
+          onForceUpdate={handleForceUpdate}
         />
         
         <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">

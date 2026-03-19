@@ -19,6 +19,7 @@ import {
   Moon,
   Sun,
   Clock,
+  RefreshCcw,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { compressImage } from '@/lib/helpers';
@@ -56,6 +57,7 @@ interface HeaderProps {
   isDark?: boolean;
   onToggleTheme?: () => void;
   currentView?: string;
+  onForceUpdate?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -89,6 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
   isDark = false,
   onToggleTheme,
   currentView,
+  onForceUpdate,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [logoLongPress, setLogoLongPress] = useState(false);
@@ -458,6 +461,15 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex gap-2 flex-shrink-0">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              onClick={onForceUpdate}
+              className="px-3 h-8 rounded-xl flex items-center justify-center gap-1.5 text-white bg-gradient-to-br from-[#d98c3f] to-[#b96c2d] shadow-sm"
+            >
+              <RefreshCcw size={12} />
+              <span className="text-xs font-semibold">更新</span>
+            </motion.button>
             {currentView === 'completed' ? (
               <div className="px-3 h-8 glass-card rounded-xl flex items-center justify-center text-foreground gap-1.5 shadow-sm opacity-70">
                 <Clock size={12} className="text-primary" />
