@@ -410,6 +410,23 @@ body.keyboard-open #bottom-nav {
   margin: -0.24rem -0.75rem 0.24rem;
 }
 
+.ticket-card-thumbnail-frame--active-inline {
+  width: 96px;
+  min-width: 96px;
+  height: 96px;
+  margin: 0 0 0 auto;
+  align-self: flex-start;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.ticket-card-thumbnail-frame--active-inline.ticket-card-thumbnail-frame--compact {
+  width: 84px;
+  min-width: 84px;
+  height: 84px;
+  margin: 0 0 0 auto;
+}
+
 .ticket-view-bg-layer {
   position: fixed;
   inset: 0;
@@ -429,6 +446,15 @@ body.keyboard-open #bottom-nav {
   height: auto;
   object-fit: contain;
   object-position: center top;
+}
+
+.ticket-card-thumbnail--active-inline {
+  width: 100% !important;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(216, 210, 198, 0.9);
 }
 
 .selection-count--pulse {

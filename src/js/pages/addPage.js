@@ -164,6 +164,14 @@ export class AddPage {
             </select>
           </div>
 
+          <div class="rounded-lg border border-wabi-border/70 p-3">
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-wabi-primary">
+              <input id="ticket-pinned" type="checkbox" ${editing?.pinned ? 'checked' : ''} />
+              設為置頂票券
+            </label>
+            <p class="text-xs text-wabi-text-secondary mt-1">置頂票券會優先顯示在主頁前面。</p>
+          </div>
+
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">標籤（預設快速選取）</label>
             <input id="tags" type="hidden" value="${escapeHtml(tagsToText(editing?.tags || []))}" />
@@ -461,7 +469,7 @@ export class AddPage {
         deletedAt: editing?.deletedAt,
         createdAt: editing?.createdAt || Date.now(),
         redeemUrl,
-        pinned: editing?.pinned || false,
+        pinned: !!root.querySelector('#ticket-pinned')?.checked,
       };
 
       if (editing) {

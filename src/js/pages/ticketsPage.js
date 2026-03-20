@@ -1288,14 +1288,14 @@ export class TicketsPage {
         : (compactGrid ? 'p-3' : 'p-4');
       const headerMarginClass = this.view === 'active' ? 'mb-2' : 'mb-3';
       const imageClass = this.view === 'active'
-        ? 'ticket-card-thumbnail ticket-card-thumbnail--active'
+        ? 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--active-inline'
         : (compactGrid
           ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
           : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
       const imageWrapperClass = this.view === 'active'
         ? (compactGrid
-          ? 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--compact'
-          : 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active')
+          ? 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--compact ticket-card-thumbnail-frame--active-inline'
+          : 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--active-inline')
         : '';
       const imageStyle = this.view === 'active'
         ? ` style="width: ${Math.round(thumbnailScale)}%;"`
@@ -1313,23 +1313,31 @@ export class TicketsPage {
 
       return `
         <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
-          <div class="flex items-start justify-between gap-3 ${headerMarginClass}">
-            <div class="flex items-start gap-3 min-w-0">
-              ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4">` : ''}
-              <div class="min-w-0">
-                <h3 class="font-semibold text-wabi-primary text-base truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
-                ${hideTagAndSerial ? '' : `<p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>`}
-                <p class="${standardExpiryClass}">${standardExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+          <div class="flex items-start gap-3 ${headerMarginClass}">
+            <div class="flex items-start gap-3 min-w-0 flex-1">
+              ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <h3 class="font-semibold text-wabi-primary text-base truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
+                    ${hideTagAndSerial ? '' : `<p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>`}
+                    <p class="${standardExpiryClass}">${standardExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                  </div>
+                  <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
+                    <i class="fa-solid fa-thumbtack"></i>
+                  </button>
+                </div>
+
+                ${showThumbnail && ticket.image && this.view === 'active'
+                  ? `<div class="${imageWrapperClass}"><img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} /></div>`
+                  : ''}
               </div>
             </div>
-            <button data-action="toggle-pin" class="text-sm ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
-              <i class="fa-solid fa-thumbtack"></i>
-            </button>
           </div>
 
-          ${showThumbnail && ticket.image ? (
-            this.view === 'active'
-              ? `<div class="${imageWrapperClass}"><img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} /></div>`
+          ${showThumbnail && ticket.image && this.view !== 'active' ? (
+            compactGrid
+              ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
               : `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
           ) : ''}
 
