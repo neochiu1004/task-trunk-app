@@ -1,6 +1,7 @@
 import {
   checkIsExpiringSoon,
   escapeHtml,
+  forceRefreshToLatest,
   formatDateTime,
   parseTags,
   showToast,
@@ -1520,6 +1521,7 @@ export class TicketsPage {
             ${backgroundImages.length > 0
               ? `<button id="toggle-view-background" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${showBackground ? '一鍵隱藏背景' : '一鍵顯示背景'}</button>`
               : ''}
+              <button id="force-refresh-btn" class="px-3 py-2 rounded-lg bg-amber-100 border border-amber-200 text-amber-800 text-sm">更新</button>
               <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-sm">${this.app.state.ui.selectionMode ? '取消多選' : '多選'}</button>
               <a href="#settings" class="px-3 py-2 rounded-lg bg-white border border-wabi-border"><i class="fa-solid fa-gear"></i></a>
             </div>
@@ -1712,6 +1714,17 @@ export class TicketsPage {
       await this.app.persistSettings();
       showToast(nextUltraCompact ? '已切換超精簡卡片模式' : '已切換標準卡片模式', 'success', 900);
       this.render();
+    });
+
+    root.querySelector('#force-refresh-btn')?.addEventListener('click', async () => {
+      const ok = window.confirm('這會重新下載最新版並重新整理頁面。要繼續嗎？');
+      if (!ok) return;
+
+      try {
+        await forceRefreshToLatest();
+      } catch (error) {
+        showToast(error?.message || '強制更新失敗，請稍後再試。', 'error');
+      }
     });
 
     root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', async () => {

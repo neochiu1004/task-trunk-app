@@ -3,6 +3,7 @@ import {
   DB_KEYS,
   downloadJson,
   escapeHtml,
+  forceRefreshToLatest,
   formatDateTime,
   parseTags,
   sendTelegramMessage,
@@ -279,6 +280,15 @@ export class SettingsPage {
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">新增票券快速標籤（逗號分隔）</label>
             <input id="quick-tags" value="${escapeHtml(quickTagsText)}" placeholder="例如：超商,咖啡,餐券" class="w-full rounded-lg border border-wabi-border px-3 py-2" />
+          </div>
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold text-amber-800">強制更新到最新版</h3>
+                <p class="text-xs text-amber-700 mt-1">遇到 PWA 還停在舊版時，可清除快取並重新載入最新程式；不會刪除票券資料。</p>
+              </div>
+              <button type="button" id="force-refresh-settings" class="px-3 py-2 rounded-lg bg-amber-600 text-white text-sm shrink-0">立即更新</button>
+            </div>
           </div>
           <div class="rounded-lg border border-wabi-border/70 p-3">
             <label class="inline-flex items-center gap-2 text-sm">
@@ -1243,6 +1253,17 @@ export class SettingsPage {
       showToast('資料已清空，正在重新載入', 'success');
       window.location.hash = 'active';
       window.location.reload();
+    });
+
+    root.querySelector('#force-refresh-settings')?.addEventListener('click', async () => {
+      const ok = window.confirm('這會重新下載最新版並重新整理頁面，未儲存的設定可能遺失。要繼續嗎？');
+      if (!ok) return;
+
+      try {
+        await forceRefreshToLatest();
+      } catch (error) {
+        showToast(error?.message || '強制更新失敗，請稍後再試。', 'error');
+      }
     });
 
     root.querySelector('#run-health-check')?.addEventListener('click', async () => {
