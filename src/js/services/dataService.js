@@ -261,6 +261,60 @@ export class DataService {
     };
   }
 
+  sanitizeLoadedState(state) {
+    const rawTasks = Array.isArray(state?.tasks) ? state.tasks : [];
+    const sanitizedTasks = [];
+    const seenIds = new Set();
+    let removedInvalidTasks = 0;
+    let removedDuplicateIds = 0;
+
+    [...rawTasks]
+      .sort((a, b) => (Number(b?.createdAt) || 0) - (Number(a?.createdAt) || 0))
+      .forEach((ticket) => {
+        const normalized = normalizeTicket(ticket);
+        if (!normalized.id || !normalized.productName?.trim()) {
+          removedInvalidTasks += 1;
+          return;
+        }
+        if (seenIds.has(normalized.id)) {
+          removedDuplicateIds += 1;
+          return;
+        }
+        seenIds.add(normalized.id);
+        sanitizedTasks.push(normalized);
+      });
+
+    const sanitizedExpiryNotified = {};
+    let removedOrphanExpiryNotified = 0;
+    Object.entries(state?.expiryNotified && typeof state.expiryNotified === 'object' ? state.expiryNotified : {}).forEach(([ticketId, value]) => {
+      if (!seenIds.has(ticketId)) {
+        removedOrphanExpiryNotified += 1;
+        return;
+      }
+      sanitizedExpiryNotified[ticketId] = value;
+    });
+
+    const changed = removedInvalidTasks > 0
+      || removedDuplicateIds > 0
+      || removedOrphanExpiryNotified > 0
+      || sanitizedTasks.length !== rawTasks.length
+      || JSON.stringify(sanitizedExpiryNotified) !== JSON.stringify(state?.expiryNotified || {});
+
+    return {
+      changed,
+      state: {
+        ...state,
+        tasks: sanitizedTasks,
+        expiryNotified: sanitizedExpiryNotified,
+      },
+      report: {
+        removedInvalidTasks,
+        removedDuplicateIds,
+        removedOrphanExpiryNotified,
+      },
+    };
+  }
+
   async saveState(partialState) {
     const jobs = [];
     const hasOwn = (key) => Object.prototype.hasOwnProperty.call(partialState, key);

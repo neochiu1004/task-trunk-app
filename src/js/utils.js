@@ -322,6 +322,44 @@ export function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getOrCreateClientInstallId() {
+  try {
+    const storageKey = 'wallet_client_install_id_v1';
+    const existing = window.localStorage?.getItem(storageKey);
+    if (existing) return existing;
+    const nextId = `client-${Math.random().toString(36).slice(2, 8)}`;
+    window.localStorage?.setItem(storageKey, nextId);
+    return nextId;
+  } catch (_error) {
+    return `client-${Math.random().toString(36).slice(2, 8)}`;
+  }
+}
+
+export function getClientSourceLabel() {
+  if (typeof window === 'undefined') return 'unknown-source';
+
+  const ua = navigator.userAgent || '';
+  const platform = /iPhone|iPad|iPod/i.test(ua)
+    ? 'iPhone'
+    : /Android/i.test(ua)
+      ? 'Android'
+      : /Macintosh|Mac OS X/i.test(ua)
+        ? 'Mac'
+        : /Windows/i.test(ua)
+          ? 'Windows'
+          : 'Browser';
+  const browser = /CriOS|Chrome/i.test(ua)
+    ? 'Chrome'
+    : /FxiOS|Firefox/i.test(ua)
+      ? 'Firefox'
+      : /Safari/i.test(ua) && !/Chrome|CriOS|Chromium/i.test(ua)
+        ? 'Safari'
+        : 'Web';
+  const displayMode = window.matchMedia?.('(display-mode: standalone)')?.matches ? 'App' : 'Web';
+  const installId = getOrCreateClientInstallId();
+  return `${platform}/${browser}/${displayMode}/${installId}`;
+}
+
 export async function forceRefreshToLatest() {
   if (typeof window === 'undefined') return;
 

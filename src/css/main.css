@@ -410,21 +410,24 @@ body.keyboard-open #bottom-nav {
   margin: -0.24rem -0.75rem 0.24rem;
 }
 
-.ticket-card-thumbnail-frame--active-inline {
-  width: 96px;
-  min-width: 96px;
-  height: 96px;
-  margin: 0 0 0 auto;
-  align-self: flex-start;
-  justify-content: flex-end;
-  align-items: flex-start;
+.ticket-card-thumbnail-frame--active-floating {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  margin: 0;
+  z-index: 2;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
 }
 
-.ticket-card-thumbnail-frame--active-inline.ticket-card-thumbnail-frame--compact {
-  width: 84px;
-  min-width: 84px;
-  height: 84px;
-  margin: 0 0 0 auto;
+.ticket-card-thumbnail-frame--active-floating.ticket-card-thumbnail-frame--compact {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
 }
 
 .ticket-view-bg-layer {
@@ -448,13 +451,15 @@ body.keyboard-open #bottom-nav {
   object-position: center top;
 }
 
-.ticket-card-thumbnail--active-inline {
+.ticket-card-thumbnail--active-floating {
   width: 100% !important;
   height: 100%;
   object-fit: cover;
   object-position: center;
   border-radius: 0.9rem;
   border: 1px solid rgba(216, 210, 198, 0.9);
+  box-shadow: 0 10px 20px -16px rgba(37, 52, 64, 0.45), 0 4px 10px rgba(37, 52, 64, 0.12);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .selection-count--pulse {

@@ -749,7 +749,7 @@ export class SettingsPage {
       this.app.state.settings = settings;
       await this.app.persistSettings();
       showToast('設定已儲存', 'success');
-      this.render();
+      window.location.hash = 'active';
     });
 
     activeShowBackgroundInput?.addEventListener('change', syncBackgroundControls);

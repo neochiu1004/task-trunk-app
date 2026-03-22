@@ -1,7 +1,6 @@
 import {
   checkIsExpiringSoon,
   escapeHtml,
-  forceRefreshToLatest,
   formatDateTime,
   parseTags,
   showToast,
@@ -1288,17 +1287,17 @@ export class TicketsPage {
         : (compactGrid ? 'p-3' : 'p-4');
       const headerMarginClass = this.view === 'active' ? 'mb-2' : 'mb-3';
       const imageClass = this.view === 'active'
-        ? 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--active-inline'
+        ? 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--active-floating'
         : (compactGrid
           ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
           : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
       const imageWrapperClass = this.view === 'active'
         ? (compactGrid
-          ? 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--compact ticket-card-thumbnail-frame--active-inline'
-          : 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--active-inline')
+          ? 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--compact ticket-card-thumbnail-frame--active-floating'
+          : 'ticket-card-thumbnail-frame ticket-card-thumbnail-frame--active ticket-card-thumbnail-frame--active-floating')
         : '';
       const imageStyle = this.view === 'active'
-        ? ` style="width: ${Math.round(thumbnailScale)}%;"`
+        ? ` style="width: ${Math.round(Math.max(52, thumbnailScale))}%;"`
         : '';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
@@ -1310,10 +1309,15 @@ export class TicketsPage {
       const swipeAttrs = swipeConfig
         ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
         : '';
+      const hasFloatingThumbnail = showThumbnail && ticket.image && this.view === 'active';
+      const contentPaddingClass = hasFloatingThumbnail ? 'pr-[5.75rem]' : '';
 
       return `
         <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
-          <div class="flex items-start gap-3 ${headerMarginClass}">
+          ${hasFloatingThumbnail
+            ? `<div class="${imageWrapperClass}"><img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} /></div>`
+            : ''}
+          <div class="flex items-start gap-3 ${headerMarginClass} ${contentPaddingClass}">
             <div class="flex items-start gap-3 min-w-0 flex-1">
               ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
               <div class="min-w-0 flex-1">
@@ -1327,10 +1331,6 @@ export class TicketsPage {
                     <i class="fa-solid fa-thumbtack"></i>
                   </button>
                 </div>
-
-                ${showThumbnail && ticket.image && this.view === 'active'
-                  ? `<div class="${imageWrapperClass}"><img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} /></div>`
-                  : ''}
               </div>
             </div>
           </div>
@@ -1502,6 +1502,11 @@ export class TicketsPage {
     const batchButton = (action, label, baseClass, enabled = hasSelection) => `
       <button type="button" data-batch="${action}" class="${baseClass} ${enabled ? '' : 'opacity-50 cursor-not-allowed'}" ${enabled ? '' : 'disabled aria-disabled="true"'}>${label}</button>
     `;
+    const gridIconClass = gridColumns === 1
+      ? 'fa-solid fa-grip-lines-vertical'
+      : gridColumns === 2
+        ? 'fa-solid fa-table-columns'
+        : 'fa-solid fa-grip';
 
     this.app.mount(`
       ${backgroundLayerHtml}
@@ -1517,21 +1522,20 @@ export class TicketsPage {
             </div>
             <div class="flex items-center gap-2">
             ${this.view === 'active'
-              ? `<button id="quick-grid-columns" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${gridColumns}欄</button>`
+              ? `<button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="${gridIconClass}"></i></button>`
               : ''}
-            <button id="toggle-ultra-compact-btn" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${ultraCompactCard ? '標準卡片' : '超精簡卡片'}</button>
+            <button id="toggle-ultra-compact-btn" title="${ultraCompactCard ? '切換標準卡片' : '切換超精簡卡片'}" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid ${ultraCompactCard ? 'fa-expand' : 'fa-compress'}"></i></button>
             ${this.view === 'completed'
-              ? `<button id="quick-clear-completed-to-trash" class="px-3 py-2 rounded-lg bg-red-100 border border-red-200 text-red-700 text-xs ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}>全部回收 (${completedTotalCount})</button>`
+              ? `<button id="quick-clear-completed-to-trash" title="全部移到回收桶（${completedTotalCount}）" class="h-10 w-10 rounded-lg bg-red-100 border border-red-200 text-red-700 text-sm flex items-center justify-center ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive"></i></button>`
               : ''}
             ${this.view === 'deleted'
-              ? `<button id="quick-purge-deleted" class="px-3 py-2 rounded-lg bg-red-100 border border-red-200 text-red-700 text-xs ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}>全部刪除 (${deletedTotalCount})</button>`
+              ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="h-10 w-10 rounded-lg bg-red-100 border border-red-200 text-red-700 text-sm flex items-center justify-center ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can"></i></button>`
               : ''}
             ${backgroundImages.length > 0
-              ? `<button id="toggle-view-background" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-xs">${showBackground ? '一鍵隱藏背景' : '一鍵顯示背景'}</button>`
+              ? `<button id="toggle-view-background" title="${showBackground ? '隱藏背景' : '顯示背景'}" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid ${showBackground ? 'fa-eye-slash' : 'fa-image'}"></i></button>`
               : ''}
-              <button id="force-refresh-btn" class="px-3 py-2 rounded-lg bg-amber-100 border border-amber-200 text-amber-800 text-sm">更新</button>
-              <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-sm">${this.app.state.ui.selectionMode ? '取消多選' : '多選'}</button>
-              <a href="#settings" class="px-3 py-2 rounded-lg bg-white border border-wabi-border"><i class="fa-solid fa-gear"></i></a>
+              <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" title="${this.app.state.ui.selectionMode ? '取消多選' : '開啟多選'}" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid ${this.app.state.ui.selectionMode ? 'fa-check-double' : 'fa-rectangle-list'}"></i></button>
+              <a href="#settings" title="設定" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid fa-gear"></i></a>
             </div>
           </header>
 
@@ -1722,17 +1726,6 @@ export class TicketsPage {
       await this.app.persistSettings();
       showToast(nextUltraCompact ? '已切換超精簡卡片模式' : '已切換標準卡片模式', 'success', 900);
       this.render();
-    });
-
-    root.querySelector('#force-refresh-btn')?.addEventListener('click', async () => {
-      const ok = window.confirm('這會重新下載最新版並重新整理頁面。要繼續嗎？');
-      if (!ok) return;
-
-      try {
-        await forceRefreshToLatest();
-      } catch (error) {
-        showToast(error?.message || '強制更新失敗，請稍後再試。', 'error');
-      }
     });
 
     root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', async () => {

@@ -8,6 +8,7 @@ import {
   DB_KEYS,
   defaultSettings,
   formatDateTime,
+  getClientSourceLabel,
   sendTelegramMessage,
   showToast,
   todayISO,
@@ -37,6 +38,7 @@ class TicketTrunkJijunApp {
 
     this.router = new Router(this);
     this.mobileViewportBound = false;
+    this.startupCleanupReport = null;
     this.pages = {
       active: new TicketsPage(this, 'active'),
       completed: new TicketsPage(this, 'completed'),
@@ -49,14 +51,23 @@ class TicketTrunkJijunApp {
   async init() {
     await this.dataService.init();
     const state = await this.dataService.loadState();
+    const sanitized = this.dataService.sanitizeLoadedState(state);
     this.state = {
       ...this.state,
-      ...state,
+      ...sanitized.state,
       settings: {
         ...defaultSettings,
-        ...(state.settings || {}),
+        ...(sanitized.state.settings || {}),
       },
     };
+    this.startupCleanupReport = sanitized.report;
+
+    if (sanitized.changed) {
+      await this.dataService.saveState({
+        tasks: this.state.tasks,
+        expiryNotified: this.state.expiryNotified,
+      });
+    }
 
     await this.ensureRequiredKeys();
     await this.sendExpiryReminderIfNeeded();
@@ -70,6 +81,17 @@ class TicketTrunkJijunApp {
     this.router.start();
     this.bindGlobalNavEvents();
     this.bindMobileViewportHandlers();
+    if (this.startupCleanupReport && (
+      this.startupCleanupReport.removedInvalidTasks > 0
+      || this.startupCleanupReport.removedDuplicateIds > 0
+      || this.startupCleanupReport.removedOrphanExpiryNotified > 0
+    )) {
+      const hints = [];
+      if (this.startupCleanupReport.removedInvalidTasks > 0) hints.push(`異常票券 ${this.startupCleanupReport.removedInvalidTasks} 張`);
+      if (this.startupCleanupReport.removedDuplicateIds > 0) hints.push(`重複 ID ${this.startupCleanupReport.removedDuplicateIds} 筆`);
+      if (this.startupCleanupReport.removedOrphanExpiryNotified > 0) hints.push(`殘留提醒 ${this.startupCleanupReport.removedOrphanExpiryNotified} 筆`);
+      showToast(`已清理：${hints.join('、')}`, 'success', 2600);
+    }
     showToast('輕鬆票券已就緒', 'success');
   }
 
@@ -194,11 +216,12 @@ class TicketTrunkJijunApp {
 
     const lines = expiring
       .sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1))
-      .map((t) => `• ${t.pinned ? '📌 ' : ''}${t.productName}（${t.expiry}）`)
+      .map((t) => `• ${t.pinned ? '📌 ' : ''}${t.productName}（${t.expiry}）${t.serial ? `｜${t.serial}` : ''}`)
       .join('\n');
 
     const pinnedCount = expiring.filter((x) => x.pinned).length;
-    const text = `⏰ *[到期提醒]* 共 ${expiring.length} 張快到期${pinnedCount ? `（含 ${pinnedCount} 張優先）` : ''}：\n${lines}`;
+    const sourceLabel = getClientSourceLabel();
+    const text = `⏰ *[到期提醒]* 共 ${expiring.length} 張快到期${pinnedCount ? `（含 ${pinnedCount} 張優先）` : ''}：\n${lines}\n\n來源：${sourceLabel}`;
 
     const result = await sendTelegramMessage(tgToken, tgChatId, text);
     if (!result.success) return;
