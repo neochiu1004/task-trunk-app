@@ -14,6 +14,7 @@ import {
   X,
   Pin,
 } from 'lucide-react';
+import type { BatchEditPayload } from '@/types/app';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -25,16 +26,7 @@ interface BatchEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedCount: number;
-  onBatchEdit: (payload: {
-    tagsToAdd: string[];
-    clearTags: boolean;
-    name: string;
-    expiry: string;
-    image: string;
-    redeemUrl: string;
-    clearRedeemUrl: boolean;
-    setPinned?: boolean | null;
-  }) => void;
+  onBatchEdit: (payload: BatchEditPayload) => void;
   allTags: string[];
   templates: Template[];
   onDeleteTemplate: (id: string) => void;

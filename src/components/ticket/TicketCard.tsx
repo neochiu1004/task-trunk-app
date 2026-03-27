@@ -82,6 +82,25 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     return '';
   };
 
+  const statusMeta = (() => {
+    if (isHealthIssueWarning) {
+      return { badge: '資料異常', badgeClassName: 'bg-ticket-danger/10 text-ticket-danger', dotClassName: 'bg-ticket-danger' };
+    }
+    if (isExpiringWarning) {
+      return { badge: '快到期', badgeClassName: 'bg-ticket-warning/15 text-ticket-warning', dotClassName: 'bg-ticket-warning' };
+    }
+    if (isDuplicateWarning) {
+      return { badge: '重複', badgeClassName: 'bg-orange-500/12 text-orange-500', dotClassName: 'bg-orange-500' };
+    }
+    if (ticket.completed) {
+      return { badge: '已核銷', badgeClassName: 'bg-muted text-muted-foreground', dotClassName: 'bg-muted-foreground' };
+    }
+    if (ticket.pinned) {
+      return { badge: '優先', badgeClassName: 'bg-amber-500/12 text-amber-600', dotClassName: 'bg-amber-500' };
+    }
+    return { badge: '待使用', badgeClassName: 'bg-ticket-success/10 text-ticket-success', dotClassName: 'bg-ticket-success' };
+  })();
+
   // Build custom card styles based on settings - opacity only affects card background, not content
   const cardStyle: React.CSSProperties = {
     ...(cardBgColor && { backgroundColor: cardBgColor }),
@@ -90,14 +109,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   
   // Calculate background opacity for card (content stays at full opacity)
   const cardBgOpacity = opacity !== undefined && opacity < 1 ? opacity : 1;
-
-  // Get status dot color
-  const getStatusDotColor = () => {
-    if (isHealthIssueWarning) return 'bg-ticket-danger';
-    if (isExpiringWarning) return 'bg-ticket-warning';
-    if (ticket.completed) return 'bg-muted-foreground';
-    return 'bg-ticket-success';
-  };
 
   if (isCompact) {
     return (
@@ -112,11 +123,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           if (isSelectionMode) onSelect(ticket.id);
           else onClick(ticket);
         }}
-        className={`rounded-2xl p-3 cursor-pointer relative overflow-hidden flex flex-col ${getStatusStyles()}`}
+        className={`relative flex flex-col overflow-hidden rounded-[1.45rem] p-3 cursor-pointer ${getStatusStyles()}`}
       >
         {/* Background layer with opacity */}
         <div 
-          className="absolute inset-0 glass-card rounded-2xl border border-border/50"
+          className="absolute inset-0 glass-card rounded-[1.45rem] border border-border/50"
           style={{ 
             opacity: cardBgOpacity,
             ...(cardBgColor && { backgroundColor: cardBgColor }),
@@ -126,7 +137,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         
         {/* Status dot indicator */}
         <div className="absolute top-0 right-0 p-2 z-20">
-          <span className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} block ring-4 ring-card`}></span>
+          <span className={`block h-2.5 w-2.5 rounded-full ${statusMeta.dotClassName} ring-4 ring-card`}></span>
         </div>
         
         {/* Selection checkbox */}
@@ -145,29 +156,32 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         {/* Content layer */}
         <div className="relative z-10 flex flex-1 gap-3">
           {/* Main content (left) */}
-          <div className="flex-1 min-w-0 flex flex-col justify-between">
+          <div className="flex min-w-0 flex-1 flex-col justify-between">
             <div>
-            <h3 className="font-bold text-foreground leading-tight line-clamp-1 text-sm">
-              {ticket.pinned && <Pin size={10} className="inline mr-1 text-amber-500" />}
-              {ticket.productName}
-              {ticket.originalImage && <Maximize2 size={10} className="inline ml-1 text-primary" />}
-              {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
-            </h3>
-            
-            {/* Tags as subtitle */}
-            {ticket.tags && ticket.tags.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                {ticket.tags.join(', ')}
-              </p>
-            )}
-            
-            {/* Expiry & duplicate info */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {isDuplicateWarning && (
-                <span className="text-[10px] font-semibold text-orange-500 flex items-center gap-0.5 bg-orange-500/10 px-1.5 py-0.5 rounded-full">
-                  <Copy size={10} /> 重複
+              <div className="mb-2 flex items-center gap-2">
+                <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${statusMeta.badgeClassName}`}>
+                  {statusMeta.badge}
                 </span>
+                {ticket.pinned && <Pin size={11} className="text-amber-500" />}
+              </div>
+              <h3 className="line-clamp-2 text-sm font-bold leading-tight text-foreground">
+                {ticket.productName}
+                {ticket.originalImage && <Maximize2 size={10} className="ml-1 inline text-primary" />}
+                {ticket.redeemUrl && <ExternalLink size={10} className="ml-1 inline text-ticket-momo" />}
+              </h3>
+            
+              {ticket.tags && ticket.tags.length > 0 && (
+                <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                  {ticket.tags.join(' · ')}
+                </p>
               )}
+
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                {isDuplicateWarning && (
+                  <span className="flex items-center gap-0.5 rounded-full bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-orange-500">
+                    <Copy size={10} /> 重複
+                  </span>
+                )}
               {isExpiringWarning ? (
                 <span className="text-xs font-medium text-ticket-warning flex items-center gap-1">
                   <AlertCircle size={12} />
@@ -179,12 +193,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                   <span>{ticket.completed ? `已用 ${formatTime(ticket.completedAt)}` : ticket.expiry || '無期限'}</span>
                 </span>
               )}
-            </div>
+              </div>
             </div>
           
-          {/* Footer with serial and pin toggle */}
-          <div className="mt-2 pt-2 border-t border-border/50 flex justify-between items-center">
-            <span className="text-[10px] text-muted-foreground font-mono tracking-wider line-clamp-1">
+          <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2">
+            <span className="line-clamp-1 text-[10px] font-mono tracking-wider text-muted-foreground">
               #{ticket.serial?.slice(0, 8) || 'N/A'}
             </span>
             <div className="flex items-center gap-1.5">
@@ -196,14 +209,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                   <Pin size={14} className={ticket.pinned ? 'fill-amber-500' : ''} />
                 </button>
               )}
-              <QrCode size={18} className="text-muted-foreground/40 flex-shrink-0" />
+              <QrCode size={18} className="flex-shrink-0 text-muted-foreground/40" />
             </div>
           </div>
           </div>
 
           {/* Thumbnail (right) */}
           <div
-            className="flex-shrink-0 rounded-xl overflow-hidden shadow-inner"
+            className="flex-shrink-0 overflow-hidden rounded-2xl shadow-inner ring-1 ring-white/50"
             style={{ width: `${gridImageHeight}px`, height: `${gridImageHeight}px` }}
           >
             {ticket.image ? (

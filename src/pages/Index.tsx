@@ -1,614 +1,742 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useTheme } from '@/hooks/use-theme';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
-import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
-import { dbHelper } from '@/lib/db';
-import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
-import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
-import { forceRefreshToLatest } from '@/lib/pwa';
-import { validateImportData } from '@/lib/validation';
-import { Header } from '@/components/layout/Header';
-import { BottomNavigation } from '@/components/layout/BottomNavigation';
-import { TicketCard } from '@/components/ticket/TicketCard';
-import { RedeemModal } from '@/components/ticket/RedeemModal';
-import { AddModal } from '@/components/modals/AddModal';
-import { SettingsModal } from '@/components/modals/SettingsModal';
-import { DataActionsModal } from '@/components/modals/DataActionsModal';
-import { ImportConfirmModal } from '@/components/modals/ImportConfirmModal';
-import { BatchEditModal } from '@/components/modals/BatchEditModal';
-import { TagManagerModal } from '@/components/modals/TagManagerModal';
-import { DataHealthCheck } from '@/components/modals/DataHealthCheck';
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronRight,
+  Copy,
+  Eye,
+  EyeOff,
+  FileDown,
+  FileUp,
+  LogOut,
+  MoreHorizontal,
+  NotebookText,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  UserSquare2,
+  Vault,
+  X,
+  KeyRound,
+} from "lucide-react";
 
-const Index = () => {
-  const { isDark, toggleTheme } = useTheme();
-  const [tasks, setTasks] = useState<Ticket[]>([]);
-  const [view, setView] = useState<ViewType>('active');
-  const [activeTags, setActiveTags] = useState<string[]>([]);
-  const [sortType, setSortType] = useState<SortType>('expiring');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [isCompact, setIsCompact] = useState(false);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showBatchModal, setShowBatchModal] = useState(false);
-  const [showDataModal, setShowDataModal] = useState(false);
-  const [importPendingData, setImportPendingData] = useState<any>(null);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [bgHistory, setBgHistory] = useState<string[]>([]);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showTagManager, setShowTagManager] = useState(false);
-  const [showHealthCheck, setShowHealthCheck] = useState(false);
-  const [healthIssueSerials, setHealthIssueSerials] = useState<Set<string>>(new Set());
-  
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { dbHelper } from "@/lib/db";
+import { createItemFromTemplate, createVaultPayload, getTemplateLabel, searchItems, templates, touchItem } from "@/lib/vault";
+import type { EditableVaultItem, FieldType, VaultField, VaultItem, VaultPayload, VaultTemplateType } from "@/types/vault";
 
-  const migrateConfig = (config: any) => ({
-    ...defaultViewConfig,
-    ...config,
-    bgSize: typeof config?.bgSize === 'number' ? config.bgSize : 100,
-    bgPosY: typeof config?.bgPosY === 'number' ? config.bgPosY : 50,
-    bgOpacity: typeof config?.bgOpacity === 'number' ? config.bgOpacity : 1,
-  });
+const DB_VAULT_KEY = "vault:data";
 
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        await dbHelper.init();
-        const dbTasks = await dbHelper.getItem<Ticket[]>(DB_KEYS.TASKS);
-        const dbSettings = await dbHelper.getItem<any>(DB_KEYS.SETTINGS);
-        const dbBgHistory = await dbHelper.getItem<string[]>(DB_KEYS.BG_HISTORY);
-        const dbTemplates = await dbHelper.getItem<Template[]>(DB_KEYS.TEMPLATES);
-
-        if (dbTasks) setTasks(dbTasks);
-        if (dbSettings) {
-          const mergedSettings = {
-            ...settings,
-            ...dbSettings,
-            bgConfigMap: dbSettings.bgConfigMap || {},
-            specificViewKeywords: dbSettings.specificViewKeywords || ['MOMO', '85度C'],
-            brandLogo: dbSettings.brandLogo || '',
-            viewConfigs: {
-              active: migrateConfig(dbSettings.viewConfigs?.active),
-              completed: migrateConfig(dbSettings.viewConfigs?.completed),
-              deleted: migrateConfig(dbSettings.viewConfigs?.deleted),
-            },
-          };
-          setSettings(mergedSettings);
-        }
-        if (dbBgHistory) setBgHistory(dbBgHistory);
-        if (dbTemplates) setTemplates(dbTemplates);
-        setIsDataLoaded(true);
-
-        // Telegram expiry reminder: only for active (not completed, not deleted) tickets
-        const loadedTasks: Ticket[] = dbTasks || [];
-        const loadedSettings: Settings = dbSettings ? { ...defaultSettings, ...dbSettings } : defaultSettings;
-        if (loadedSettings.tgToken && loadedSettings.tgChatId) {
-          const notifiedMap = (await dbHelper.getItem<Record<string, string>>(DB_KEYS.EXPIRY_NOTIFIED)) || {};
-          const today = new Date().toISOString().slice(0, 10);
-          const expiringTickets = loadedTasks.filter(
-            (t) => !t.completed && !t.isDeleted && t.expiry && checkIsExpiringSoon(t.expiry, loadedSettings.notifyDays) && notifiedMap[t.id] !== today
-          );
-          if (expiringTickets.length > 0) {
-            const pinnedTickets = expiringTickets.filter((t) => t.pinned);
-            const unpinnedTickets = expiringTickets.filter((t) => !t.pinned);
-            const formatLine = (t: typeof expiringTickets[0]) => `• ${t.pinned ? '📌 ' : ''}${t.productName}（${t.expiry}）`;
-            const lines = [...pinnedTickets.map(formatLine), ...unpinnedTickets.map(formatLine)].join('\n');
-            const pinnedNote = pinnedTickets.length > 0 ? `（含 ${pinnedTickets.length} 張優先）` : '';
-            const msg = `⏰ *[到期提醒]* 共 ${expiringTickets.length} 張快到期${pinnedNote}：\n${lines}`;
-            sendTelegramMessage(loadedSettings.tgToken, loadedSettings.tgChatId, msg).then((res) => {
-              if (res.success) {
-                expiringTickets.forEach((t) => { notifiedMap[t.id] = today; });
-                // Clean up old entries for tickets that no longer exist
-                const taskIds = new Set(loadedTasks.map((t) => t.id));
-                Object.keys(notifiedMap).forEach((id) => { if (!taskIds.has(id)) delete notifiedMap[id]; });
-                dbHelper.setItem(DB_KEYS.EXPIRY_NOTIFIED, notifiedMap);
-              }
-            }).catch(console.error);
-          }
-        }
-      } catch (err) {
-        console.error('Database initialization failed:', err);
-      }
-    };
-    initData();
-  }, []);
-
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.TASKS, tasks); }, [tasks, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.SETTINGS, settings); }, [settings, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.BG_HISTORY, bgHistory); }, [bgHistory, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.TEMPLATES, templates); }, [templates, isDataLoaded]);
-
-  const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))], [tasks]);
-  const duplicateSerials = useMemo(() => {
-    const counts: Record<string, number> = {};
-    tasks.forEach((t) => { if (!t.isDeleted && t.serial) counts[t.serial] = (counts[t.serial] || 0) + 1; });
-    return new Set(Object.keys(counts).filter((s) => counts[s] > 1));
-  }, [tasks]);
-
-  const toggleTag = (tag: string) => {
-    setActiveTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const matchesTag = (t: Ticket, tag: string): boolean => {
-    if (tag === 'special_expiring') return checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
-    if (tag === 'special_duplicate') return duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
-    if (tag === 'special_has_original') return !!t.originalImage && !t.completed && !t.isDeleted;
-    if (tag === 'special_pinned') return !!t.pinned && !t.completed && !t.isDeleted;
-    return !!(t.tags && t.tags.includes(tag));
-  };
-
-  const filteredTasks = useMemo(() => {
-    let result = tasks.filter((t) => {
-      if (view === 'active' && (t.completed || t.isDeleted)) return false;
-      if (view === 'completed' && (!t.completed || t.isDeleted)) return false;
-      if (view === 'deleted' && !t.isDeleted) return false;
-      
-      // Multi-select tag filter (OR union)
-      if (activeTags.length > 0) {
-        if (!activeTags.some((tag) => matchesTag(t, tag))) return false;
-      }
-
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        return t.productName.toLowerCase().includes(q) || 
-          (t.note && t.note.toLowerCase().includes(q)) || 
-          (t.serial && t.serial.toLowerCase().includes(q)) ||
-          (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(q)));
-      }
-      return true;
-    });
-    result.sort((a, b) => {
-      if (view === 'completed') {
-        return (b.completedAt || 0) - (a.completedAt || 0);
-      }
-      const hasHealthIssueA = !a.completed && !a.isDeleted && healthIssueSerials.has(a.serial || '');
-      const hasHealthIssueB = !b.completed && !b.isDeleted && healthIssueSerials.has(b.serial || '');
-      if (hasHealthIssueA !== hasHealthIssueB) return hasHealthIssueA ? -1 : 1;
-      
-      const pinnedA = !a.completed && !a.isDeleted && !!a.pinned;
-      const pinnedB = !b.completed && !b.isDeleted && !!b.pinned;
-      if (pinnedA !== pinnedB) return pinnedA ? -1 : 1;
-      
-      const isExpiringA = !a.completed && !a.isDeleted && checkIsExpiringSoon(a.expiry, settings.notifyDays);
-      const isExpiringB = !b.completed && !b.isDeleted && checkIsExpiringSoon(b.expiry, settings.notifyDays);
-      if (isExpiringA !== isExpiringB) return isExpiringA ? -1 : 1;
-      if (sortType === 'newest') return b.createdAt - a.createdAt;
-      if (sortType === 'oldest') return a.createdAt - b.createdAt;
-      if (sortType === 'expiring') {
-        const dateA = a.expiry ? new Date(a.expiry.replace(/\//g, '-')) : new Date(9999, 11, 31);
-        const dateB = b.expiry ? new Date(b.expiry.replace(/\//g, '-')) : new Date(9999, 11, 31);
-        return dateA.getTime() - dateB.getTime();
-      }
-      return 0;
-    });
-    return result;
-  }, [tasks, view, activeTags, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials]);
-
-  const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
-  const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
-  const handleToggleComplete = async (ticket: Ticket) => {
-    const newStatus = !ticket.completed;
-    const completedAt = newStatus ? Date.now() : undefined;
-    setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, completed: newStatus, completedAt } : t)));
-    if (newStatus && settings.tgToken && settings.tgChatId) {
-      const msg = `✅ *[已核銷]* ${ticket.productName}\n🔢 序號: ${ticket.serial || '無'}\n⏰ 時間: ${formatDateTime(completedAt)}`;
-      sendTelegramMessage(settings.tgToken, settings.tgChatId, msg).catch(console.error);
-    }
-  };
-  const handleDelete = (id: string, forceNotify = false, skipConfirm = false) => {
-    const now = Date.now();
-    if (forceNotify && settings.tgToken && settings.tgChatId) {
-      const target = tasks.find((t) => t.id === id);
-      if (target) {
-        const msg = `🗑️ *[已刪除]*\n方案: ${target.productName}\n序號: \`${target.serial || '無'}\`\n時間: ${formatDateTime(now)}`;
-        sendTelegramMessage(settings.tgToken, settings.tgChatId, msg).catch(console.error);
-      }
-    }
-    if (view === 'deleted') {
-      if (skipConfirm || confirm('確定永久刪除？')) {
-        setTasks((prev) => prev.filter((t) => t.id !== id));
-      }
-    } else {
-      setTasks((prev) => prev.map((t) => (id === t.id ? { ...t, isDeleted: true, deletedAt: now } : t)));
-    }
-  };
-  const handleRestore = (ticket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, isDeleted: false, deletedAt: undefined } : t)));
-  const handleBackup = () => {
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '');
-    const baseName = settings.localBackupFileName?.trim() || 'vouchy_backup';
-    const fileName = `${baseName}_${dateStr}_${timeStr}.json`;
-    
-    const backupData = { version: 3, timestamp: Date.now(), settings, tasks, templates, bgHistory };
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
-  };
-  const handleImportClick = () => {
-    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
-    input.onchange = (e: any) => {
-      const r = new FileReader();
-      r.onload = (ev) => { 
-        try { 
-          const rawData = JSON.parse(ev.target?.result as string);
-          const validationResult = validateImportData(rawData);
-          if (validationResult.success === false) {
-            alert(validationResult.error);
-            return;
-          }
-          setImportPendingData(validationResult.data);
-          setShowDataModal(false);
-        } catch { 
-          alert('JSON 格式錯誤，無法解析檔案'); 
-        } 
-      };
-      r.readAsText(e.target.files[0]);
-    }; input.click();
-  };
-  const executeImport = (mode: 'append' | 'overwrite', restoreSettings: boolean) => {
-    if (!importPendingData) return;
-    const importedTasks = Array.isArray(importPendingData) ? importPendingData : (importPendingData.tasks || []);
-    if (restoreSettings && importPendingData.settings) {
-      const impSet = importPendingData.settings;
-      setSettings((prev) => ({
-        ...prev,
-        ...impSet,
-        tgToken: impSet.tgToken || prev.tgToken,
-        tgChatId: impSet.tgChatId || prev.tgChatId,
-        brandLogo: impSet.brandLogo || prev.brandLogo,
-        specificViewKeywords: impSet.specificViewKeywords || ['MOMO', '85度C'],
-        viewConfigs: {
-          active: migrateConfig(impSet.viewConfigs?.active),
-          completed: migrateConfig(impSet.viewConfigs?.completed),
-          deleted: migrateConfig(impSet.viewConfigs?.deleted),
-        },
-      }));
-    }
-    // 還原背景歷史
-    if (restoreSettings && importPendingData.bgHistory && Array.isArray(importPendingData.bgHistory)) {
-      if (mode === 'append') {
-        setBgHistory((prev) => [...new Set([...importPendingData.bgHistory, ...prev])].slice(0, 20));
-      } else {
-        setBgHistory(importPendingData.bgHistory);
-      }
-    }
-    if (importPendingData.templates && Array.isArray(importPendingData.templates)) {
-      if (mode === 'append') setTemplates((prev) => [...prev, ...importPendingData.templates]);
-      else setTemplates(importPendingData.templates);
-    }
-    if (mode === 'append') setTasks((prev) => [...prev, ...importedTasks]);
-    else setTasks(importedTasks);
-    setImportPendingData(null);
-    alert(`匯入成功！共 ${importedTasks.length} 筆票券。`);
-  };
-  const handleFullReset = async () => {
-    if (window.confirm('⚠️ 確定要清空所有資料嗎？')) {
-      await dbHelper.removeItem(DB_KEYS.TASKS); await dbHelper.removeItem(DB_KEYS.SETTINGS); await dbHelper.removeItem(DB_KEYS.BG_HISTORY); await dbHelper.removeItem(DB_KEYS.TEMPLATES);
-      window.location.reload();
-    }
-  };
-  const handleSelect = (id: string) => { const s = new Set(selectedIds); if (s.has(id)) s.delete(id); else s.add(id); setSelectedIds(s); };
-  const handleSelectAll = () => setSelectedIds(selectedIds.size === filteredTasks.length ? new Set() : new Set(filteredTasks.map((t) => t.id)));
-  const handleBatchEdit = (payload: any) => {
-    setTasks((prev) => prev.map((t) => {
-      if (!selectedIds.has(t.id)) return t;
-      let newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
-      let newRedeemUrl = payload.clearRedeemUrl ? undefined : (payload.redeemUrl || t.redeemUrl);
-      return { 
-        ...t, 
-        tags: newTags, 
-        productName: payload.name || t.productName, 
-        image: payload.image || t.image, 
-        expiry: payload.expiry ? payload.expiry.replace(/-/g, '/') : t.expiry,
-        redeemUrl: newRedeemUrl,
-        ...(payload.setPinned === true ? { pinned: true } : payload.setPinned === false ? { pinned: false } : {}),
-      };
-    }));
-    setSelectedIds(new Set()); setIsSelectionMode(false);
-  };
-  const handleSaveSettings = (newSettings: Settings) => {
-    setSettings(newSettings);
-    const imagesToAdd = [newSettings.viewConfigs.active.backgroundImage, newSettings.viewConfigs.completed.backgroundImage, newSettings.viewConfigs.deleted.backgroundImage].filter(Boolean);
-    if (imagesToAdd.length > 0) setBgHistory((prev) => [...new Set([...imagesToAdd, ...prev])].slice(0, 20));
-  };
-  // 記住使用者自訂的背景圖（用於三模式切換）
-  const savedBgRef = React.useRef<Record<string, { main: string; header: string }>>({});
-  const handleQuickBgChange = () => {
-    const cfg = settings.viewConfigs[view];
-    const currentBg = cfg.backgroundImage || '';
-    const currentHeaderBg = cfg.headerBackgroundImage || '';
-
-    // 儲存非空的背景圖
-    if (currentBg) savedBgRef.current[view] = { ...savedBgRef.current[view], main: currentBg };
-    if (currentHeaderBg) savedBgRef.current[view] = { ...savedBgRef.current[view], header: currentHeaderBg };
-
-    const saved = savedBgRef.current[view] || { main: '', header: '' };
-    // 如果沒有歷史主背景，從 bgHistory 取第一張
-    if (!saved.main && bgHistory.length > 0) saved.main = bgHistory[0];
-
-    let nextBg: string;
-    let nextHeaderBg: string;
-
-    let modeName: string;
-
-    if (currentBg && currentHeaderBg) {
-      // 模式1 (兩者都有) → 模式2 (只顯示主背景)
-      nextBg = currentBg;
-      nextHeaderBg = '';
-      modeName = '🖼 只顯示主背景';
-    } else if (currentBg && !currentHeaderBg) {
-      // 模式2 (只有主背景) → 模式3 (都不顯示)
-      nextBg = '';
-      nextHeaderBg = '';
-      modeName = '🚫 無背景';
-    } else {
-      // 模式3 (都沒有) → 模式1 (兩者都顯示)
-      const history = bgHistory.length > 0 ? bgHistory : [];
-      const lastMain = saved.main || '';
-      const idx = history.indexOf(lastMain);
-      const nextIdx = (idx + 1) % Math.max(history.length, 1);
-      nextBg = history[nextIdx] || saved.main || '';
-      nextHeaderBg = saved.header || '';
-      modeName = '✨ 全部背景';
-    }
-
-    setSettings((prev) => {
-      const next = { ...prev };
-      const currentView = { ...next.viewConfigs[view], backgroundImage: nextBg, headerBackgroundImage: nextHeaderBg };
-      next.viewConfigs = { ...next.viewConfigs, [view]: currentView };
-      return next;
-    });
-  };
-  const handleSaveTemplate = (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => {
-    setTemplates((prev) => [...prev, { id: 'tpl_' + Date.now(), ...data }]);
-    alert(`已儲存範本：${data.label}`);
-  };
-  const handleDeleteTemplate = (id: string) => { if (window.confirm('確定刪除此範本？')) setTemplates((prev) => prev.filter((t) => t.id !== id)); };
-  const handleRenameTemplate = (id: string, newLabel: string) => {
-    setTemplates((prev) => prev.map((t) => t.id === id ? { ...t, label: newLabel } : t));
-  };
-  const handleEditTemplate = (id: string, updates: Partial<Omit<Template, 'id'>>) => {
-    setTemplates((prev) => prev.map((t) => t.id === id ? { ...t, ...updates } : t));
-  };
-  const handleReorderTemplate = (fromIndex: number, toIndex: number) => {
-    setTemplates((prev) => {
-      if (fromIndex < 0 || fromIndex >= prev.length || toIndex < 0 || toIndex >= prev.length) return prev;
-      const newTemplates = [...prev];
-      const [removed] = newTemplates.splice(fromIndex, 1);
-      newTemplates.splice(toIndex, 0, removed);
-      return newTemplates;
-    });
-  };
-  const handleDeleteTag = (tagToDelete: string) => {
-    if (window.confirm(`確定刪除標籤「${tagToDelete}」？將從所有票券移除此標籤。`)) {
-      setTasks((prev) => prev.map((t) => ({ ...t, tags: (t.tags || []).filter((tag) => tag !== tagToDelete) })));
-      setActiveTags((prev) => prev.filter((t) => t !== tagToDelete));
-    }
-  };
-
-  const handleForceUpdate = async () => {
-    const shouldContinue = window.confirm('這會重新下載最新版並重新整理頁面。要繼續嗎？');
-    if (!shouldContinue) return;
-
-    try {
-      await forceRefreshToLatest();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : '強制更新失敗，請稍後再試。');
-    }
-  };
-
-  if (!isDataLoaded) return (
-    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-      >
-        <Loader2 className="w-10 h-10 text-primary" />
-      </motion.div>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-muted-foreground font-medium text-sm"
-      >
-        正在載入資料庫...
-      </motion.p>
-    </div>
-  );
-
-  const currentConfig = settings.viewConfigs[view] || defaultViewConfig;
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.02,
-      },
-    },
-    exit: {
-      opacity: 0,
-      transition: {
-        staggerChildren: 0.01,
-        staggerDirection: -1,
-      },
-    },
-  };
-
-  return (
-    <>
-      {currentConfig.backgroundImage && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: currentConfig.bgOpacity || 1 }}
-          transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-0 mx-auto max-w-md"
-          style={{
-            top: '160px',
-            backgroundImage: `url(${currentConfig.backgroundImage})`,
-            backgroundSize: `${currentConfig.bgSize || 100}% auto`,
-            backgroundPosition: `center ${currentConfig.bgPosY || 50}%`,
-            backgroundRepeat: 'no-repeat',
-          }}
-        />
-      )}
-      
-      <div className="max-w-md mx-auto min-h-screen relative z-10 overflow-x-hidden" style={{ backgroundColor: currentConfig.backgroundImage ? 'transparent' : undefined }}>
-        <Header
-          appTitle={settings.appTitle}
-          onTitleChange={(t) => setSettings((s) => ({ ...s, appTitle: t }))}
-          onOpenSettings={() => setShowSettings(true)}
-          onOpenMenu={() => setShowDataModal(true)}
-          sortType={sortType}
-          setSortType={setSortType}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isSelectionMode={isSelectionMode}
-          setIsSelectionMode={setIsSelectionMode}
-          selectedCount={selectedIds.size}
-          onSelectAll={handleSelectAll}
-          isCompact={isCompact}
-          setIsCompact={setIsCompact}
-          activeTags={activeTags}
-          toggleTag={toggleTag}
-          clearTags={() => setActiveTags([])}
-          allTags={allTags}
-          onQuickBgChange={handleQuickBgChange}
-          onOpenTagManager={() => setShowTagManager(true)}
-          headerBackgroundImage={currentConfig.headerBackgroundImage}
-          headerBgSize={currentConfig.headerBgSize}
-          headerBgPosY={currentConfig.headerBgPosY}
-          headerBgOpacity={currentConfig.headerBgOpacity}
-          brandLogo={settings.brandLogo}
-          onBrandLogoChange={(logo) => setSettings((s) => ({ ...s, brandLogo: logo }))}
-          headerButtonSize={settings.headerButtonSize}
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
-          currentView={view}
-          onForceUpdate={handleForceUpdate}
-        />
-        
-        <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={view + activeTags.join(',') + sortType}
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className={isCompact ? `grid gap-3 px-4 ${(currentConfig.gridColumns || 2) === 3 ? 'grid-cols-3' : 'grid-cols-2'}` : ""}
-            >
-              {filteredTasks.length > 0 ? (
-                filteredTasks.map((t, index) => (
-                  <TicketCard
-                    key={t.id}
-                    ticket={t}
-                    onClick={setSelectedTicket}
-                    notifyDays={settings.notifyDays}
-                    isSelectionMode={isSelectionMode}
-                    isSelected={selectedIds.has(t.id)}
-                    onSelect={handleSelect}
-                    isDuplicate={duplicateSerials.has(t.serial)}
-                    opacity={currentConfig.cardOpacity}
-                    cardBgColor={currentConfig.cardBgColor}
-                    cardBorderColor={currentConfig.cardBorderColor}
-                    isCompact={isCompact}
-                    gridImageHeight={currentConfig.gridImageHeight}
-                    index={index}
-                    hasHealthIssue={healthIssueSerials.has(t.serial || '')}
-                    onTogglePin={(id) => {
-                      setTasks(prev => prev.map(tk => tk.id === id ? { ...tk, pinned: !tk.pinned } : tk));
-                    }}
-                  />
-                ))
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-24 text-muted-foreground"
-                >
-                  <span className="text-6xl mb-6 block opacity-20">🎫</span>
-                  <p className="font-medium text-sm">暫無票券</p>
-                </motion.div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-        
-        {isSelectionMode && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-2.5 z-40"
-          >
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => { setIsSelectionMode(false); setSelectedIds(new Set()); }}
-              className="px-5 py-3.5 glass-card text-foreground rounded-2xl font-semibold text-sm shadow-glass-lg"
-            >
-              取消
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowBatchModal(true)}
-              disabled={selectedIds.size === 0}
-              className="px-5 py-3.5 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Pencil size={16} /> 編輯 {selectedIds.size} 張
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (confirm(`確定刪除 ${selectedIds.size} 張票券？`)) {
-                  const skipConfirm = view === 'deleted';
-                  selectedIds.forEach((id) => handleDelete(id, false, skipConfirm));
-                  setSelectedIds(new Set());
-                  setIsSelectionMode(false);
-                }
-              }}
-              disabled={selectedIds.size === 0}
-              className="px-5 py-3.5 bg-ticket-warning text-primary-foreground rounded-2xl font-semibold text-sm shadow-premium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 size={16} />
-            </motion.button>
-          </motion.div>
-        )}
-        
-        <BottomNavigation
-          view={view}
-          setView={setView}
-          onAddClick={() => setShowAddModal(true)}
-        />
-      </div>
-
-      <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} settings={settings} redeemUrlPresets={settings.redeemUrlPresets} />
-      <AddModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} onAddBatch={handleAddBatch} redeemUrlPresets={settings.redeemUrlPresets} onSaveTemplate={handleSaveTemplate} />
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} bgHistory={bgHistory} onSave={handleSaveSettings} onRemoveHistory={(url) => { if (confirm('移除此背景？')) setBgHistory((prev) => prev.filter((i) => i !== url)); }} onAddToHistory={(bg) => { if (bg) setBgHistory((prev) => [bg, ...prev.filter((b) => b !== bg)].slice(0, 20)); }} />
-      <DataActionsModal 
-        isOpen={showDataModal} 
-        onClose={() => setShowDataModal(false)} 
-        onBackup={handleBackup} 
-        onImportClick={handleImportClick} 
-        onReset={handleFullReset} 
-        onHealthCheck={() => { setShowDataModal(false); setShowHealthCheck(true); }} 
-        settings={settings}
-        onImportData={(data) => {
-          setImportPendingData(data);
-          setShowDataModal(false);
-        }}
-      />
-      <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
-      <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} redeemUrlPresets={settings.redeemUrlPresets} />
-      <TagManagerModal isOpen={showTagManager} onClose={() => setShowTagManager(false)} tags={allTags} onDeleteTag={handleDeleteTag} />
-      <DataHealthCheck isOpen={showHealthCheck} onClose={() => setShowHealthCheck(false)} onBackup={handleBackup} onMismatchedSerials={setHealthIssueSerials} />
-    </>
-  );
+const fieldTypeLabels: Record<FieldType, string> = {
+  text: "文字",
+  password: "密碼",
+  number: "數字",
+  date: "日期",
+  multiline: "多行文字",
 };
 
-export default Index;
+const templateIcons = {
+  login: KeyRound,
+  identity: UserSquare2,
+  note: NotebookText,
+} satisfies Record<VaultTemplateType, typeof KeyRound>;
+
+const classNames = (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ");
+
+const maskValue = (value: string) => {
+  if (!value) return "未填寫";
+  return "•".repeat(Math.min(12, Math.max(6, value.length)));
+};
+
+const generatePassword = () => {
+  const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*-_+=";
+  const bytes = crypto.getRandomValues(new Uint8Array(20));
+  return Array.from(bytes, (byte) => charset[byte % charset.length]).join("");
+};
+
+const createEditableItem = (item?: VaultItem, templateType: VaultTemplateType = "login"): EditableVaultItem =>
+  item
+    ? {
+        ...structuredClone(item),
+        tagsText: item.tags.join(", "),
+      }
+    : {
+        ...createItemFromTemplate(templateType),
+        tagsText: "",
+      };
+
+const formatRelativeTime = (timestamp?: number) => {
+  if (!timestamp) return "尚未使用";
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days = Math.floor(diff / 86_400_000);
+  if (minutes < 1) return "剛剛";
+  if (minutes < 60) return `${minutes} 分鐘前`;
+  if (hours < 24) return `${hours} 小時前`;
+  if (days < 7) return `${days} 天前`;
+  return new Date(timestamp).toLocaleDateString("zh-TW", { month: "short", day: "numeric" });
+};
+
+const downloadTextFile = (filename: string, contents: string) => {
+  const blob = new Blob([contents], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+type ItemCardProps = {
+  item: VaultItem;
+  onOpen: () => void;
+  onCopy: (item: VaultItem, field: VaultField) => Promise<void>;
+};
+
+function ItemCard({ item, onOpen, onCopy }: ItemCardProps) {
+  const Icon = templateIcons[item.templateType];
+  const quickFields = item.fields.filter((field) => field.value.trim()).slice(0, 3);
+
+  return (
+    <Card className="overflow-hidden border-white/60 bg-white/80 shadow-xl shadow-slate-900/8 backdrop-blur">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <button className="flex min-w-0 flex-1 items-start gap-3 text-left" onClick={onOpen}>
+            <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-[20px] bg-secondary">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="truncate text-lg font-semibold">{item.title}</p>
+                {item.isPinned ? <Pin className="h-4 w-4 text-primary" /> : null}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {getTemplateLabel(item.templateType)} ・ {formatRelativeTime(item.lastCopiedAt)}
+              </p>
+            </div>
+          </button>
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl" onClick={onOpen}>
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {quickFields.length === 0 ? (
+            <div className="rounded-2xl bg-secondary/70 px-3 py-3 text-sm text-muted-foreground">尚未填寫欄位內容</div>
+          ) : (
+            quickFields.map((field) => (
+              <div key={field.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white px-3 py-3">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{field.label}</p>
+                  <p className="truncate text-sm font-medium">{field.isSensitive ? maskValue(field.value) : field.value}</p>
+                </div>
+                <Button size="icon" className="h-10 w-10 rounded-2xl shrink-0" onClick={() => void onCopy(item, field)}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function Index() {
+  const [isReady, setIsReady] = useState(false);
+  const [vault, setVault] = useState<VaultPayload | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorItem, setEditorItem] = useState<EditableVaultItem | null>(null);
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importMode, setImportMode] = useState<"replace" | "merge">("replace");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const bootstrap = async () => {
+      await dbHelper.init();
+      const storedVault = await dbHelper.getItem<VaultPayload>(DB_VAULT_KEY);
+      setVault(storedVault ?? createVaultPayload());
+      setIsReady(true);
+    };
+
+    bootstrap().catch((error) => {
+      console.error(error);
+      toast.error("初始化失敗，請重新整理");
+    });
+  }, []);
+
+  const persistVault = async (nextVault: VaultPayload) => {
+    await dbHelper.setItem(DB_VAULT_KEY, nextVault);
+    setVault(nextVault);
+  };
+
+  const items = vault?.items ?? [];
+  const selectedItem = items.find((item) => item.id === selectedItemId) ?? null;
+  const filteredItems = useMemo(() => searchItems(items, searchQuery), [items, searchQuery]);
+  const pinnedItems = useMemo(() => items.filter((item) => item.isPinned).slice(0, 4), [items]);
+  const recentItems = useMemo(
+    () =>
+      [...items]
+        .sort((a, b) => (b.lastCopiedAt ?? b.updatedAt) - (a.lastCopiedAt ?? a.updatedAt))
+        .slice(0, 5),
+    [items],
+  );
+
+  const stats = useMemo(() => {
+    const sensitiveFields = items.reduce(
+      (count, item) => count + item.fields.filter((field) => field.isSensitive && field.value.trim()).length,
+      0,
+    );
+    return {
+      itemCount: items.length,
+      pinnedCount: items.filter((item) => item.isPinned).length,
+      sensitiveFields,
+    };
+  }, [items]);
+
+  const copyField = async (item: VaultItem, field: VaultField) => {
+    try {
+      await navigator.clipboard.writeText(field.value);
+      if (vault) {
+        const nextVault = {
+          ...vault,
+          items: items.map((entry) => (entry.id === item.id ? touchItem(entry) : entry)),
+        };
+        await persistVault(nextVault);
+      }
+      setSelectedItemId(item.id);
+      toast.success(`已複製 ${field.label}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("複製失敗");
+    }
+  };
+
+  const openEditor = (item?: VaultItem, templateType?: VaultTemplateType) => {
+    setEditorItem(createEditableItem(item, templateType));
+    setEditorOpen(true);
+  };
+
+  const saveEditor = async () => {
+    if (!vault || !editorItem) return;
+    if (!editorItem.title.trim()) {
+      toast.error("請輸入標題");
+      return;
+    }
+
+    const nextItem: VaultItem = {
+      ...editorItem,
+      title: editorItem.title.trim(),
+      tags: editorItem.tagsText
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      fields: editorItem.fields.map((field) => ({
+        ...field,
+        label: field.label.trim() || "未命名欄位",
+      })),
+      updatedAt: Date.now(),
+    };
+
+    const exists = vault.items.some((item) => item.id === nextItem.id);
+    const nextVault = {
+      ...vault,
+      items: exists ? vault.items.map((item) => (item.id === nextItem.id ? nextItem : item)) : [nextItem, ...vault.items],
+    };
+    await persistVault(nextVault);
+    setEditorOpen(false);
+    setEditorItem(null);
+    toast.success(exists ? "資料已更新" : "已新增資料");
+  };
+
+  const removeItem = async (itemId: string) => {
+    if (!vault || !window.confirm("要刪除這筆資料嗎？")) return;
+    const nextVault = {
+      ...vault,
+      items: vault.items.filter((item) => item.id !== itemId),
+    };
+    await persistVault(nextVault);
+    if (selectedItemId === itemId) setSelectedItemId(null);
+    toast.success("已刪除");
+  };
+
+  const togglePin = async (itemId: string) => {
+    if (!vault) return;
+    const nextVault = {
+      ...vault,
+      items: vault.items.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              isPinned: !item.isPinned,
+              updatedAt: Date.now(),
+            }
+          : item,
+      ),
+    };
+    await persistVault(nextVault);
+  };
+
+  const handleExport = () => {
+    if (!vault) return;
+    const payload = JSON.stringify({ format: "wallet-backup-v1", createdAt: Date.now(), vault }, null, 2);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    downloadTextFile(`vault-backup-${stamp}.json`, payload);
+    setExportOpen(false);
+    toast.success("已匯出備份");
+  };
+
+  const handleImport = async () => {
+    if (!vault || !importFile) {
+      toast.error("請先選擇備份檔");
+      return;
+    }
+
+    try {
+      const raw = JSON.parse(await importFile.text()) as { format: string; vault: VaultPayload };
+      if (raw.format !== "wallet-backup-v1") {
+        toast.error("備份格式不正確");
+        return;
+      }
+
+      const incomingVault = raw.vault;
+      const nextVault =
+        importMode === "merge"
+          ? {
+              ...incomingVault,
+              items: [...incomingVault.items, ...vault.items.filter((item) => !incomingVault.items.some((entry) => entry.id === item.id))],
+              settings: vault.settings,
+            }
+          : {
+              ...incomingVault,
+              settings: vault.settings,
+            };
+
+      await persistVault(nextVault);
+      setImportOpen(false);
+      setImportFile(null);
+      toast.success(importMode === "merge" ? "已合併匯入" : "已還原備份");
+    } catch (error) {
+      console.error(error);
+      toast.error("備份檔讀取失敗");
+    }
+  };
+
+  const clearVault = async () => {
+    if (!window.confirm("確定清空所有資料？")) return;
+    const nextVault = createVaultPayload();
+    await persistVault(nextVault);
+    setSelectedItemId(null);
+    setSettingsOpen(false);
+    toast.success("已清空資料");
+  };
+
+  const renderFieldValue = (field: VaultField) => (field.isSensitive && !visibleFields[field.id] ? maskValue(field.value) : field.value || "未填寫");
+
+  if (!isReady || !vault) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 text-center">
+        <div className="space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[28px] border border-white/40 bg-white/80 shadow-lg shadow-slate-900/10 backdrop-blur">
+            <Vault className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm uppercase tracking-[0.32em] text-muted-foreground">Pocket Vault</p>
+            <h1 className="mt-2 text-3xl font-semibold">正在載入資料保管箱</h1>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto min-h-screen w-full max-w-md px-4 pb-28 pt-6">
+      <section className="rounded-[32px] border border-white/50 bg-white/75 p-5 shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Pocket Vault</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">搜尋即複製</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">已取消密碼功能，現在打開 app 就能直接查看與複製資料。</p>
+          </div>
+          <Button variant="secondary" size="icon" className="h-11 w-11 rounded-2xl" onClick={() => setSettingsOpen(true)}>
+            <MoreHorizontal className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          <Card className="border-0 bg-slate-950 text-white shadow-xl shadow-slate-900/15">
+            <CardContent className="p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/60">Items</p>
+              <p className="mt-2 text-3xl font-semibold">{stats.itemCount}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 bg-white/90 shadow-xl shadow-slate-900/10">
+            <CardContent className="p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Pinned</p>
+              <p className="mt-2 text-3xl font-semibold">{stats.pinnedCount}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 bg-emerald-50/90 shadow-xl shadow-emerald-900/10">
+            <CardContent className="p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-700/70">Sensitive</p>
+              <p className="mt-2 text-3xl font-semibold text-emerald-800">{stats.sensitiveFields}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-5 rounded-[28px] bg-slate-950/95 p-4 text-white shadow-xl shadow-slate-900/15">
+          <div className="flex items-center gap-3">
+            <Search className="h-5 w-5 text-white/60" />
+            <input className="h-10 flex-1 bg-transparent text-base outline-none placeholder:text-white/45" placeholder="搜尋姓名、護照、網站、備註..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+            {searchQuery ? (
+              <button className="rounded-full p-1.5 text-white/60" onClick={() => setSearchQuery("")}>
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-5 space-y-5">
+        {!searchQuery && pinnedItems.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-sm font-semibold text-muted-foreground">釘選資料</h2>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                最常用
+              </Badge>
+            </div>
+            <div className="grid gap-3">
+              {pinnedItems.map((item) => (
+                <ItemCard key={item.id} item={item} onOpen={() => setSelectedItemId(item.id)} onCopy={copyField} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {!searchQuery && recentItems.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-sm font-semibold text-muted-foreground">最近使用</h2>
+              <span className="text-xs text-muted-foreground">點卡片就能看到所有欄位</span>
+            </div>
+            <div className="grid gap-3">
+              {recentItems.map((item) => (
+                <ItemCard key={item.id} item={item} onOpen={() => setSelectedItemId(item.id)} onCopy={copyField} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-semibold text-muted-foreground">{searchQuery ? "搜尋結果" : "全部資料"}</h2>
+            <span className="text-xs text-muted-foreground">{filteredItems.length} 筆</span>
+          </div>
+
+          {filteredItems.length === 0 ? (
+            <Card className="border-dashed border-white/60 bg-white/70 shadow-lg shadow-slate-900/5">
+              <CardContent className="flex flex-col items-center justify-center gap-3 px-5 py-10 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-[24px] bg-secondary">
+                  <Search className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold">沒有找到符合的內容</p>
+                  <p className="mt-1 text-sm text-muted-foreground">試著搜尋姓名、護照號碼、網站或欄位名稱。</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {filteredItems.map((item) => (
+                <ItemCard key={item.id} item={item} onOpen={() => setSelectedItemId(item.id)} onCopy={copyField} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <button className="fixed bottom-6 left-1/2 flex h-16 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-center gap-2 rounded-[28px] bg-slate-950 text-base font-medium text-white shadow-2xl shadow-slate-900/20" onClick={() => openEditor(undefined, "login")}>
+        <Plus className="h-5 w-5" />
+        新增資料
+      </button>
+
+      <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItemId(null)}>
+        <DialogContent className="top-auto max-h-[92vh] w-full translate-x-[-50%] translate-y-0 rounded-t-[32px] border-white/50 bg-white/95 p-0 sm:top-[50%] sm:max-w-xl sm:translate-y-[-50%] sm:rounded-[32px]">
+          {selectedItem ? (
+            <div className="max-h-[92vh] overflow-y-auto p-5">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="rounded-full px-3 py-1">
+                      {getTemplateLabel(selectedItem.templateType)}
+                    </Badge>
+                    {selectedItem.isPinned ? (
+                      <Badge variant="secondary" className="rounded-full px-3 py-1">
+                        已釘選
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <h2 className="mt-3 text-2xl font-semibold">{selectedItem.title}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">最近使用：{formatRelativeTime(selectedItem.lastCopiedAt)}</p>
+                </div>
+                <Button variant="secondary" size="icon" className="h-11 w-11 rounded-2xl" onClick={() => openEditor(selectedItem)}>
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {selectedItem.fields.map((field) => (
+                  <Card key={field.id} className="border-white/70 bg-white shadow-lg shadow-slate-900/5">
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{field.label}</p>
+                          <p className="mt-2 break-all text-base font-medium">{renderFieldValue(field)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {field.isSensitive ? (
+                            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl" onClick={() => setVisibleFields((current) => ({ ...current, [field.id]: !current[field.id] }))}>
+                              {visibleFields[field.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                          ) : null}
+                          <Button size="icon" className="h-10 w-10 rounded-2xl" onClick={() => void copyField(selectedItem, field)}>
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {selectedItem.tags.length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selectedItem.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="rounded-full px-3 py-1">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="mt-6 grid grid-cols-3 gap-3">
+                <Button variant="outline" className="rounded-2xl" onClick={() => void togglePin(selectedItem.id)}>
+                  {selectedItem.isPinned ? <PinOff className="mr-1 h-4 w-4" /> : <Pin className="mr-1 h-4 w-4" />}
+                  {selectedItem.isPinned ? "取消釘選" : "釘選"}
+                </Button>
+                <Button variant="outline" className="rounded-2xl" onClick={() => openEditor(selectedItem)}>
+                  編輯
+                </Button>
+                <Button variant="destructive" className="rounded-2xl" onClick={() => void removeItem(selectedItem.id)}>
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  刪除
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+        <DialogContent className="top-auto max-h-[92vh] w-full translate-x-[-50%] translate-y-0 rounded-t-[32px] border-white/50 bg-white/95 p-0 sm:top-[50%] sm:max-w-xl sm:translate-y-[-50%] sm:rounded-[32px]">
+          {editorItem ? (
+            <div className="max-h-[92vh] overflow-y-auto p-5">
+              <DialogHeader>
+                <DialogTitle>{vault?.items.some((item) => item.id === editorItem.id) ? "編輯資料" : "新增資料"}</DialogTitle>
+                <DialogDescription>內建模板可快速開始，也能自由新增欄位。</DialogDescription>
+              </DialogHeader>
+
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  {templates.map((template) => {
+                    const Icon = templateIcons[template.type];
+                    const active = editorItem.templateType === template.type;
+                    return (
+                      <button
+                        key={template.type}
+                        className={classNames("rounded-[24px] border px-3 py-4 text-left transition", active ? "border-primary bg-primary text-primary-foreground" : "border-white/70 bg-white")}
+                        onClick={() => setEditorItem((current) => (current ? { ...current, templateType: template.type, fields: createItemFromTemplate(template.type).fields } : current))}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <p className="mt-3 text-sm font-medium">{template.label}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">標題</label>
+                  <Input value={editorItem.title} onChange={(event) => setEditorItem((current) => (current ? { ...current, title: event.target.value } : current))} placeholder="例如：護照、GitHub、家用 Wi-Fi" />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">標籤</label>
+                  <Input value={editorItem.tagsText} onChange={(event) => setEditorItem((current) => (current ? { ...current, tagsText: event.target.value } : current))} placeholder="例如：旅行, 常用, 工作" />
+                </div>
+
+                <div className="space-y-3">
+                  {editorItem.fields.map((field, index) => (
+                    <Card key={field.id} className="border-white/70 bg-white shadow-sm">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">欄位 {index + 1}</p>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => setEditorItem((current) => (current ? { ...current, fields: current.fields.filter((entry) => entry.id !== field.id) } : current))} disabled={editorItem.fields.length <= 1}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <Input value={field.label} onChange={(event) => setEditorItem((current) => (current ? { ...current, fields: current.fields.map((entry) => (entry.id === field.id ? { ...entry, label: event.target.value } : entry)) } : current))} placeholder="欄位名稱" />
+
+                        {field.type === "multiline" ? (
+                          <Textarea value={field.value} onChange={(event) => setEditorItem((current) => (current ? { ...current, fields: current.fields.map((entry) => (entry.id === field.id ? { ...entry, value: event.target.value } : entry)) } : current))} placeholder="輸入內容" />
+                        ) : (
+                          <Input type={field.type === "password" ? "password" : field.type === "date" ? "date" : "text"} value={field.value} onChange={(event) => setEditorItem((current) => (current ? { ...current, fields: current.fields.map((entry) => (entry.id === field.id ? { ...entry, value: event.target.value } : entry)) } : current))} placeholder="輸入內容" />
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <select className="h-11 rounded-xl border border-input bg-card px-3 text-sm" value={field.type} onChange={(event) => setEditorItem((current) => (current ? { ...current, fields: current.fields.map((entry) => (entry.id === field.id ? { ...entry, type: event.target.value as FieldType } : entry)) } : current))}>
+                            {Object.entries(fieldTypeLabels).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button className={classNames("rounded-xl border px-3 text-sm transition", field.isSensitive ? "border-primary bg-primary/10 text-primary" : "border-input bg-card text-muted-foreground")} onClick={() => setEditorItem((current) => (current ? { ...current, fields: current.fields.map((entry) => (entry.id === field.id ? { ...entry, isSensitive: !entry.isSensitive } : entry)) } : current))}>
+                            {field.isSensitive ? "敏感欄位" : "一般欄位"}
+                          </button>
+                        </div>
+
+                        {field.type === "password" ? (
+                          <Button variant="outline" className="w-full rounded-xl" onClick={() => setEditorItem((current) => (current ? { ...current, fields: current.fields.map((entry) => (entry.id === field.id ? { ...entry, value: generatePassword(), isSensitive: true } : entry)) } : current))}>
+                            <Sparkles className="mr-1 h-4 w-4" />
+                            產生強密碼
+                          </Button>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                <Button variant="outline" className="w-full rounded-2xl" onClick={() => setEditorItem((current) => (current ? { ...current, fields: [...current.fields, { id: crypto.randomUUID(), label: "新欄位", value: "", type: "text", isSensitive: false, copyBehavior: "value" }] } : current))}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  新增欄位
+                </Button>
+
+                <Button className="h-12 w-full rounded-2xl text-base" onClick={() => void saveEditor()}>
+                  儲存資料
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="rounded-[32px] border-white/50 bg-white/95">
+          <DialogHeader>
+            <DialogTitle>匯出備份</DialogTitle>
+            <DialogDescription>已取消密碼保護，備份會直接輸出為 JSON 檔。</DialogDescription>
+          </DialogHeader>
+          <Button className="w-full rounded-2xl" onClick={handleExport}>
+            <FileDown className="mr-1 h-4 w-4" />
+            下載備份
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="rounded-[32px] border-white/50 bg-white/95">
+          <DialogHeader>
+            <DialogTitle>匯入備份</DialogTitle>
+            <DialogDescription>可覆蓋目前資料，或把備份內容和現有資料合併。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <button className="flex h-24 w-full items-center justify-between rounded-[24px] border border-dashed border-input bg-secondary/40 px-4" onClick={() => fileInputRef.current?.click()}>
+              <div className="text-left">
+                <p className="text-sm font-medium">{importFile ? importFile.name : "選擇備份檔"}</p>
+                <p className="mt-1 text-xs text-muted-foreground">接受 `wallet-backup-v1` JSON 檔</p>
+              </div>
+              <FileUp className="h-5 w-5 text-muted-foreground" />
+            </button>
+            <input ref={fileInputRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} />
+
+            <div className="grid grid-cols-2 gap-3">
+              <button className={classNames("rounded-2xl border px-4 py-3 text-sm", importMode === "replace" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card")} onClick={() => setImportMode("replace")}>
+                取代目前資料
+              </button>
+              <button className={classNames("rounded-2xl border px-4 py-3 text-sm", importMode === "merge" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card")} onClick={() => setImportMode("merge")}>
+                合併匯入
+              </button>
+            </div>
+
+            <Button className="w-full rounded-2xl" onClick={() => void handleImport()}>
+              開始匯入
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="top-auto w-full translate-x-[-50%] translate-y-0 rounded-t-[32px] border-white/50 bg-white/95 p-5 sm:top-[50%] sm:max-w-xl sm:translate-y-[-50%] sm:rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle>保管箱設定</DialogTitle>
+            <DialogDescription>目前已取消密碼與鎖定流程，打開 app 就能直接使用。</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <button className="flex w-full items-center justify-between rounded-[24px] border border-white/70 bg-white px-4 py-4 text-left" onClick={() => openEditor(undefined, "identity")}>
+              <div>
+                <p className="font-medium">新增證件資料</p>
+                <p className="mt-1 text-sm text-muted-foreground">快速填姓名、護照號碼、國籍與日期</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+
+            <button className="flex w-full items-center justify-between rounded-[24px] border border-white/70 bg-white px-4 py-4 text-left" onClick={() => setExportOpen(true)}>
+              <div>
+                <p className="font-medium">匯出備份</p>
+                <p className="mt-1 text-sm text-muted-foreground">不再需要輸入備份密碼</p>
+              </div>
+              <FileDown className="h-5 w-5 text-muted-foreground" />
+            </button>
+
+            <button className="flex w-full items-center justify-between rounded-[24px] border border-white/70 bg-white px-4 py-4 text-left" onClick={() => setImportOpen(true)}>
+              <div>
+                <p className="font-medium">匯入備份</p>
+                <p className="mt-1 text-sm text-muted-foreground">可選擇覆蓋或合併現有內容</p>
+              </div>
+              <FileUp className="h-5 w-5 text-muted-foreground" />
+            </button>
+
+            <Button variant="outline" className="w-full rounded-2xl" onClick={() => setSettingsOpen(false)}>
+              <LogOut className="mr-1 h-4 w-4" />
+              關閉設定
+            </Button>
+
+            <Button variant="destructive" className="w-full rounded-2xl" onClick={() => void clearVault()}>
+              <Trash2 className="mr-1 h-4 w-4" />
+              清空所有資料
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </main>
+  );
+}

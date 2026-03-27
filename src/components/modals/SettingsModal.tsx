@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Minus, Plus, Check, CloudCog, ListTodo, CheckCircle2, Trash, PanelTop, Palette, PaintBucket, Droplets, Maximize, Move, Rows, Image as ImageIcon, SendHorizontal, Loader2, FileJson, ShieldAlert, Link, MousePointer2, RefreshCcw } from 'lucide-react';
-import { Settings, ViewConfig, RedeemUrlPreset } from '../../types/ticket';
+import { ModalShell } from '@/components/ui/modal-shell';
+import type { Settings, ViewConfig, RedeemUrlPreset, ViewType } from '../../types/ticket';
 import { generateId } from '../../lib/helpers';
 import { defaultViewConfig } from '../../lib/constants';
 import { compressImage, sendTelegramMessage } from '../../lib/helpers';
@@ -26,9 +27,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onAddToHistory,
 }) => {
   const [localSettings, setLocalSettings] = useState<Settings>(() =>
-    settings ? JSON.parse(JSON.stringify(settings)) : ({} as Settings)
+    settings ? JSON.parse(JSON.stringify(settings)) as Settings : settings
   );
-  const [currentTab, setCurrentTab] = useState<'active' | 'completed' | 'deleted'>('active');
+  const [currentTab, setCurrentTab] = useState<ViewType>('active');
   const [testStatus, setTestStatus] = useState<'sending' | 'success' | 'error' | null>(null);
   const [isForceUpdating, setIsForceUpdating] = useState(false);
   const [newKw, setNewKw] = useState('');
@@ -37,11 +38,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const headerFileInputRef = React.useRef<HTMLInputElement>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setLocalSettings(JSON.parse(JSON.stringify(settings)) as Settings);
+    }
+  }, [isOpen, settings]);
+
   if (!isOpen) return null;
 
   const currentViewConfig: ViewConfig = localSettings.viewConfigs?.[currentTab] || { ...defaultViewConfig };
 
-  const handleGlobalChange = (key: keyof Settings, value: any) => {
+  const handleGlobalChange = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -62,11 +69,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     );
   };
 
-  const handleViewConfigChange = (key: keyof ViewConfig, value: any) => {
+  const handleViewConfigChange = <K extends keyof ViewConfig>(key: K, value: ViewConfig[K]) => {
     setLocalSettings((prev) => {
       const next = { ...prev };
       const currentView = { ...next.viewConfigs[currentTab] };
-      (currentView as any)[key] = value;
+      currentView[key] = value;
 
       const imageUrl = currentView.backgroundImage;
       if (!next.bgConfigMap) next.bgConfigMap = {};
@@ -90,8 +97,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleStep = (key: keyof ViewConfig | keyof Settings, delta: number, min: number, max: number, isViewConfig = true, stepVal = 1) => {
-    const currentVal = isViewConfig ? (currentViewConfig as any)[key] : (localSettings as any)[key];
-    let nextVal = parseFloat(currentVal || 0) + delta * stepVal;
+    const currentVal = isViewConfig
+      ? Number(currentViewConfig[key as keyof ViewConfig] || 0)
+      : Number(localSettings[key as keyof Settings] || 0);
+    let nextVal = currentVal + delta * stepVal;
     // Wrap around: if exceeds max, go to min; if below min, go to max
     if (nextVal > max) {
       nextVal = min;
@@ -171,19 +180,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-foreground/40 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card w-full max-w-sm rounded-3xl p-6 shadow-2xl scale-100 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-foreground">
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      contentClassName="max-w-sm"
+      header={
+        <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
           <CloudCog size={24} className="text-primary" /> 系統設定
         </h2>
-
-        <div className="space-y-5">
+      }
+      footer={
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-xl px-5 py-2.5 font-bold text-muted-foreground transition-colors hover:bg-muted"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSave}
+            className="rounded-xl bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-95 hover:bg-primary/90"
+          >
+            儲存設定
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
               通知天數 (紅框顯示)
@@ -968,7 +991,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
           </div>
-        </div>
         <div className="border-t border-border pt-4 mt-5">
           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
             <RefreshCcw size={14} /> 版本更新
@@ -991,21 +1013,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 text-muted-foreground font-bold hover:bg-muted rounded-xl transition-colors"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
-          >
-            儲存設定
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 };
