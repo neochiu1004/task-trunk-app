@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
+import type { BatchEditPayload, ImportPayload, StoredSettings } from '@/types/app';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
@@ -34,7 +35,7 @@ const Index = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
-  const [importPendingData, setImportPendingData] = useState<any>(null);
+  const [importPendingData, setImportPendingData] = useState<ImportPayload | Ticket[] | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [bgHistory, setBgHistory] = useState<string[]>([]);
@@ -45,7 +46,7 @@ const Index = () => {
   
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const migrateConfig = (config: any) => ({
+  const migrateConfig = (config?: Partial<typeof defaultViewConfig>) => ({
     ...defaultViewConfig,
     ...config,
     bgSize: typeof config?.bgSize === 'number' ? config.bgSize : 100,
@@ -58,14 +59,14 @@ const Index = () => {
       try {
         await dbHelper.init();
         const dbTasks = await dbHelper.getItem<Ticket[]>(DB_KEYS.TASKS);
-        const dbSettings = await dbHelper.getItem<any>(DB_KEYS.SETTINGS);
+        const dbSettings = await dbHelper.getItem<StoredSettings>(DB_KEYS.SETTINGS);
         const dbBgHistory = await dbHelper.getItem<string[]>(DB_KEYS.BG_HISTORY);
         const dbTemplates = await dbHelper.getItem<Template[]>(DB_KEYS.TEMPLATES);
 
         if (dbTasks) setTasks(dbTasks);
         if (dbSettings) {
-          const mergedSettings = {
-            ...settings,
+          const mergedSettings: Settings = {
+            ...defaultSettings,
             ...dbSettings,
             bgConfigMap: dbSettings.bgConfigMap || {},
             specificViewKeywords: dbSettings.specificViewKeywords || ['MOMO', '85度C'],
@@ -134,16 +135,16 @@ const Index = () => {
     );
   };
 
-  const matchesTag = (t: Ticket, tag: string): boolean => {
+  const matchesTag = useCallback((t: Ticket, tag: string): boolean => {
     if (tag === 'special_expiring') return checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
     if (tag === 'special_duplicate') return duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
     if (tag === 'special_has_original') return !!t.originalImage && !t.completed && !t.isDeleted;
     if (tag === 'special_pinned') return !!t.pinned && !t.completed && !t.isDeleted;
     return !!(t.tags && t.tags.includes(tag));
-  };
+  }, [duplicateSerials, settings.notifyDays]);
 
   const filteredTasks = useMemo(() => {
-    let result = tasks.filter((t) => {
+    const result = tasks.filter((t) => {
       if (view === 'active' && (t.completed || t.isDeleted)) return false;
       if (view === 'completed' && (!t.completed || t.isDeleted)) return false;
       if (view === 'deleted' && !t.isDeleted) return false;
@@ -187,7 +188,7 @@ const Index = () => {
       return 0;
     });
     return result;
-  }, [tasks, view, activeTags, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials]);
+  }, [tasks, view, activeTags, searchQuery, sortType, settings.notifyDays, healthIssueSerials, matchesTag]);
 
   const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
   const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
@@ -231,7 +232,10 @@ const Index = () => {
   };
   const handleImportClick = () => {
     const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
-    input.onchange = (e: any) => {
+    input.onchange = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) return;
       const r = new FileReader();
       r.onload = (ev) => { 
         try { 
@@ -247,7 +251,7 @@ const Index = () => {
           alert('JSON 格式錯誤，無法解析檔案'); 
         } 
       };
-      r.readAsText(e.target.files[0]);
+      r.readAsText(file);
     }; input.click();
   };
   const executeImport = (mode: 'append' | 'overwrite', restoreSettings: boolean) => {
@@ -294,11 +298,11 @@ const Index = () => {
   };
   const handleSelect = (id: string) => { const s = new Set(selectedIds); if (s.has(id)) s.delete(id); else s.add(id); setSelectedIds(s); };
   const handleSelectAll = () => setSelectedIds(selectedIds.size === filteredTasks.length ? new Set() : new Set(filteredTasks.map((t) => t.id)));
-  const handleBatchEdit = (payload: any) => {
+  const handleBatchEdit = (payload: BatchEditPayload) => {
     setTasks((prev) => prev.map((t) => {
       if (!selectedIds.has(t.id)) return t;
-      let newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
-      let newRedeemUrl = payload.clearRedeemUrl ? undefined : (payload.redeemUrl || t.redeemUrl);
+      const newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
+      const newRedeemUrl = payload.clearRedeemUrl ? undefined : (payload.redeemUrl || t.redeemUrl);
       return { 
         ...t, 
         tags: newTags, 
