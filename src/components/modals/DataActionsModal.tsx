@@ -1,5 +1,5 @@
 import React from 'react';
-import { DatabaseBackup, ArchiveRestore, Eraser, Activity } from 'lucide-react';
+import { DatabaseBackup, ArchiveRestore, Eraser, Activity, BellOff } from 'lucide-react';
 import { Settings } from '../../types/ticket';
 
 interface DataActionsModalProps {
@@ -7,6 +7,7 @@ interface DataActionsModalProps {
   onClose: () => void;
   onBackup: () => void;
   onImportClick: () => void;
+  onClearExpiryCache: () => void;
   onReset: () => void;
   onHealthCheck: () => void;
   settings: Settings;
@@ -18,6 +19,7 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   onClose,
   onBackup,
   onImportClick,
+  onClearExpiryCache,
   onReset,
   onHealthCheck,
 }) => {
@@ -51,6 +53,12 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
           className="w-full py-4 bg-ticket-success/10 text-ticket-success rounded-2xl font-bold flex flex-col items-center gap-1 hover:bg-ticket-success/20 transition-colors"
         >
           <ArchiveRestore size={24} /> 匯入還原
+        </button>
+        <button
+          onClick={onClearExpiryCache}
+          className="w-full py-4 bg-amber-500/10 text-amber-600 rounded-2xl font-bold flex flex-col items-center gap-1 hover:bg-amber-500/20 transition-colors"
+        >
+          <BellOff size={24} /> 清除到期提醒快取
         </button>
         <button
           onClick={onReset}

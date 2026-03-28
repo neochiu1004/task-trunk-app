@@ -346,9 +346,18 @@ const Index = () => {
   };
   const handleFullReset = async () => {
     if (window.confirm('⚠️ 確定要清空所有資料嗎？')) {
-      await dbHelper.removeItem(DB_KEYS.TASKS); await dbHelper.removeItem(DB_KEYS.SETTINGS); await dbHelper.removeItem(DB_KEYS.BG_HISTORY); await dbHelper.removeItem(DB_KEYS.TEMPLATES);
+      await dbHelper.removeItem(DB_KEYS.TASKS);
+      await dbHelper.removeItem(DB_KEYS.SETTINGS);
+      await dbHelper.removeItem(DB_KEYS.BG_HISTORY);
+      await dbHelper.removeItem(DB_KEYS.TEMPLATES);
+      await dbHelper.removeItem(DB_KEYS.EXPIRY_NOTIFIED);
       window.location.reload();
     }
+  };
+  const handleClearExpiryCache = async () => {
+    await dbHelper.removeItem(DB_KEYS.EXPIRY_NOTIFIED);
+    alert('已清除到期提醒快取，重新整理後會以目前票券重新計算提醒。');
+    window.location.reload();
   };
   const handleSelect = (id: string) => { const s = new Set(selectedIds); if (s.has(id)) s.delete(id); else s.add(id); setSelectedIds(s); };
   const handleSelectAll = () => setSelectedIds(selectedIds.size === filteredTasks.length ? new Set() : new Set(filteredTasks.map((t) => t.id)));
@@ -741,6 +750,7 @@ const Index = () => {
         onClose={() => setShowDataModal(false)} 
         onBackup={handleBackup} 
         onImportClick={handleImportClick} 
+        onClearExpiryCache={handleClearExpiryCache}
         onReset={handleFullReset} 
         onHealthCheck={() => { setShowDataModal(false); setShowHealthCheck(true); }} 
         settings={settings}
