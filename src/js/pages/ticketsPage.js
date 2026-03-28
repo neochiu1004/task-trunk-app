@@ -1362,9 +1362,41 @@ export class TicketsPage {
   }
 
   buildTicketDerivedMap(notifyDays = this.app.state.settings.notifyDays) {
-    return this.app.state.tasks.reduce((map, ticket) => {
+    return this.buildTicketAnalysis(notifyDays).derivedMap;
+  }
+
+  buildTicketSerialCounts() {
+    return this.buildTicketAnalysis(this.app.state.settings.notifyDays).serialCounts;
+  }
+
+  collectTicketSummary() {
+    const {
+      allTags,
+      urgentActiveCount,
+      completedTotalCount,
+      deletedTotalCount,
+    } = this.buildTicketAnalysis(this.app.state.settings.notifyDays);
+    return {
+      allTags,
+      urgentActiveCount,
+      completedTotalCount,
+      deletedTotalCount,
+    };
+  }
+
+  buildTicketAnalysis(notifyDays = this.app.state.settings.notifyDays) {
+    const derivedMap = new Map();
+    const serialCounts = new Map();
+    const allTags = new Set();
+    let urgentActiveCount = 0;
+    let completedTotalCount = 0;
+    let deletedTotalCount = 0;
+
+    for (const ticket of this.app.state.tasks) {
       const expiryState = getExpiryState(ticket.expiry, notifyDays);
-      map.set(ticket.id, {
+      const isExpiring = ['expired', 'today', 'soon'].includes(expiryState);
+
+      derivedMap.set(ticket.id, {
         searchText: [
           ticket.productName,
           ticket.serial,
@@ -1374,54 +1406,39 @@ export class TicketsPage {
         ].filter(Boolean).join(' ').toLowerCase(),
         expiryState,
         expiryCountdown: getExpiryCountdownLabel(ticket.expiry),
-        isExpiring: ['expired', 'today', 'soon'].includes(expiryState),
+        isExpiring,
       });
-      return map;
-    }, new Map());
-  }
 
-  buildTicketSerialCounts() {
-    return this.app.state.tasks.reduce((counts, ticket) => {
-      if (ticket.isDeleted || !ticket.serial) return counts;
-      counts.set(ticket.serial, (counts.get(ticket.serial) || 0) + 1);
-      return counts;
-    }, new Map());
-  }
-
-  collectTicketSummary() {
-    const summary = {
-      allTags: new Set(),
-      urgentActiveCount: 0,
-      completedTotalCount: 0,
-      deletedTotalCount: 0,
-    };
-
-    for (const ticket of this.app.state.tasks) {
       for (const tag of ticket.tags || []) {
-        summary.allTags.add(tag);
+        allTags.add(tag);
+      }
+
+      if (!ticket.isDeleted && ticket.serial) {
+        serialCounts.set(ticket.serial, (serialCounts.get(ticket.serial) || 0) + 1);
       }
 
       if (ticket.isDeleted) {
-        summary.deletedTotalCount += 1;
+        deletedTotalCount += 1;
         continue;
       }
 
       if (ticket.completed) {
-        summary.completedTotalCount += 1;
+        completedTotalCount += 1;
         continue;
       }
 
-      const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
-      if (state === 'expired' || state === 'today' || state === 'soon') {
-        summary.urgentActiveCount += 1;
+      if (isExpiring) {
+        urgentActiveCount += 1;
       }
     }
 
     return {
-      allTags: [...summary.allTags].sort(),
-      urgentActiveCount: summary.urgentActiveCount,
-      completedTotalCount: summary.completedTotalCount,
-      deletedTotalCount: summary.deletedTotalCount,
+      derivedMap,
+      serialCounts,
+      allTags: [...allTags].sort(),
+      urgentActiveCount,
+      completedTotalCount,
+      deletedTotalCount,
     };
   }
 
@@ -1430,9 +1447,16 @@ export class TicketsPage {
     this.clearBackgroundInsetHandler();
     this.showSwipeHintIfNeeded();
     const meta = VIEW_META[this.view];
-    const derivedMap = this.buildTicketDerivedMap(this.app.state.settings.notifyDays);
+    const ticketAnalysis = this.buildTicketAnalysis(this.app.state.settings.notifyDays);
+    const {
+      derivedMap,
+      serialCounts,
+      allTags,
+      urgentActiveCount,
+      completedTotalCount,
+      deletedTotalCount,
+    } = ticketAnalysis;
     const tickets = this.filterTickets(derivedMap);
-    const serialCounts = this.buildTicketSerialCounts();
     const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
     const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
     const showThumbnail = viewConfig.showThumbnail !== false;
@@ -1478,12 +1502,6 @@ export class TicketsPage {
     const backgroundLayerHtml = initialBackgroundImage && showBackground
       ? `<div class="ticket-view-bg-layer" style="background-image: url('${escapeHtml(initialBackgroundImage)}'); opacity: ${bgOpacity};"></div>`
       : '';
-    const {
-      allTags,
-      urgentActiveCount,
-      completedTotalCount,
-      deletedTotalCount,
-    } = this.collectTicketSummary();
     const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
       tag === ORIGINAL_IMAGE_FILTER_TAG
         ? '原圖'
