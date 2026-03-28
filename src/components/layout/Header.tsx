@@ -120,6 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   // 決定 Logo 顯示：自訂 > 背景圖 > 預設
   const displayLogo = brandLogo || vouchyLogo;
+  const canUseSelection = currentView === 'active';
 
   // 按鈕顏色配置
   const buttonConfigs = [
@@ -430,33 +431,37 @@ export const Header: React.FC<HeaderProps> = ({
         {/* View Tabs & Controls */}
         <div className="flex justify-between items-center gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto no-scrollbar">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setIsSelectionMode(!isSelectionMode)}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 flex-shrink-0 ${
-                isSelectionMode 
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
-                  : 'glass-button text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <BoxSelect size={12} /> {isSelectionMode ? `${selectedCount}` : '選'}
-            </motion.button>
-            
-            <AnimatePresence>
-              {isSelectionMode && (
+            {canUseSelection && (
+              <>
                 <motion.button
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={onSelectAll}
-                  className="px-3 py-2 glass-button rounded-xl text-xs font-semibold flex items-center gap-1.5 text-muted-foreground hover:text-foreground flex-shrink-0"
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => setIsSelectionMode(!isSelectionMode)}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 flex-shrink-0 ${
+                    isSelectionMode 
+                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
+                      : 'glass-button text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  <CheckSquare size={12} /> 全選
+                  <BoxSelect size={12} /> {isSelectionMode ? `${selectedCount}` : '選'}
                 </motion.button>
-              )}
-            </AnimatePresence>
+                
+                <AnimatePresence>
+                  {isSelectionMode && (
+                    <motion.button
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={onSelectAll}
+                      className="px-3 py-2 glass-button rounded-xl text-xs font-semibold flex items-center gap-1.5 text-muted-foreground hover:text-foreground flex-shrink-0"
+                    >
+                      <CheckSquare size={12} /> 全選
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
             
           </div>
 

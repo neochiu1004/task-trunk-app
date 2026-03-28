@@ -236,6 +236,13 @@ const Index = () => {
   }, [filteredTasks.length, isSelectionMode]);
 
   useEffect(() => {
+    if (view !== 'active' && isSelectionMode) {
+      setIsSelectionMode(false);
+      setSelectedIds(new Set());
+    }
+  }, [view, isSelectionMode]);
+
+  useEffect(() => {
     if (selectedTicket && !tasks.some((t) => t.id === selectedTicket.id)) {
       setSelectedTicket(null);
     }
