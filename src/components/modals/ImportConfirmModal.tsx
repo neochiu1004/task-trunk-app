@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { FileJson, Check } from 'lucide-react';
+import type { ImportPayload } from '@/types/app';
+import type { Ticket } from '@/types/ticket';
 
 interface ImportConfirmModalProps {
   isOpen: boolean;
-  data: any;
+  data: ImportPayload | Ticket[] | null;
   onConfirm: (mode: 'append' | 'overwrite', restoreSettings: boolean) => void;
   onCancel: () => void;
 }

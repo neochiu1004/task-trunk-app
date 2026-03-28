@@ -3,6 +3,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
+import type { BatchEditPayload, ImportPayload, StoredSettings } from '@/types/app';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
@@ -43,7 +44,7 @@ const Index = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
-  const [importPendingData, setImportPendingData] = useState<any>(null);
+  const [importPendingData, setImportPendingData] = useState<ImportPayload | Ticket[] | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [bgHistory, setBgHistory] = useState<string[]>([]);
@@ -54,7 +55,7 @@ const Index = () => {
   
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const migrateConfig = (config: any) => ({
+  const migrateConfig = (config?: Partial<typeof defaultViewConfig>) => ({
     ...defaultViewConfig,
     ...config,
     bgSize: typeof config?.bgSize === 'number' ? config.bgSize : 100,
@@ -67,7 +68,7 @@ const Index = () => {
       try {
         await dbHelper.init();
         const dbTasks = await dbHelper.getItem<Ticket[]>(DB_KEYS.TASKS);
-        const dbSettings = await dbHelper.getItem<any>(DB_KEYS.SETTINGS);
+        const dbSettings = await dbHelper.getItem<StoredSettings>(DB_KEYS.SETTINGS);
         const dbBgHistory = await dbHelper.getItem<string[]>(DB_KEYS.BG_HISTORY);
         const dbTemplates = await dbHelper.getItem<Template[]>(DB_KEYS.TEMPLATES);
 
@@ -308,7 +309,10 @@ const Index = () => {
   };
   const handleImportClick = () => {
     const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
-    input.onchange = (e: any) => {
+    input.onchange = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) return;
       const r = new FileReader();
       r.onload = (ev) => { 
         try { 
@@ -324,7 +328,7 @@ const Index = () => {
           alert('JSON 格式錯誤，無法解析檔案'); 
         } 
       };
-      r.readAsText(e.target.files[0]);
+      r.readAsText(file);
     }; input.click();
   };
   const executeImport = (mode: 'append' | 'overwrite', restoreSettings: boolean) => {
@@ -380,7 +384,7 @@ const Index = () => {
   };
   const handleSelect = (id: string) => { const s = new Set(selectedIds); if (s.has(id)) s.delete(id); else s.add(id); setSelectedIds(s); };
   const handleSelectAll = () => setSelectedIds(selectedIds.size === filteredTasks.length ? new Set() : new Set(filteredTasks.map((t) => t.id)));
-  const handleBatchEdit = (payload: any) => {
+  const handleBatchEdit = (payload: BatchEditPayload) => {
     setTasks((prev) => prev.map((t) => {
       if (!selectedIds.has(t.id)) return t;
       let newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
