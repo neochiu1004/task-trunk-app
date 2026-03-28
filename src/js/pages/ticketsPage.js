@@ -1913,22 +1913,6 @@ export class TicketsPage {
       this.render();
     });
 
-    root.querySelectorAll('[data-filter-tag]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const tag = btn.dataset.filterTag;
-        if (!tag) return;
-        const idx = this.app.state.ui.activeTags.indexOf(tag);
-        if (idx >= 0) {
-          this.app.state.ui.activeTags.splice(idx, 1);
-        } else {
-          this.app.state.ui.activeTags.push(tag);
-        }
-        const pruned = pruneSelectionToVisible();
-        if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-        this.render();
-      });
-    });
-
     root.querySelector('[data-tag-clear]')?.addEventListener('click', () => {
       this.app.state.ui.activeTags = [];
       const pruned = pruneSelectionToVisible();
@@ -1948,34 +1932,6 @@ export class TicketsPage {
       }
     });
 
-    root.querySelector('#continue-batch-hint-btn')?.addEventListener('click', () => {
-      const firstEnabledBatchBtn = root.querySelector('.batch-actions [data-batch]:not([disabled])');
-      if (!firstEnabledBatchBtn) return;
-      firstEnabledBatchBtn.focus();
-      showToast('已定位到批次操作', 'success');
-      this.hideContinueBatchHint();
-      const hintBtn = root.querySelector('#continue-batch-hint-btn');
-      hintBtn?.classList.add('hidden');
-      hintBtn?.setAttribute('aria-hidden', 'true');
-    });
-
-    root.querySelector('#continue-batch-hint-btn')?.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      event.currentTarget.click();
-    });
-
-    root.querySelectorAll('[data-select]').forEach((box) => {
-      box.addEventListener('change', () => {
-        const id = box.dataset.select;
-        if (!id) return;
-        if (box.checked) this.app.state.ui.selectedIds.add(id);
-        else this.app.state.ui.selectedIds.delete(id);
-        this.hideContinueBatchHint();
-        this.render();
-      });
-    });
-
     const toggleCardSelection = (ticketId) => {
       if (!ticketId || !this.app.state.ui.selectionMode) return;
       if (this.app.state.ui.selectedIds.has(ticketId)) {
@@ -1988,56 +1944,10 @@ export class TicketsPage {
     };
 
     root.querySelectorAll('.ticket-card').forEach((card) => {
-      card.addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.closest('button, a, input, textarea, select, label')) return;
-        if (card.dataset.swipeSuppressClick === '1') {
-          card.dataset.swipeSuppressClick = '0';
-          return;
-        }
-        const ticketId = card.dataset.ticketId;
-        if (!ticketId) return;
-
-        if (this.app.state.ui.selectionMode) {
-          toggleCardSelection(ticketId);
-          return;
-        }
-
-        const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
-        if (!ticket || ticket.isDeleted) return;
-        if (ticket.completed) {
-          showToast('此票券已核銷，請至已使用視圖管理', 'success');
-          return;
-        }
-
-        this.openRedeemModeModal(ticket);
-      });
-
-      card.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        const target = event.target;
-        if (target.closest('button, a, input, textarea, select, label')) return;
-        event.preventDefault();
-        toggleCardSelection(card.dataset.ticketId);
-      });
-
       this.bindCardSwipeGesture(card);
     });
 
-    root.querySelectorAll('[data-tag]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const tag = btn.dataset.tag;
-        if (!tag) return;
-        if (!this.app.state.ui.activeTags.includes(tag)) {
-          this.app.state.ui.activeTags.push(tag);
-        }
-        this.render();
-      });
-    });
-
-    root.querySelectorAll('[data-batch]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const action = btn.dataset.batch;
+    const handleBatchAction = async (action) => {
         const ids = [...this.app.state.ui.selectedIds];
         const finishBatch = () => {
           if (this.app.state.ui.keepSelectionMode) {
@@ -2249,19 +2159,12 @@ export class TicketsPage {
         };
         showToast(actionMessages[action] || '批次操作完成', 'success');
         this.render();
-      });
-    });
+    };
 
-    root.querySelectorAll('[data-action]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const article = btn.closest('[data-ticket-id]');
-        const ticketId = article?.dataset.ticketId;
+    const handleTicketAction = async (action, ticketId) => {
         if (!ticketId) return;
-
         const ticket = this.app.state.tasks.find((t) => t.id === ticketId);
         if (!ticket) return;
-
-        const action = btn.dataset.action;
         if (action === 'edit') {
           this.app.state.ui.selectionMode = false;
           this.app.state.ui.selectedIds.clear();
@@ -2326,7 +2229,109 @@ export class TicketsPage {
           await this.app.persistTasks();
           this.render();
         }
-      });
+    };
+
+    root.addEventListener('change', (event) => {
+      const box = event.target.closest('[data-select]');
+      if (!box) return;
+      const id = box.dataset.select;
+      if (!id) return;
+      if (box.checked) this.app.state.ui.selectedIds.add(id);
+      else this.app.state.ui.selectedIds.delete(id);
+      this.hideContinueBatchHint();
+      this.render();
+    });
+
+    root.addEventListener('keydown', (event) => {
+      const continueHint = event.target.closest('#continue-batch-hint-btn');
+      if (continueHint) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        continueHint.click();
+        return;
+      }
+
+      const card = event.target.closest('.ticket-card');
+      if (!card) return;
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.target.closest('button, a, input, textarea, select, label')) return;
+      event.preventDefault();
+      toggleCardSelection(card.dataset.ticketId);
+    });
+
+    root.addEventListener('click', async (event) => {
+      const continueHint = event.target.closest('#continue-batch-hint-btn');
+      if (continueHint) {
+        const firstEnabledBatchBtn = root.querySelector('.batch-actions [data-batch]:not([disabled])');
+        if (!firstEnabledBatchBtn) return;
+        firstEnabledBatchBtn.focus();
+        showToast('已定位到批次操作', 'success');
+        this.hideContinueBatchHint();
+        continueHint.classList.add('hidden');
+        continueHint.setAttribute('aria-hidden', 'true');
+        return;
+      }
+
+      const filterTagButton = event.target.closest('[data-filter-tag]');
+      if (filterTagButton) {
+        const tag = filterTagButton.dataset.filterTag;
+        if (!tag) return;
+        const idx = this.app.state.ui.activeTags.indexOf(tag);
+        if (idx >= 0) this.app.state.ui.activeTags.splice(idx, 1);
+        else this.app.state.ui.activeTags.push(tag);
+        const pruned = pruneSelectionToVisible();
+        if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+        this.render();
+        return;
+      }
+
+      const tagButton = event.target.closest('[data-tag]');
+      if (tagButton) {
+        const tag = tagButton.dataset.tag;
+        if (!tag) return;
+        if (!this.app.state.ui.activeTags.includes(tag)) {
+          this.app.state.ui.activeTags.push(tag);
+        }
+        this.render();
+        return;
+      }
+
+      const batchButton = event.target.closest('[data-batch]');
+      if (batchButton) {
+        await handleBatchAction(batchButton.dataset.batch);
+        return;
+      }
+
+      const actionButton = event.target.closest('[data-action]');
+      if (actionButton) {
+        const article = actionButton.closest('[data-ticket-id]');
+        await handleTicketAction(actionButton.dataset.action, article?.dataset.ticketId);
+        return;
+      }
+
+      const card = event.target.closest('.ticket-card');
+      if (!card) return;
+      if (event.target.closest('button, a, input, textarea, select, label')) return;
+      if (card.dataset.swipeSuppressClick === '1') {
+        card.dataset.swipeSuppressClick = '0';
+        return;
+      }
+      const ticketId = card.dataset.ticketId;
+      if (!ticketId) return;
+
+      if (this.app.state.ui.selectionMode) {
+        toggleCardSelection(ticketId);
+        return;
+      }
+
+      const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
+      if (!ticket || ticket.isDeleted) return;
+      if (ticket.completed) {
+        showToast('此票券已核銷，請至已使用視圖管理', 'success');
+        return;
+      }
+
+      this.openRedeemModeModal(ticket);
     });
   }
 }
