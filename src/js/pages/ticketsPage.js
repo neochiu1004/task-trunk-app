@@ -570,30 +570,8 @@ export class TicketsPage {
     });
   }
 
-  openRedeemModeModal(ticket) {
-    const originalImage = ticket.originalImage || '';
-    const hasOriginalImage = !!originalImage;
-    const hasBarcodeSource = !!ticket.serial;
-    const defaultMode = hasOriginalImage ? 'original' : 'barcode';
-    const keywords = (this.app.state.settings.specificViewKeywords || []).length
-      ? this.app.state.settings.specificViewKeywords
-      : ['MOMO', '85度C'];
-    const searchTarget = `${ticket.productName || ''}${(ticket.tags || []).join('')}`.toUpperCase();
-    const isSpecificView = keywords.some((kw) => searchTarget.includes((kw || '').toUpperCase()));
-
-    if (!hasOriginalImage && !hasBarcodeSource) {
-      showToast('此票券缺少原圖與序號，無法開啟核銷模式', 'error');
-      return;
-    }
-
-    const bcid = resolveBarcodeBcid(ticket.barcodeFormat);
-    const safeBcid = ['qrcode', 'datamatrix', 'azteccode', 'pdf417', 'maxicode'].includes(bcid)
-      ? 'code128'
-      : bcid;
-
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 z-[95] bg-black/72 backdrop-blur-sm flex items-center justify-center p-0';
-    modal.innerHTML = `
+  buildRedeemModalMarkup(ticket, { hasOriginalImage, hasBarcodeSource, defaultMode }) {
+    return `
       <div id="redeem-shell" class="w-full h-full rounded-none border-0 bg-white shadow-2xl p-3 md:p-4 flex flex-col">
         <div id="redeem-header" data-redeem-keepopen="1" class="flex items-start justify-between gap-3 mb-2 md:mb-3">
           <div class="min-w-0">
@@ -620,6 +598,165 @@ export class TicketsPage {
         </div>
       </div>
     `;
+  }
+
+  updateRedeemModeButtonState(modal, { mode, barcodeVariant, hasOriginalImage, shell, header, modeSwitch, previewWrap, barcodeVariantSwitch, footer }) {
+    modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
+      const btnMode = btn.dataset.redeemMode;
+      const isActive = btnMode === mode;
+      btn.classList.toggle('bg-wabi-primary', isActive);
+      btn.classList.toggle('text-white', isActive);
+      btn.classList.toggle('border-wabi-primary', isActive);
+    });
+
+    const immersiveOriginal = mode === 'original' && hasOriginalImage;
+    header?.classList.toggle('hidden', immersiveOriginal);
+    modeSwitch?.classList.toggle('hidden', immersiveOriginal);
+    footer?.classList.toggle('hidden', immersiveOriginal);
+
+    if (shell) {
+      shell.classList.toggle('p-0', immersiveOriginal);
+      shell.classList.toggle('bg-black', immersiveOriginal);
+      shell.classList.toggle('p-3', !immersiveOriginal);
+      shell.classList.toggle('md:p-4', !immersiveOriginal);
+      shell.classList.toggle('bg-white', !immersiveOriginal);
+    }
+
+    if (previewWrap) {
+      previewWrap.classList.toggle('border-0', immersiveOriginal);
+      previewWrap.classList.toggle('rounded-none', immersiveOriginal);
+      previewWrap.classList.toggle('bg-black', immersiveOriginal);
+      previewWrap.classList.toggle('border', !immersiveOriginal);
+      previewWrap.classList.toggle('border-wabi-border', !immersiveOriginal);
+      previewWrap.classList.toggle('rounded-lg', !immersiveOriginal);
+      previewWrap.classList.toggle('bg-slate-100', !immersiveOriginal);
+    }
+
+    if (barcodeVariantSwitch) {
+      barcodeVariantSwitch.classList.toggle('hidden', immersiveOriginal || mode !== 'barcode');
+    }
+
+    modal.querySelectorAll('[data-barcode-variant]').forEach((btn) => {
+      const isActive = btn.dataset.barcodeVariant === barcodeVariant;
+      btn.classList.toggle('bg-wabi-primary', isActive);
+      btn.classList.toggle('text-white', isActive);
+      btn.classList.toggle('border-wabi-primary', isActive);
+    });
+  }
+
+  async drawRedeemBarcodeSvg(ticket, container, targetBcid, scale = 3, height = 10) {
+    const { toSVG } = await getBarcodeSvgRenderer();
+    try {
+      const markup = toSVG({
+        bcid: targetBcid,
+        text: ticket.serial,
+        scale,
+        height,
+        includetext: true,
+        textxalign: 'center',
+        backgroundcolor: 'FFFFFF',
+      });
+      container.innerHTML = markup;
+    } catch (_error) {
+      const fallbackMarkup = toSVG({
+        bcid: 'code128',
+        text: ticket.serial,
+        scale,
+        height,
+        includetext: true,
+        textxalign: 'center',
+        backgroundcolor: 'FFFFFF',
+      });
+      container.innerHTML = fallbackMarkup;
+    }
+
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', 'auto');
+    svg.classList.add('w-full', 'h-auto', 'block');
+  }
+
+  mountDeferredRedeemBarcode(ticket, container, targetBcid, scale = 3, height = 10) {
+    if (!container) return;
+    container.innerHTML = `
+      <button
+        type="button"
+        data-load-barcode
+        data-redeem-ignore-swipe="1"
+        class="w-full min-h-[160px] rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-wabi-primary hover:bg-white"
+      >
+        <span class="block text-sm font-semibold text-slate-700">載入條碼預覽</span>
+        <span class="mt-1 block text-xs text-slate-500">需要時再下載條碼模組，開啟會更快</span>
+      </button>
+    `;
+
+    const button = container.querySelector('[data-load-barcode]');
+    if (!button) return;
+
+    button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.disabled = true;
+      button.classList.add('opacity-70', 'cursor-wait');
+      button.innerHTML = `
+        <span class="block text-sm font-semibold text-slate-700">正在載入條碼...</span>
+        <span class="mt-1 block text-xs text-slate-500">首次載入可能需要幾秒</span>
+      `;
+
+      try {
+        await this.drawRedeemBarcodeSvg(ticket, container, targetBcid, scale, height);
+      } catch (_error) {
+        container.innerHTML = `
+          <button
+            type="button"
+            data-load-barcode
+            data-redeem-ignore-swipe="1"
+            class="w-full min-h-[160px] rounded-lg border border-dashed border-rose-300 bg-rose-50 px-4 py-6 text-center transition hover:border-rose-400"
+          >
+            <span class="block text-sm font-semibold text-rose-700">條碼載入失敗，點我重試</span>
+            <span class="mt-1 block text-xs text-rose-500">可先使用 QR Code 或原圖模式</span>
+          </button>
+        `;
+        this.mountDeferredRedeemBarcode(ticket, container, targetBcid, scale, height);
+      }
+    }, { once: true });
+  }
+
+  async drawRedeemQrCanvas(ticket, canvas, size = 180) {
+    const QRious = await getQrRenderer();
+    new QRious({
+      element: canvas,
+      value: ticket.serial || '',
+      size,
+      level: 'H',
+    });
+  }
+
+  openRedeemModeModal(ticket) {
+    const originalImage = ticket.originalImage || '';
+    const hasOriginalImage = !!originalImage;
+    const hasBarcodeSource = !!ticket.serial;
+    const defaultMode = hasOriginalImage ? 'original' : 'barcode';
+    const keywords = (this.app.state.settings.specificViewKeywords || []).length
+      ? this.app.state.settings.specificViewKeywords
+      : ['MOMO', '85度C'];
+    const searchTarget = `${ticket.productName || ''}${(ticket.tags || []).join('')}`.toUpperCase();
+    const isSpecificView = keywords.some((kw) => searchTarget.includes((kw || '').toUpperCase()));
+
+    if (!hasOriginalImage && !hasBarcodeSource) {
+      showToast('此票券缺少原圖與序號，無法開啟核銷模式', 'error');
+      return;
+    }
+
+    const bcid = resolveBarcodeBcid(ticket.barcodeFormat);
+    const safeBcid = ['qrcode', 'datamatrix', 'azteccode', 'pdf417', 'maxicode'].includes(bcid)
+      ? 'code128'
+      : bcid;
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-[95] bg-black/72 backdrop-blur-sm flex items-center justify-center p-0';
+    modal.innerHTML = this.buildRedeemModalMarkup(ticket, { hasOriginalImage, hasBarcodeSource, defaultMode });
 
     let mode = defaultMode;
     let barcodeVariant = isSpecificView ? 'momo' : 'standard';
@@ -629,139 +766,6 @@ export class TicketsPage {
     const modeSwitch = modal.querySelector('#redeem-mode-switch');
     const barcodeVariantSwitch = modal.querySelector('#barcode-variant-switch');
     const footer = modal.querySelector('#redeem-footer');
-
-    const updateModeButtonState = () => {
-      modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
-        const btnMode = btn.dataset.redeemMode;
-        const isActive = btnMode === mode;
-        btn.classList.toggle('bg-wabi-primary', isActive);
-        btn.classList.toggle('text-white', isActive);
-        btn.classList.toggle('border-wabi-primary', isActive);
-      });
-
-      const immersiveOriginal = mode === 'original' && hasOriginalImage;
-      header?.classList.toggle('hidden', immersiveOriginal);
-      modeSwitch?.classList.toggle('hidden', immersiveOriginal);
-      footer?.classList.toggle('hidden', immersiveOriginal);
-
-      if (shell) {
-        shell.classList.toggle('p-0', immersiveOriginal);
-        shell.classList.toggle('bg-black', immersiveOriginal);
-        shell.classList.toggle('p-3', !immersiveOriginal);
-        shell.classList.toggle('md:p-4', !immersiveOriginal);
-        shell.classList.toggle('bg-white', !immersiveOriginal);
-      }
-
-      if (previewWrap) {
-        previewWrap.classList.toggle('border-0', immersiveOriginal);
-        previewWrap.classList.toggle('rounded-none', immersiveOriginal);
-        previewWrap.classList.toggle('bg-black', immersiveOriginal);
-        previewWrap.classList.toggle('border', !immersiveOriginal);
-        previewWrap.classList.toggle('border-wabi-border', !immersiveOriginal);
-        previewWrap.classList.toggle('rounded-lg', !immersiveOriginal);
-        previewWrap.classList.toggle('bg-slate-100', !immersiveOriginal);
-      }
-
-      if (barcodeVariantSwitch) {
-        barcodeVariantSwitch.classList.toggle('hidden', immersiveOriginal || mode !== 'barcode');
-      }
-
-      modal.querySelectorAll('[data-barcode-variant]').forEach((btn) => {
-        const isActive = btn.dataset.barcodeVariant === barcodeVariant;
-        btn.classList.toggle('bg-wabi-primary', isActive);
-        btn.classList.toggle('text-white', isActive);
-        btn.classList.toggle('border-wabi-primary', isActive);
-      });
-    };
-
-    const drawBarcodeSvg = async (container, targetBcid = safeBcid, scale = 3, height = 10) => {
-      const { toSVG } = await getBarcodeSvgRenderer();
-      try {
-        const markup = toSVG({
-          bcid: targetBcid,
-          text: ticket.serial,
-          scale,
-          height,
-          includetext: true,
-          textxalign: 'center',
-          backgroundcolor: 'FFFFFF',
-        });
-        container.innerHTML = markup;
-      } catch (_error) {
-        const fallbackMarkup = toSVG({
-          bcid: 'code128',
-          text: ticket.serial,
-          scale,
-          height,
-          includetext: true,
-          textxalign: 'center',
-          backgroundcolor: 'FFFFFF',
-        });
-        container.innerHTML = fallbackMarkup;
-      }
-
-      const svg = container.querySelector('svg');
-      if (!svg) return;
-      svg.setAttribute('width', '100%');
-      svg.setAttribute('height', 'auto');
-      svg.classList.add('w-full', 'h-auto', 'block');
-    };
-
-    const mountDeferredBarcode = (container, targetBcid = safeBcid, scale = 3, height = 10) => {
-      if (!container) return;
-      container.innerHTML = `
-        <button
-          type="button"
-          data-load-barcode
-          data-redeem-ignore-swipe="1"
-          class="w-full min-h-[160px] rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-wabi-primary hover:bg-white"
-        >
-          <span class="block text-sm font-semibold text-slate-700">載入條碼預覽</span>
-          <span class="mt-1 block text-xs text-slate-500">需要時再下載條碼模組，開啟會更快</span>
-        </button>
-      `;
-
-      const button = container.querySelector('[data-load-barcode]');
-      if (!button) return;
-
-      button.addEventListener('click', async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        button.disabled = true;
-        button.classList.add('opacity-70', 'cursor-wait');
-        button.innerHTML = `
-          <span class="block text-sm font-semibold text-slate-700">正在載入條碼...</span>
-          <span class="mt-1 block text-xs text-slate-500">首次載入可能需要幾秒</span>
-        `;
-
-        try {
-          await drawBarcodeSvg(container, targetBcid, scale, height);
-        } catch (_error) {
-          container.innerHTML = `
-            <button
-              type="button"
-              data-load-barcode
-              data-redeem-ignore-swipe="1"
-              class="w-full min-h-[160px] rounded-lg border border-dashed border-rose-300 bg-rose-50 px-4 py-6 text-center transition hover:border-rose-400"
-            >
-              <span class="block text-sm font-semibold text-rose-700">條碼載入失敗，點我重試</span>
-              <span class="mt-1 block text-xs text-rose-500">可先使用 QR Code 或原圖模式</span>
-            </button>
-          `;
-          mountDeferredBarcode(container, targetBcid, scale, height);
-        }
-      }, { once: true });
-    };
-
-    const drawQrCanvas = async (canvas, size = 180) => {
-      const QRious = await getQrRenderer();
-      new QRious({
-        element: canvas,
-        value: ticket.serial || '',
-        size,
-        level: 'H',
-      });
-    };
 
     const renderStandardBarcodePreview = async () => {
       if (!ticket.serial) {
@@ -786,8 +790,8 @@ export class TicketsPage {
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas');
       if (!barcodeSvg || !qrCanvas) return;
 
-      mountDeferredBarcode(barcodeSvg, safeBcid, 3, 10);
-      await drawQrCanvas(qrCanvas, 180);
+      this.mountDeferredRedeemBarcode(ticket, barcodeSvg, safeBcid, 3, 10);
+      await this.drawRedeemQrCanvas(ticket, qrCanvas, 180);
     };
 
     const renderMomoBarcodePreview = async () => {
@@ -840,8 +844,8 @@ export class TicketsPage {
       const barcodeSvg = previewWrap.querySelector('#redeem-barcode-svg-momo');
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas-momo');
       if (!barcodeSvg || !qrCanvas) return;
-      mountDeferredBarcode(barcodeSvg, safeBcid, 3, 10);
-      await drawQrCanvas(qrCanvas, 110);
+      this.mountDeferredRedeemBarcode(ticket, barcodeSvg, safeBcid, 3, 10);
+      await this.drawRedeemQrCanvas(ticket, qrCanvas, 110);
     };
 
     const renderBarcodePreview = async () => {
@@ -862,7 +866,7 @@ export class TicketsPage {
         previewWrap.innerHTML = `
           <img src="${originalImage}" alt="原圖預覽" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-cover bg-black cursor-pointer" />
         `;
-        updateModeButtonState();
+        this.updateRedeemModeButtonState(modal, { mode, barcodeVariant, hasOriginalImage, shell, header, modeSwitch, previewWrap, barcodeVariantSwitch, footer });
         return;
       }
 
@@ -874,7 +878,7 @@ export class TicketsPage {
 
       previewWrap.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-500 text-sm">正在載入條碼預覽...</div>';
       await renderBarcodePreview();
-      updateModeButtonState();
+      this.updateRedeemModeButtonState(modal, { mode, barcodeVariant, hasOriginalImage, shell, header, modeSwitch, previewWrap, barcodeVariantSwitch, footer });
     };
 
     const onKeydown = (event) => {
