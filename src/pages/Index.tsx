@@ -189,6 +189,38 @@ const Index = () => {
     return result;
   }, [tasks, view, activeTags, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials]);
 
+  const viewCounts = useMemo(() => ({
+    active: tasks.filter((t) => !t.completed && !t.isDeleted).length,
+    completed: tasks.filter((t) => t.completed && !t.isDeleted).length,
+    deleted: tasks.filter((t) => t.isDeleted).length,
+  }), [tasks]);
+
+  const currentViewCount = viewCounts[view];
+  const hasActiveFilters = activeTags.length > 0 || !!searchQuery.trim();
+  const viewLabelMap: Record<ViewType, string> = {
+    active: '待使用',
+    completed: '已使用',
+    deleted: '回收桶',
+  };
+  const emptyStateTitle = searchQuery.trim()
+    ? '找不到符合搜尋的票券'
+    : activeTags.length > 0
+      ? '目前沒有符合標籤條件的票券'
+      : view === 'completed'
+        ? '目前沒有已使用票券'
+        : view === 'deleted'
+          ? '回收桶是空的'
+          : '目前沒有待使用票券';
+  const emptyStateDescription = searchQuery.trim()
+    ? '可以試試別的關鍵字，或先清除搜尋與標籤篩選。'
+    : activeTags.length > 0
+      ? '清掉目前篩選後，就可以回到完整票券清單。'
+      : view === 'completed'
+        ? '核銷後的票券會集中在這裡，方便回頭查詢。'
+        : view === 'deleted'
+          ? '刪除的票券會先暫存在這裡，之後可以還原或永久刪除。'
+          : '先用下方新增按鈕建立票券，之後就能在這裡集中管理。';
+
   const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
   const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
   const handleToggleComplete = async (ticket: Ticket) => {
@@ -493,6 +525,78 @@ const Index = () => {
         />
         
         <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
+          <div className="px-4 mb-4 space-y-3">
+            <div className="glass-card rounded-2xl px-4 py-3 border border-border/50">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-semibold">
+                    目前清單
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-foreground">
+                    {viewLabelMap[view]} {filteredTasks.length} / {currentViewCount} 張
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {searchQuery.trim() && (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
+                        搜尋: {searchQuery.trim()}
+                      </span>
+                    )}
+                    {activeTags.map((tag) => (
+                      <span key={tag} className="px-2 py-1 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                        {tag}
+                      </span>
+                    ))}
+                    {isSelectionMode && (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-ticket-warning/15 text-ticket-warning">
+                        已選 {selectedIds.size} 張
+                      </span>
+                    )}
+                    {!searchQuery.trim() && activeTags.length === 0 && !isSelectionMode && (
+                      <span className="text-[11px] text-muted-foreground">
+                        目前沒有額外篩選
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {(hasActiveFilters || isSelectionMode) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setActiveTags([]);
+                      setIsSelectionMode(false);
+                      setSelectedIds(new Set());
+                    }}
+                    className="px-3 py-2 rounded-xl glass-button text-xs font-semibold text-muted-foreground hover:text-foreground shrink-0"
+                  >
+                    清除
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isSelectionMode && (
+              <div className="rounded-2xl bg-primary/8 border border-primary/15 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground">
+                    批次模式已開啟
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    點選票券加入批次操作，目前已選 {selectedIds.size} 張。
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shrink-0"
+                >
+                  {selectedIds.size === filteredTasks.length && filteredTasks.length > 0 ? '取消全選' : '全選目前清單'}
+                </button>
+              </div>
+            )}
+          </div>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={view + activeTags.join(',') + sortType}
@@ -529,10 +633,23 @@ const Index = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-24 text-muted-foreground"
+                  className="mx-4 text-center py-16 px-6 glass-card rounded-[28px] text-muted-foreground border border-border/50"
                 >
                   <span className="text-6xl mb-6 block opacity-20">🎫</span>
-                  <p className="font-medium text-sm">暫無票券</p>
+                  <p className="font-semibold text-base text-foreground">{emptyStateTitle}</p>
+                  <p className="mt-2 text-sm leading-6">{emptyStateDescription}</p>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setActiveTags([]);
+                      }}
+                      className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+                    >
+                      清除搜尋與篩選
+                    </button>
+                  )}
                 </motion.div>
               )}
             </motion.div>
@@ -584,6 +701,9 @@ const Index = () => {
           view={view}
           setView={setView}
           onAddClick={() => setShowAddModal(true)}
+          activeCount={viewCounts.active}
+          completedCount={viewCounts.completed}
+          deletedCount={viewCounts.deleted}
         />
       </div>
 

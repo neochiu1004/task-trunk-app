@@ -7,6 +7,9 @@ interface BottomNavigationProps {
   view: ViewType;
   setView: (view: ViewType) => void;
   onAddClick: () => void;
+  activeCount: number;
+  completedCount: number;
+  deletedCount: number;
 }
 
 const navItems = [
@@ -19,7 +22,16 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   view,
   setView,
   onAddClick,
+  activeCount,
+  completedCount,
+  deletedCount,
 }) => {
+  const counts = {
+    active: activeCount,
+    completed: completedCount,
+    deleted: deletedCount,
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-md pointer-events-auto">
@@ -28,6 +40,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <NavItem
             icon={navItems[0].icon}
             label={navItems[0].label}
+            count={counts.active}
             isActive={view === navItems[0].id}
             onClick={() => setView(navItems[0].id)}
           />
@@ -51,12 +64,14 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <NavItem
             icon={navItems[1].icon}
             label={navItems[1].label}
+            count={counts.completed}
             isActive={view === navItems[1].id}
             onClick={() => setView(navItems[1].id)}
           />
           <NavItem
             icon={navItems[2].icon}
             label={navItems[2].label}
+            count={counts.deleted}
             isActive={view === navItems[2].id}
             onClick={() => setView(navItems[2].id)}
           />
@@ -69,11 +84,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 interface NavItemProps {
   icon: React.ElementType;
   label: string;
+  count: number;
   isActive: boolean;
   onClick: () => void;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, isActive, onClick }) => {
+const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, count, isActive, onClick }) => {
   return (
     <motion.button
       whileTap={{ scale: 0.9 }}
@@ -93,6 +109,13 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, isActive, onClick 
           />
         )}
         <Icon size={22} className="relative z-10" />
+        {count > 0 && (
+          <span className={`absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center z-20 ${
+            isActive ? 'bg-[#334A52] text-white' : 'bg-white/90 text-[#334A52] border border-border/60'
+          }`}>
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
       </div>
       <span className="text-[10px] font-medium">{label}</span>
     </motion.button>
