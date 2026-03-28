@@ -1181,6 +1181,20 @@ export class TicketsPage {
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
+    const notifyDays = this.app.state.settings.notifyDays;
+    const selectedIds = this.app.state.ui.selectedIds;
+    const selectionMode = this.app.state.ui.selectionMode;
+    const serialCounts = this.app.state.tasks.reduce((counts, currentTicket) => {
+      if (currentTicket.isDeleted || !currentTicket.serial) return counts;
+      counts.set(currentTicket.serial, (counts.get(currentTicket.serial) || 0) + 1);
+      return counts;
+    }, new Map());
+    const swipeMap = {
+      active: { left: '核銷', right: '回收' },
+      completed: { left: '還原', right: '回收' },
+      deleted: { left: '清除', right: '還原' },
+    };
+    const swipeConfig = swipeMap[this.view];
     if (!tickets.length) {
       const meta = VIEW_META[this.view];
       return `
@@ -1192,18 +1206,19 @@ export class TicketsPage {
     }
 
     return tickets.map((ticket) => {
-      const isExpiring = !ticket.completed && !ticket.isDeleted && checkIsExpiringSoon(ticket.expiry, this.app.state.settings.notifyDays);
+      const isActiveTicket = !ticket.completed && !ticket.isDeleted;
+      const isExpiring = isActiveTicket && checkIsExpiringSoon(ticket.expiry, notifyDays);
       const expiryState = !ticket.completed && !ticket.isDeleted
-        ? getExpiryState(ticket.expiry, this.app.state.settings.notifyDays)
+        ? getExpiryState(ticket.expiry, notifyDays)
         : 'normal';
-      const expiryCountdown = !ticket.completed && !ticket.isDeleted
+      const expiryCountdown = isActiveTicket
         ? getExpiryCountdownLabel(ticket.expiry)
         : '';
-      const isDuplicateSerial = !!ticket.serial && this.app.state.tasks.filter((t) => !t.isDeleted && t.serial === ticket.serial).length > 1;
+      const isDuplicateSerial = !!ticket.serial && (serialCounts.get(ticket.serial) || 0) > 1;
       const hasOriginalImage = !!ticket.originalImage;
-      const selected = this.app.state.ui.selectedIds.has(ticket.id);
-      const selectedVisual = this.app.state.ui.selectionMode && selected;
-      const selectionA11yAttrs = this.app.state.ui.selectionMode
+      const selected = selectedIds.has(ticket.id);
+      const selectedVisual = selectionMode && selected;
+      const selectionA11yAttrs = selectionMode
         ? `tabindex="0" role="checkbox" aria-checked="${selected ? 'true' : 'false'}" aria-label="切換票券選取"`
         : '';
       const tagChipClass = this.view === 'active'
@@ -1258,12 +1273,6 @@ export class TicketsPage {
             : expiryState === 'soon'
               ? 'ticket-card-expiry--soon ticket-card-expiry--soon-pill'
               : 'ticket-card-expiry--normal ticket-card-expiry--normal-pill';
-        const swipeMap = {
-          active: { left: '核銷', right: '回收' },
-          completed: { left: '還原', right: '回收' },
-          deleted: { left: '清除', right: '還原' },
-        };
-        const swipeConfig = swipeMap[this.view];
         const swipeAttrs = swipeConfig
           ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
           : '';
@@ -1271,7 +1280,7 @@ export class TicketsPage {
           <article class="ticket-card ticket-card--ultra ${originalFrameClass} ${compactExpiryCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${compactPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
             <div class="flex items-start justify-between gap-1.5">
               <div class="flex items-start gap-2 min-w-0">
-                ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
+                ${selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
                 <div class="min-w-0">
                   <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
                   <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1"><span class="ticket-card-expiry-date">${escapeHtml(ticket.expiry || '無期限')}</span>${expiryCountdown ? `<span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
@@ -1341,7 +1350,7 @@ export class TicketsPage {
           <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border p-2.5 shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}">
             <div class="flex items-start justify-between gap-2 mb-2">
               <div class="flex items-start gap-2 min-w-0 flex-1">
-                ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
+                ${selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
                 <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight line-clamp-2 min-w-0 flex-1">${escapeHtml(ticket.productName || '未命名票券')}</h3>
               </div>
               <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
@@ -1383,12 +1392,6 @@ export class TicketsPage {
         ? ` style="width: ${Math.round(Math.max(52, thumbnailScale))}%;"`
         : '';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
-      const swipeMap = {
-        active: { left: '核銷', right: '回收' },
-        completed: { left: '還原', right: '回收' },
-        deleted: { left: '清除', right: '還原' },
-      };
-      const swipeConfig = swipeMap[this.view];
       const swipeAttrs = swipeConfig
         ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
         : '';
@@ -1402,7 +1405,7 @@ export class TicketsPage {
             : ''}
           <div class="flex items-start gap-3 ${headerMarginClass} ${contentPaddingClass}">
             <div class="flex items-start gap-3 min-w-0 flex-1">
-              ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
+              ${selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
