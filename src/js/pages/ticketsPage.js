@@ -1169,9 +1169,7 @@ export class TicketsPage {
           : expiryState === 'soon'
             ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
             : '<i class="fa-regular fa-calendar mr-1"></i>';
-      const activeExpiryBadge = this.view === 'active' && !ticket.completed && !ticket.isDeleted
-        ? `<span class="${activeExpiryClass}">${activeExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}</span>`
-        : '';
+      const activeExpiryBadge = '';
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
@@ -1296,7 +1294,7 @@ export class TicketsPage {
         ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
         : '';
       const hasFloatingThumbnail = showThumbnail && ticket.image && this.view === 'active';
-      const contentPaddingClass = hasFloatingThumbnail ? 'pr-[5.75rem]' : '';
+      const contentPaddingClass = hasFloatingThumbnail ? 'pr-[6.75rem]' : '';
 
       return `
         <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
