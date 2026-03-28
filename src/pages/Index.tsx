@@ -21,6 +21,14 @@ import { BatchEditModal } from '@/components/modals/BatchEditModal';
 import { TagManagerModal } from '@/components/modals/TagManagerModal';
 import { DataHealthCheck } from '@/components/modals/DataHealthCheck';
 
+const FAR_FUTURE_TIMESTAMP = new Date(9999, 11, 31).getTime();
+
+const getExpiryTimestamp = (expiry?: string) => {
+  if (!expiry) return FAR_FUTURE_TIMESTAMP;
+  const parsed = new Date(expiry.replace(/\//g, '-')).getTime();
+  return Number.isNaN(parsed) ? FAR_FUTURE_TIMESTAMP : parsed;
+};
+
 const Index = () => {
   const { isDark, toggleTheme } = useTheme();
   const [tasks, setTasks] = useState<Ticket[]>([]);
@@ -123,6 +131,7 @@ const Index = () => {
   useDebouncedDbValue(DB_KEYS.TEMPLATES, templates, isDataLoaded);
 
   const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))], [tasks]);
+  const normalizedSearchQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
   const duplicateSerials = useMemo(() => {
     const counts: Record<string, number> = {};
     tasks.forEach((t) => { if (!t.isDeleted && t.serial) counts[t.serial] = (counts[t.serial] || 0) + 1; });
@@ -143,8 +152,22 @@ const Index = () => {
     return !!(t.tags && t.tags.includes(tag));
   };
 
+  const normalizedTasks = useMemo(() => tasks.map((ticket) => ({
+    ticket,
+    searchText: [
+      ticket.productName,
+      ticket.note || '',
+      ticket.serial || '',
+      ...(ticket.tags || []),
+    ].join(' ').toLowerCase(),
+    expiryTimestamp: getExpiryTimestamp(ticket.expiry),
+    isHealthIssue: !ticket.completed && !ticket.isDeleted && healthIssueSerials.has(ticket.serial || ''),
+    isPinned: !ticket.completed && !ticket.isDeleted && !!ticket.pinned,
+    isExpiring: !ticket.completed && !ticket.isDeleted && checkIsExpiringSoon(ticket.expiry, settings.notifyDays),
+  })), [tasks, healthIssueSerials, settings.notifyDays]);
+
   const filteredTasks = useMemo(() => {
-    let result = tasks.filter((t) => {
+    const result = normalizedTasks.filter(({ ticket: t, searchText }) => {
       if (view === 'active' && (t.completed || t.isDeleted)) return false;
       if (view === 'completed' && (!t.completed || t.isDeleted)) return false;
       if (view === 'deleted' && !t.isDeleted) return false;
@@ -154,41 +177,29 @@ const Index = () => {
         if (!activeTags.some((tag) => matchesTag(t, tag))) return false;
       }
 
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        return t.productName.toLowerCase().includes(q) || 
-          (t.note && t.note.toLowerCase().includes(q)) || 
-          (t.serial && t.serial.toLowerCase().includes(q)) ||
-          (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(q)));
+      if (normalizedSearchQuery) {
+        return searchText.includes(normalizedSearchQuery);
       }
       return true;
     });
     result.sort((a, b) => {
       if (view === 'completed') {
-        return (b.completedAt || 0) - (a.completedAt || 0);
+        return (b.ticket.completedAt || 0) - (a.ticket.completedAt || 0);
       }
-      const hasHealthIssueA = !a.completed && !a.isDeleted && healthIssueSerials.has(a.serial || '');
-      const hasHealthIssueB = !b.completed && !b.isDeleted && healthIssueSerials.has(b.serial || '');
-      if (hasHealthIssueA !== hasHealthIssueB) return hasHealthIssueA ? -1 : 1;
+      if (a.isHealthIssue !== b.isHealthIssue) return a.isHealthIssue ? -1 : 1;
       
-      const pinnedA = !a.completed && !a.isDeleted && !!a.pinned;
-      const pinnedB = !b.completed && !b.isDeleted && !!b.pinned;
-      if (pinnedA !== pinnedB) return pinnedA ? -1 : 1;
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       
-      const isExpiringA = !a.completed && !a.isDeleted && checkIsExpiringSoon(a.expiry, settings.notifyDays);
-      const isExpiringB = !b.completed && !b.isDeleted && checkIsExpiringSoon(b.expiry, settings.notifyDays);
-      if (isExpiringA !== isExpiringB) return isExpiringA ? -1 : 1;
-      if (sortType === 'newest') return b.createdAt - a.createdAt;
-      if (sortType === 'oldest') return a.createdAt - b.createdAt;
+      if (a.isExpiring !== b.isExpiring) return a.isExpiring ? -1 : 1;
+      if (sortType === 'newest') return b.ticket.createdAt - a.ticket.createdAt;
+      if (sortType === 'oldest') return a.ticket.createdAt - b.ticket.createdAt;
       if (sortType === 'expiring') {
-        const dateA = a.expiry ? new Date(a.expiry.replace(/\//g, '-')) : new Date(9999, 11, 31);
-        const dateB = b.expiry ? new Date(b.expiry.replace(/\//g, '-')) : new Date(9999, 11, 31);
-        return dateA.getTime() - dateB.getTime();
+        return a.expiryTimestamp - b.expiryTimestamp;
       }
       return 0;
     });
-    return result;
-  }, [tasks, view, activeTags, searchQuery, sortType, duplicateSerials, settings.notifyDays, healthIssueSerials]);
+    return result.map(({ ticket }) => ticket);
+  }, [normalizedTasks, view, activeTags, normalizedSearchQuery, sortType, duplicateSerials]);
 
   const viewCounts = useMemo(() => ({
     active: tasks.filter((t) => !t.completed && !t.isDeleted).length,
