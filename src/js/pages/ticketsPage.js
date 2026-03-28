@@ -378,12 +378,42 @@ export class TicketsPage {
     }, 2000);
   }
 
+  createBatchModal(contentHtml, { onCancel } = {}) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
+    modal.innerHTML = contentHtml;
+
+    const handleCancel = () => {
+      onCancel?.();
+    };
+
+    const onKeydown = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      handleCancel();
+    };
+
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        handleCancel();
+      }
+    });
+
+    document.body.appendChild(modal);
+    window.addEventListener('keydown', onKeydown);
+
+    const destroy = () => {
+      window.removeEventListener('keydown', onKeydown);
+      modal.remove();
+    };
+
+    return { modal, destroy };
+  }
+
   pickTemplateForBatch() {
     const templates = this.app.state.templates || [];
     return new Promise((resolve) => {
-      const modal = document.createElement('div');
-      modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
-      modal.innerHTML = `
+      const { modal, destroy } = this.createBatchModal(`
         <div class="w-full max-w-md rounded-2xl border border-wabi-border bg-white shadow-2xl p-4">
           <h3 class="text-lg font-semibold text-wabi-primary mb-1">選擇範本</h3>
           <p class="text-sm text-wabi-text-secondary mb-3">請選擇要批次套用的範本</p>
@@ -399,21 +429,12 @@ export class TicketsPage {
             <button type="button" data-cancel-template class="px-4 py-2 rounded-lg border border-wabi-border text-sm">取消</button>
           </div>
         </div>
-      `;
-
-      const onKeydown = (event) => {
-        if (event.key === 'Escape') cleanup(null);
-      };
+      `, { onCancel: () => cleanup(null) });
 
       const cleanup = (template) => {
-        window.removeEventListener('keydown', onKeydown);
-        modal.remove();
+        destroy();
         resolve(template || null);
       };
-
-      modal.addEventListener('click', (event) => {
-        if (event.target === modal) cleanup(null);
-      });
 
       modal.querySelector('[data-cancel-template]')?.addEventListener('click', () => cleanup(null));
       modal.querySelectorAll('[data-pick-template]').forEach((btn) => {
@@ -422,18 +443,13 @@ export class TicketsPage {
           cleanup(templates[index]);
         });
       });
-
-      document.body.appendChild(modal);
-      window.addEventListener('keydown', onKeydown);
     });
   }
 
   pickRedeemUrlForBatch() {
     const presets = this.app.state.settings.redeemUrlPresets || [];
     return new Promise((resolve) => {
-      const modal = document.createElement('div');
-      modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
-      modal.innerHTML = `
+      const { modal, destroy } = this.createBatchModal(`
         <div class="w-full max-w-md rounded-2xl border border-wabi-border bg-white shadow-2xl p-4">
           <h3 class="text-lg font-semibold text-wabi-primary mb-1">批次設定兌換網址</h3>
           <p class="text-sm text-wabi-text-secondary mb-3">可直接選預設網址，或輸入自訂網址</p>
@@ -454,16 +470,12 @@ export class TicketsPage {
             <button type="button" data-confirm-url class="px-3 py-2 rounded-lg bg-wabi-primary text-white text-sm">套用</button>
           </div>
         </div>
-      `;
+      `, { onCancel: () => cleanup('', true) });
 
       const cleanup = (value, cancelled = false) => {
-        modal.remove();
+        destroy();
         resolve({ value, cancelled });
       };
-
-      modal.addEventListener('click', (event) => {
-        if (event.target === modal) cleanup('', true);
-      });
 
       const input = modal.querySelector('#batch-redeem-url-input');
       modal.querySelectorAll('[data-pick-preset]').forEach((btn) => {
@@ -478,8 +490,6 @@ export class TicketsPage {
       modal.querySelector('[data-clear-url]')?.addEventListener('click', () => cleanup('', false));
       modal.querySelector('[data-cancel-url]')?.addEventListener('click', () => cleanup('', true));
       modal.querySelector('[data-confirm-url]')?.addEventListener('click', () => cleanup((input.value || '').trim(), false));
-
-      document.body.appendChild(modal);
       input.focus();
     });
   }
@@ -491,9 +501,7 @@ export class TicketsPage {
 
     return new Promise((resolve) => {
       const selectedTags = new Set();
-      const modal = document.createElement('div');
-      modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
-      modal.innerHTML = `
+      const { modal, destroy } = this.createBatchModal(`
         <div class="w-full max-w-md rounded-2xl border border-wabi-border bg-white shadow-2xl p-4">
           <h3 class="text-lg font-semibold text-wabi-primary mb-1">${title}</h3>
           <p class="text-sm text-wabi-text-secondary mb-3">${hint}</p>
@@ -508,16 +516,12 @@ export class TicketsPage {
             <button type="button" data-confirm-tags class="px-3 py-2 rounded-lg bg-wabi-primary text-white text-sm">確認</button>
           </div>
         </div>
-      `;
+      `, { onCancel: () => cleanup({ cancelled: true, tags: [] }) });
 
       const cleanup = (payload) => {
-        modal.remove();
+        destroy();
         resolve(payload || { cancelled: true, tags: [] });
       };
-
-      modal.addEventListener('click', (event) => {
-        if (event.target === modal) cleanup({ cancelled: true, tags: [] });
-      });
 
       modal.querySelectorAll('[data-tag-chip]').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -540,8 +544,6 @@ export class TicketsPage {
         const tags = [...new Set([...selectedTags, ...inputTags])];
         cleanup({ cancelled: false, tags });
       });
-
-      document.body.appendChild(modal);
       input.focus();
     });
   }
