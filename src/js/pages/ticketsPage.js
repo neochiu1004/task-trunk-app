@@ -1064,14 +1064,10 @@ export class TicketsPage {
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
-    const notifyDays = this.app.state.settings.notifyDays;
     const selectedIds = this.app.state.ui.selectedIds;
     const selectionMode = this.app.state.ui.selectionMode;
-    const serialCounts = this.app.state.tasks.reduce((counts, currentTicket) => {
-      if (currentTicket.isDeleted || !currentTicket.serial) return counts;
-      counts.set(currentTicket.serial, (counts.get(currentTicket.serial) || 0) + 1);
-      return counts;
-    }, new Map());
+    const derivedMap = options.derivedMap || this.buildTicketDerivedMap(this.app.state.settings.notifyDays);
+    const serialCounts = options.serialCounts || this.buildTicketSerialCounts();
     const swipeMap = {
       active: { left: '核銷', right: '回收' },
       completed: { left: '還原', right: '回收' },
@@ -1089,14 +1085,11 @@ export class TicketsPage {
     }
 
     return tickets.map((ticket) => {
+      const derived = derivedMap.get(ticket.id);
       const isActiveTicket = !ticket.completed && !ticket.isDeleted;
-      const isExpiring = isActiveTicket && checkIsExpiringSoon(ticket.expiry, notifyDays);
-      const expiryState = !ticket.completed && !ticket.isDeleted
-        ? getExpiryState(ticket.expiry, notifyDays)
-        : 'normal';
-      const expiryCountdown = isActiveTicket
-        ? getExpiryCountdownLabel(ticket.expiry)
-        : '';
+      const isExpiring = isActiveTicket && !!derived?.isExpiring;
+      const expiryState = isActiveTicket ? (derived?.expiryState || 'normal') : 'normal';
+      const expiryCountdown = isActiveTicket ? (derived?.expiryCountdown || '') : '';
       const isDuplicateSerial = !!ticket.serial && (serialCounts.get(ticket.serial) || 0) > 1;
       const hasOriginalImage = !!ticket.originalImage;
       const selected = selectedIds.has(ticket.id);
@@ -1123,20 +1116,6 @@ export class TicketsPage {
       const originalImageBadge = hasOriginalImage
         ? '<span class="text-xs rounded-full px-2 py-1 bg-sky-100 text-sky-700"><i class="fa-regular fa-image mr-1"></i>原圖</span>'
         : '';
-      const activeExpiryClass = expiryState === 'expired'
-        ? 'ticket-expiry-chip ticket-expiry-chip--expired'
-        : expiryState === 'today'
-          ? 'ticket-expiry-chip ticket-expiry-chip--today'
-          : expiryState === 'soon'
-            ? 'ticket-expiry-chip ticket-expiry-chip--soon'
-            : 'ticket-expiry-chip ticket-expiry-chip--normal';
-      const activeExpiryPrefix = expiryState === 'expired'
-        ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
-        : expiryState === 'today'
-          ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
-          : expiryState === 'soon'
-            ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
-            : '<i class="fa-regular fa-calendar mr-1"></i>';
       const activeExpiryBadge = '';
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
       if (ultraCompactCard) {
@@ -1325,16 +1304,16 @@ export class TicketsPage {
     }).join('');
   }
 
-  filterTickets() {
+  filterTickets(derivedMap = null) {
     const search = this.app.state.ui.search.trim().toLowerCase();
     const sortType = this.app.state.ui.sort;
     const activeTags = this.app.state.ui.activeTags;
     const notifyDays = this.app.state.settings.notifyDays;
-    const derivedMap = this.buildTicketDerivedMap(notifyDays);
+    const ticketDerivedMap = derivedMap || this.buildTicketDerivedMap(notifyDays);
     const sortComparator = getSortComparator(sortType);
 
     let list = this.app.state.tasks.filter((ticket) => {
-      const derived = derivedMap.get(ticket.id);
+      const derived = ticketDerivedMap.get(ticket.id);
       if (this.view === 'active' && (ticket.completed || ticket.isDeleted)) return false;
       if (this.view === 'completed' && (!ticket.completed || ticket.isDeleted)) return false;
       if (this.view === 'deleted' && !ticket.isDeleted) return false;
@@ -1370,8 +1349,8 @@ export class TicketsPage {
           soon: 2,
           normal: 3,
         };
-        const stateA = derivedMap.get(a.id)?.expiryState || 'normal';
-        const stateB = derivedMap.get(b.id)?.expiryState || 'normal';
+        const stateA = ticketDerivedMap.get(a.id)?.expiryState || 'normal';
+        const stateB = ticketDerivedMap.get(b.id)?.expiryState || 'normal';
         const rankA = urgencyRank[stateA] ?? urgencyRank.normal;
         const rankB = urgencyRank[stateB] ?? urgencyRank.normal;
         if (rankA !== rankB) return rankA - rankB;
@@ -1384,6 +1363,7 @@ export class TicketsPage {
 
   buildTicketDerivedMap(notifyDays = this.app.state.settings.notifyDays) {
     return this.app.state.tasks.reduce((map, ticket) => {
+      const expiryState = getExpiryState(ticket.expiry, notifyDays);
       map.set(ticket.id, {
         searchText: [
           ticket.productName,
@@ -1392,9 +1372,19 @@ export class TicketsPage {
           ticket.redeemUrl,
           ...(ticket.tags || []),
         ].filter(Boolean).join(' ').toLowerCase(),
-        expiryState: getExpiryState(ticket.expiry, notifyDays),
+        expiryState,
+        expiryCountdown: getExpiryCountdownLabel(ticket.expiry),
+        isExpiring: ['expired', 'today', 'soon'].includes(expiryState),
       });
       return map;
+    }, new Map());
+  }
+
+  buildTicketSerialCounts() {
+    return this.app.state.tasks.reduce((counts, ticket) => {
+      if (ticket.isDeleted || !ticket.serial) return counts;
+      counts.set(ticket.serial, (counts.get(ticket.serial) || 0) + 1);
+      return counts;
     }, new Map());
   }
 
@@ -1440,7 +1430,9 @@ export class TicketsPage {
     this.clearBackgroundInsetHandler();
     this.showSwipeHintIfNeeded();
     const meta = VIEW_META[this.view];
-    const tickets = this.filterTickets();
+    const derivedMap = this.buildTicketDerivedMap(this.app.state.settings.notifyDays);
+    const tickets = this.filterTickets(derivedMap);
+    const serialCounts = this.buildTicketSerialCounts();
     const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
     const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
     const showThumbnail = viewConfig.showThumbnail !== false;
@@ -1620,7 +1612,7 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor })}</div>
+        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor, derivedMap, serialCounts })}</div>
       </section>
     `);
 
