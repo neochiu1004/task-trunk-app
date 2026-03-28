@@ -1,8 +1,5 @@
 import { DataService } from './services/dataService.js';
 import { Router } from './router.js';
-import { TicketsPage } from './pages/ticketsPage.js';
-import { AddPage } from './pages/addPage.js';
-import { SettingsPage } from './pages/settingsPage.js';
 import {
   checkIsExpiringSoon,
   DB_KEYS,
@@ -13,6 +10,29 @@ import {
   showToast,
   todayISO,
 } from './utils.js';
+
+const pageLoaders = {
+  active: async (app) => {
+    const { TicketsPage } = await import('./pages/ticketsPage.js');
+    return new TicketsPage(app, 'active');
+  },
+  completed: async (app) => {
+    const { TicketsPage } = await import('./pages/ticketsPage.js');
+    return new TicketsPage(app, 'completed');
+  },
+  deleted: async (app) => {
+    const { TicketsPage } = await import('./pages/ticketsPage.js');
+    return new TicketsPage(app, 'deleted');
+  },
+  add: async (app) => {
+    const { AddPage } = await import('./pages/addPage.js');
+    return new AddPage(app);
+  },
+  settings: async (app) => {
+    const { SettingsPage } = await import('./pages/settingsPage.js');
+    return new SettingsPage(app);
+  },
+};
 
 class TicketTrunkJijunApp {
   constructor() {
@@ -39,13 +59,6 @@ class TicketTrunkJijunApp {
     this.router = new Router(this);
     this.mobileViewportBound = false;
     this.startupCleanupReport = null;
-    this.pages = {
-      active: new TicketsPage(this, 'active'),
-      completed: new TicketsPage(this, 'completed'),
-      deleted: new TicketsPage(this, 'deleted'),
-      add: new AddPage(this),
-      settings: new SettingsPage(this),
-    };
   }
 
   async init() {
@@ -72,11 +85,11 @@ class TicketTrunkJijunApp {
     await this.ensureRequiredKeys();
     await this.sendExpiryReminderIfNeeded();
 
-    this.router.register('active', this.pages.active);
-    this.router.register('completed', this.pages.completed);
-    this.router.register('deleted', this.pages.deleted);
-    this.router.register('add', this.pages.add);
-    this.router.register('settings', this.pages.settings);
+    this.router.register('active', () => pageLoaders.active(this));
+    this.router.register('completed', () => pageLoaders.completed(this));
+    this.router.register('deleted', () => pageLoaders.deleted(this));
+    this.router.register('add', () => pageLoaders.add(this));
+    this.router.register('settings', () => pageLoaders.settings(this));
 
     this.router.start();
     this.bindGlobalNavEvents();

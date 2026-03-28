@@ -2,11 +2,12 @@ export class Router {
   constructor(app) {
     this.app = app;
     this.routes = new Map();
+    this.routeCache = new Map();
     this.currentHash = null;
   }
 
-  register(hash, page) {
-    this.routes.set(hash, page);
+  register(hash, loader) {
+    this.routes.set(hash, loader);
   }
 
   start() {
@@ -35,7 +36,18 @@ export class Router {
     this.currentHash = route;
     this.app.setActiveNav(route);
 
-    const page = this.routes.get(route);
+    const page = await this.resolveRoute(route);
     await page.render();
+  }
+
+  async resolveRoute(route) {
+    if (this.routeCache.has(route)) {
+      return this.routeCache.get(route);
+    }
+
+    const loader = this.routes.get(route);
+    const page = typeof loader === 'function' ? await loader() : loader;
+    this.routeCache.set(route, page);
+    return page;
   }
 }
