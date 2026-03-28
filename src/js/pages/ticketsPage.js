@@ -16,18 +16,20 @@ const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
 const EXPIRY_URGENT_FILTER_TAG = '__expiry_urgent__';
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
 let swipeHintShownInSession = false;
-let barcodeRendererPromise = null;
+let barcodeSvgRendererPromise = null;
+let qrRendererPromise = null;
 
-async function getBarcodeRenderer() {
-  barcodeRendererPromise ||= Promise.all([
-    import('bwip-js'),
-    import('qrious'),
-  ]).then(([bwipModule, qriousModule]) => ({
-    bwipjs: bwipModule.default,
-    QRious: qriousModule.default,
+async function getBarcodeSvgRenderer() {
+  barcodeSvgRendererPromise ||= import('bwip-js/generic').then((module) => ({
+    toSVG: module.toSVG,
   }));
 
-  return barcodeRendererPromise;
+  return barcodeSvgRendererPromise;
+}
+
+async function getQrRenderer() {
+  qrRendererPromise ||= import('qrious').then((module) => module.default);
+  return qrRendererPromise;
 }
 
 function parseExpiryToTime(expiry) {
@@ -792,10 +794,10 @@ export class TicketsPage {
       });
     };
 
-    const drawBarcodeCanvas = async (canvas, targetBcid = safeBcid, scale = 3, height = 10) => {
-      const { bwipjs } = await getBarcodeRenderer();
+    const drawBarcodeSvg = async (container, targetBcid = safeBcid, scale = 3, height = 10) => {
+      const { toSVG } = await getBarcodeSvgRenderer();
       try {
-        bwipjs.toCanvas(canvas, {
+        const markup = toSVG({
           bcid: targetBcid,
           text: ticket.serial,
           scale,
@@ -804,8 +806,9 @@ export class TicketsPage {
           textxalign: 'center',
           backgroundcolor: 'FFFFFF',
         });
+        container.innerHTML = markup;
       } catch (_error) {
-        bwipjs.toCanvas(canvas, {
+        const fallbackMarkup = toSVG({
           bcid: 'code128',
           text: ticket.serial,
           scale,
@@ -814,11 +817,64 @@ export class TicketsPage {
           textxalign: 'center',
           backgroundcolor: 'FFFFFF',
         });
+        container.innerHTML = fallbackMarkup;
       }
+
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', 'auto');
+      svg.classList.add('w-full', 'h-auto', 'block');
+    };
+
+    const mountDeferredBarcode = (container, targetBcid = safeBcid, scale = 3, height = 10) => {
+      if (!container) return;
+      container.innerHTML = `
+        <button
+          type="button"
+          data-load-barcode
+          data-redeem-ignore-swipe="1"
+          class="w-full min-h-[160px] rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-wabi-primary hover:bg-white"
+        >
+          <span class="block text-sm font-semibold text-slate-700">載入條碼預覽</span>
+          <span class="mt-1 block text-xs text-slate-500">需要時再下載條碼模組，開啟會更快</span>
+        </button>
+      `;
+
+      const button = container.querySelector('[data-load-barcode]');
+      if (!button) return;
+
+      button.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        button.disabled = true;
+        button.classList.add('opacity-70', 'cursor-wait');
+        button.innerHTML = `
+          <span class="block text-sm font-semibold text-slate-700">正在載入條碼...</span>
+          <span class="mt-1 block text-xs text-slate-500">首次載入可能需要幾秒</span>
+        `;
+
+        try {
+          await drawBarcodeSvg(container, targetBcid, scale, height);
+        } catch (_error) {
+          container.innerHTML = `
+            <button
+              type="button"
+              data-load-barcode
+              data-redeem-ignore-swipe="1"
+              class="w-full min-h-[160px] rounded-lg border border-dashed border-rose-300 bg-rose-50 px-4 py-6 text-center transition hover:border-rose-400"
+            >
+              <span class="block text-sm font-semibold text-rose-700">條碼載入失敗，點我重試</span>
+              <span class="mt-1 block text-xs text-rose-500">可先使用 QR Code 或原圖模式</span>
+            </button>
+          `;
+          mountDeferredBarcode(container, targetBcid, scale, height);
+        }
+      }, { once: true });
     };
 
     const drawQrCanvas = async (canvas, size = 180) => {
-      const { QRious } = await getBarcodeRenderer();
+      const QRious = await getQrRenderer();
       new QRious({
         element: canvas,
         value: ticket.serial || '',
@@ -835,7 +891,7 @@ export class TicketsPage {
       previewWrap.innerHTML = `
         <div class="w-full h-full flex flex-col items-center justify-center gap-4 p-3 md:p-5 cursor-pointer" data-redeem-tap-trigger="1">
           <div class="w-full max-w-4xl bg-white border border-wabi-border rounded-xl p-2 shadow-sm">
-            <canvas id="redeem-barcode-canvas" class="w-full"></canvas>
+            <div id="redeem-barcode-svg" class="w-full overflow-hidden"></div>
           </div>
           <div class="p-3 bg-white border border-wabi-border rounded-[28px] shadow-sm">
             <canvas id="redeem-qr-canvas" class="rounded-2xl"></canvas>
@@ -846,14 +902,12 @@ export class TicketsPage {
           </div>
         </div>
       `;
-      const barcodeCanvas = previewWrap.querySelector('#redeem-barcode-canvas');
+      const barcodeSvg = previewWrap.querySelector('#redeem-barcode-svg');
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas');
-      if (!barcodeCanvas || !qrCanvas) return;
+      if (!barcodeSvg || !qrCanvas) return;
 
-      await Promise.all([
-        drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10),
-        drawQrCanvas(qrCanvas, 180),
-      ]);
+      mountDeferredBarcode(barcodeSvg, safeBcid, 3, 10);
+      await drawQrCanvas(qrCanvas, 180);
     };
 
     const renderMomoBarcodePreview = async () => {
@@ -881,7 +935,7 @@ export class TicketsPage {
                 <div class="border-t border-dashed border-slate-300"></div>
                 <div class="bg-slate-100 rounded-xl p-3 flex flex-col items-center gap-3">
                   <div class="w-full px-2">
-                    <canvas id="redeem-barcode-canvas-momo" class="w-full bg-white rounded-lg border border-wabi-border"></canvas>
+                    <div id="redeem-barcode-svg-momo" class="w-full bg-white rounded-lg border border-wabi-border overflow-hidden"></div>
                   </div>
                   <div class="p-1.5 bg-white border border-wabi-border rounded-lg shadow-sm">
                     <canvas id="redeem-qr-canvas-momo" class="rounded-xl"></canvas>
@@ -903,13 +957,11 @@ export class TicketsPage {
           </div>
         </div>
       `;
-      const barcodeCanvas = previewWrap.querySelector('#redeem-barcode-canvas-momo');
+      const barcodeSvg = previewWrap.querySelector('#redeem-barcode-svg-momo');
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas-momo');
-      if (!barcodeCanvas || !qrCanvas) return;
-      await Promise.all([
-        drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10),
-        drawQrCanvas(qrCanvas, 110),
-      ]);
+      if (!barcodeSvg || !qrCanvas) return;
+      mountDeferredBarcode(barcodeSvg, safeBcid, 3, 10);
+      await drawQrCanvas(qrCanvas, 110);
     };
 
     const renderBarcodePreview = async () => {
