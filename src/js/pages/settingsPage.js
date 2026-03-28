@@ -10,9 +10,14 @@ import {
   showToast,
   validateImportData,
 } from '../utils.js';
-import { scanMultipleBarcodesFromImage } from '../services/barcodeService.js';
 
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
+let barcodeServicePromise = null;
+
+async function getBarcodeScanner() {
+  barcodeServicePromise ||= import('../services/barcodeService.js');
+  return barcodeServicePromise;
+}
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -1309,6 +1314,7 @@ export class SettingsPage {
       };
 
       showToast('正在進行條碼一致性檢查...');
+      const { scanMultipleBarcodesFromImage } = await getBarcodeScanner();
 
       for (const ticket of candidates) {
         const source = ticket.originalImage || ticket.image;

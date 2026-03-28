@@ -1,4 +1,3 @@
-import { scanMultipleBarcodesFromImage } from '../services/barcodeService.js';
 import {
   BARCODE_FORMATS,
   compressImage,
@@ -9,6 +8,13 @@ import {
   tagsToText,
   normalizeDateInput,
 } from '../utils.js';
+
+let barcodeServicePromise = null;
+
+async function getBarcodeScanner() {
+  barcodeServicePromise ||= import('../services/barcodeService.js');
+  return barcodeServicePromise;
+}
 
 export class AddPage {
   constructor(app) {
@@ -373,6 +379,7 @@ export class AddPage {
 
       const scanSource = originalImage || imageData;
       showToast('正在辨識條碼...');
+      const { scanMultipleBarcodesFromImage } = await getBarcodeScanner();
       const results = await scanMultipleBarcodesFromImage(scanSource);
       if (!results.length) {
         showToast('未找到條碼', 'error');
