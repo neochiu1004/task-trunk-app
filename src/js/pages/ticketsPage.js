@@ -143,6 +143,7 @@ export class TicketsPage {
     this.continueBatchHintTimer = null;
     this.searchIsComposing = false;
     this.searchRenderTimer = null;
+    this.cardGestureHandlers = null;
   }
 
   isTouchGestureAvailable() {
@@ -454,6 +455,18 @@ export class TicketsPage {
     }, { passive: true });
   }
 
+  clearCardGestureHandlers() {
+    if (!this.cardGestureHandlers) return;
+    const root = this.app.getRoot();
+    if (root) {
+      root.removeEventListener('touchstart', this.cardGestureHandlers.touchstart);
+      root.removeEventListener('touchmove', this.cardGestureHandlers.touchmove);
+      root.removeEventListener('touchcancel', this.cardGestureHandlers.touchcancel);
+      root.removeEventListener('touchend', this.cardGestureHandlers.touchend);
+    }
+    this.cardGestureHandlers = null;
+  }
+
   clearBackgroundRotationTimer() {
     if (this.backgroundRotationTimer) {
       window.clearInterval(this.backgroundRotationTimer);
@@ -462,6 +475,7 @@ export class TicketsPage {
   }
 
   clearBackgroundInsetHandler() {
+    this.clearCardGestureHandlers();
     if (this.backgroundInsetHandler) {
       window.removeEventListener('resize', this.backgroundInsetHandler);
       window.removeEventListener('orientationchange', this.backgroundInsetHandler);
@@ -1711,6 +1725,7 @@ export class TicketsPage {
       clearTimeout(this.searchRenderTimer);
       this.searchRenderTimer = null;
     }
+    this.clearCardGestureHandlers();
     if (this.toolbarScrollHandler) {
       window.removeEventListener('scroll', this.toolbarScrollHandler);
       this.toolbarScrollHandler = null;
@@ -1943,9 +1958,188 @@ export class TicketsPage {
       this.render();
     };
 
-    root.querySelectorAll('.ticket-card').forEach((card) => {
-      this.bindCardSwipeGesture(card);
-    });
+    if (this.isTouchGestureAvailable() && this.isSwipeGestureEnabled()) {
+      const interactiveSelector = 'button, a, input, textarea, select, label, [data-no-swipe], .ticket-card-actions';
+      const SWIPE_LOCK_DISTANCE = 10;
+      const SWIPE_TRIGGER_DISTANCE = this.getSwipeTriggerDistance();
+      const SWIPE_HINT_DISTANCE = Math.max(24, Math.floor(SWIPE_TRIGGER_DISTANCE * 0.55));
+      const SWIPE_CLAMP_DISTANCE = 92;
+      const SWIPE_PREVENT_CLICK_DISTANCE = 16;
+      const LONG_PRESS_MS = 430;
+      const LONG_PRESS_MOVE_TOLERANCE = 10;
+      const gestureState = {
+        card: null,
+        tracking: false,
+        horizontalSwipe: false,
+        startX: 0,
+        startY: 0,
+        currentOffset: 0,
+        swipeHintNotified: false,
+        longPressTriggered: false,
+        longPressTimer: null,
+      };
+
+      const clearLongPressTimer = () => {
+        if (!gestureState.longPressTimer) return;
+        clearTimeout(gestureState.longPressTimer);
+        gestureState.longPressTimer = null;
+      };
+
+      const resetSwipeVisual = (animated = true) => {
+        const { card } = gestureState;
+        if (!card) return;
+        card.classList.remove('ticket-card--swiping', 'ticket-card--swipe-left', 'ticket-card--swipe-right', 'ticket-card--swipe-ready');
+        if (animated) {
+          card.classList.add('ticket-card--swipe-release');
+        } else {
+          card.classList.remove('ticket-card--swipe-release');
+        }
+        card.style.removeProperty('--ticket-swipe-offset');
+        gestureState.swipeHintNotified = false;
+      };
+
+      const setSwipeOffset = (offset) => {
+        const { card } = gestureState;
+        if (!card) return;
+        const limited = Math.max(-SWIPE_CLAMP_DISTANCE, Math.min(SWIPE_CLAMP_DISTANCE, offset));
+        gestureState.currentOffset = limited;
+        const absOffset = Math.abs(limited);
+        card.style.setProperty('--ticket-swipe-offset', `${limited}px`);
+        card.classList.add('ticket-card--swiping');
+        card.classList.toggle('ticket-card--swipe-left', limited < -18);
+        card.classList.toggle('ticket-card--swipe-right', limited > 18);
+        const ready = absOffset >= SWIPE_HINT_DISTANCE;
+        card.classList.toggle('ticket-card--swipe-ready', ready);
+        if (ready && !gestureState.swipeHintNotified) {
+          gestureState.swipeHintNotified = true;
+          this.triggerHapticFeedback(8);
+        }
+      };
+
+      const touchstart = (event) => {
+        if (event.touches.length !== 1) return;
+        const card = event.target.closest('.ticket-card[data-swipe-enabled="1"]');
+        if (!card) return;
+        if (event.target.closest(interactiveSelector)) return;
+        const inSelectionMode = this.app.state.ui.selectionMode;
+        gestureState.card = card;
+        gestureState.tracking = true;
+        gestureState.horizontalSwipe = false;
+        gestureState.longPressTriggered = false;
+        gestureState.startX = event.touches[0].clientX;
+        gestureState.startY = event.touches[0].clientY;
+        gestureState.currentOffset = 0;
+        gestureState.swipeHintNotified = false;
+        card.dataset.swipeSuppressClick = '0';
+        card.classList.remove('ticket-card--swipe-release');
+
+        clearLongPressTimer();
+        if (!inSelectionMode) {
+          gestureState.longPressTimer = setTimeout(() => {
+            gestureState.longPressTimer = null;
+            if (!gestureState.tracking || gestureState.card !== card) return;
+            const ticketId = card.dataset.ticketId;
+            if (!ticketId) return;
+            gestureState.longPressTriggered = true;
+            gestureState.tracking = false;
+            gestureState.horizontalSwipe = false;
+            gestureState.currentOffset = 0;
+            card.dataset.swipeSuppressClick = '1';
+            resetSwipeVisual(false);
+            this.app.state.ui.selectionMode = true;
+            this.app.state.ui.selectedIds.add(ticketId);
+            this.hideContinueBatchHint();
+            this.triggerHapticFeedback([12, 30, 12]);
+            showToast('已進入多選模式', 'success', 900);
+            this.render();
+          }, LONG_PRESS_MS);
+        }
+      };
+
+      const touchmove = (event) => {
+        const { card } = gestureState;
+        if (!card || !gestureState.tracking || event.touches.length !== 1) return;
+        const dx = event.touches[0].clientX - gestureState.startX;
+        const dy = event.touches[0].clientY - gestureState.startY;
+        if (Math.abs(dx) > LONG_PRESS_MOVE_TOLERANCE || Math.abs(dy) > LONG_PRESS_MOVE_TOLERANCE) {
+          clearLongPressTimer();
+        }
+
+        if (!gestureState.horizontalSwipe) {
+          if (Math.abs(dx) < SWIPE_LOCK_DISTANCE && Math.abs(dy) < SWIPE_LOCK_DISTANCE) return;
+          gestureState.horizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.15;
+          if (!gestureState.horizontalSwipe) {
+            gestureState.tracking = false;
+            resetSwipeVisual(false);
+            gestureState.card = null;
+            return;
+          }
+        }
+
+        event.preventDefault();
+        setSwipeOffset(dx);
+        if (Math.abs(dx) >= SWIPE_PREVENT_CLICK_DISTANCE) {
+          card.dataset.swipeSuppressClick = '1';
+        }
+      };
+
+      const finishGesture = async () => {
+        const { card } = gestureState;
+        clearLongPressTimer();
+        if (!card) return;
+        if (gestureState.longPressTriggered) {
+          gestureState.longPressTriggered = false;
+          gestureState.card = null;
+          return;
+        }
+        if (!gestureState.tracking) {
+          gestureState.card = null;
+          return;
+        }
+        gestureState.tracking = false;
+        const finalOffset = gestureState.currentOffset;
+        const ticketId = card.dataset.ticketId;
+        const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
+        const shouldTrigger = gestureState.horizontalSwipe && Math.abs(finalOffset) >= SWIPE_TRIGGER_DISTANCE;
+        gestureState.horizontalSwipe = false;
+        gestureState.currentOffset = 0;
+        if (!shouldTrigger || !ticket) {
+          resetSwipeVisual(true);
+          gestureState.card = null;
+          return;
+        }
+
+        const direction = finalOffset < 0 ? 'left' : 'right';
+        try {
+          await this.handleSwipeAction(ticket, direction);
+        } finally {
+          resetSwipeVisual(true);
+          gestureState.card = null;
+        }
+      };
+
+      const touchcancel = () => {
+        clearLongPressTimer();
+        if (gestureState.card) {
+          gestureState.tracking = false;
+          gestureState.horizontalSwipe = false;
+          gestureState.longPressTriggered = false;
+          gestureState.currentOffset = 0;
+          resetSwipeVisual(true);
+        }
+        gestureState.card = null;
+      };
+
+      const touchend = () => {
+        void finishGesture();
+      };
+
+      this.cardGestureHandlers = { touchstart, touchmove, touchcancel, touchend };
+      root.addEventListener('touchstart', touchstart, { passive: true });
+      root.addEventListener('touchmove', touchmove, { passive: false });
+      root.addEventListener('touchcancel', touchcancel, { passive: true });
+      root.addEventListener('touchend', touchend, { passive: true });
+    }
 
     const handleBatchAction = async (action) => {
         const ids = [...this.app.state.ui.selectedIds];
