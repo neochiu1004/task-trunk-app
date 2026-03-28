@@ -51,16 +51,28 @@ export default defineConfig(({ mode }) => ({
           "**/assets/bwip-js-*.js",
           "**/assets/barcodeService-*.js",
           "**/assets/qrious-*.js",
+          "**/assets/base-*.js",
+          "**/assets/qr-*.js",
+          "**/assets/oned-*.js",
+          "**/assets/pdf417-*.js",
+          "**/assets/datamatrix-*.js",
+          "**/assets/aztec-*.js",
+          "**/assets/GridSamplerInstance-*.js",
+          "**/assets/WhiteRectangleDetector-*.js",
+          "**/assets/DecoderResult-*.js",
+          "**/assets/BitSource-*.js",
+          "**/assets/IllegalStateException-*.js",
         ],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/(?:bwip-js|barcodeService|qrious)-.*\.js$/i,
+            urlPattern:
+              /\/assets\/(?:bwip-js|barcodeService|qrious|base|qr|oned|pdf417|datamatrix|aztec|GridSamplerInstance|WhiteRectangleDetector|DecoderResult|BitSource|IllegalStateException)-.*\.js$/i,
             handler: "CacheFirst",
             options: {
               cacheName: "on-demand-barcode-assets",
               expiration: {
-                maxEntries: 6,
+                maxEntries: 16,
                 maxAgeSeconds: 60 * 60 * 24 * 30,
               },
               cacheableResponse: {

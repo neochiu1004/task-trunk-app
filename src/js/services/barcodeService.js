@@ -1,20 +1,48 @@
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library';
+import BarcodeFormat from '@zxing/library/esm/core/BarcodeFormat';
 
-const DEFAULT_FORMATS = [
-  BarcodeFormat.QR_CODE,
-  BarcodeFormat.CODE_128,
-  BarcodeFormat.CODE_39,
-  BarcodeFormat.CODE_93,
-  BarcodeFormat.EAN_13,
-  BarcodeFormat.EAN_8,
-  BarcodeFormat.UPC_A,
-  BarcodeFormat.UPC_E,
-  BarcodeFormat.ITF,
-  BarcodeFormat.PDF_417,
-  BarcodeFormat.DATA_MATRIX,
-  BarcodeFormat.AZTEC,
-  BarcodeFormat.CODABAR,
-];
+const GROUP_LOADERS = {
+  qr: () => import('./barcodeReaders/qr.js'),
+  oned: () => import('./barcodeReaders/oned.js'),
+  pdf417: () => import('./barcodeReaders/pdf417.js'),
+  datamatrix: () => import('./barcodeReaders/datamatrix.js'),
+  aztec: () => import('./barcodeReaders/aztec.js'),
+};
+
+const DEFAULT_FORMATS_BY_GROUP = {
+  qr: [BarcodeFormat.QR_CODE],
+  oned: [
+    BarcodeFormat.CODE_128,
+    BarcodeFormat.CODE_39,
+    BarcodeFormat.CODE_93,
+    BarcodeFormat.EAN_13,
+    BarcodeFormat.EAN_8,
+    BarcodeFormat.UPC_A,
+    BarcodeFormat.UPC_E,
+    BarcodeFormat.ITF,
+    BarcodeFormat.CODABAR,
+  ],
+  pdf417: [BarcodeFormat.PDF_417],
+  datamatrix: [BarcodeFormat.DATA_MATRIX],
+  aztec: [BarcodeFormat.AZTEC],
+};
+
+const COMMON_GROUPS = ['qr', 'oned'];
+const EXTENDED_GROUPS = ['pdf417', 'datamatrix', 'aztec'];
+const FORMAT_GROUPS = {
+  QR_CODE: 'qr',
+  CODE_128: 'oned',
+  CODE_39: 'oned',
+  CODE_93: 'oned',
+  EAN_13: 'oned',
+  EAN_8: 'oned',
+  UPC_A: 'oned',
+  UPC_E: 'oned',
+  ITF: 'oned',
+  CODABAR: 'oned',
+  PDF_417: 'pdf417',
+  DATA_MATRIX: 'datamatrix',
+  AZTEC: 'aztec',
+};
 
 const FORMAT_NAME_MAP = Object.entries(BarcodeFormat).reduce((map, [name, value]) => {
   if (typeof value === 'number') {
@@ -24,27 +52,63 @@ const FORMAT_NAME_MAP = Object.entries(BarcodeFormat).reduce((map, [name, value]
 }, {});
 
 const readerCache = new Map();
+const moduleCache = new Map();
 
-function createHints(formats = DEFAULT_FORMATS) {
-  const hints = new Map();
-  hints.set(DecodeHintType.TRY_HARDER, true);
-  hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-  return hints;
-}
-
-function getReader(formats = DEFAULT_FORMATS) {
-  const key = formats.join(',');
-  if (!readerCache.has(key)) {
-    readerCache.set(key, new BrowserMultiFormatReader(createHints(formats)));
-  }
-  return readerCache.get(key);
-}
-
-function getFormatsToTry(preferredFormat) {
+function normalizePreferredFormat(preferredFormat) {
   const normalized = String(preferredFormat || '').trim().toUpperCase();
-  const preferred = FORMAT_NAME_MAP[normalized];
-  if (!preferred) return [DEFAULT_FORMATS];
-  return [[preferred], DEFAULT_FORMATS];
+  return normalized || null;
+}
+
+function getGroupsToTry(preferredFormat) {
+  const preferredGroup = preferredFormat ? FORMAT_GROUPS[preferredFormat] : null;
+  const ordered = [];
+
+  if (preferredGroup) {
+    ordered.push(preferredGroup);
+  }
+
+  for (const group of COMMON_GROUPS) {
+    if (!ordered.includes(group)) ordered.push(group);
+  }
+
+  for (const group of EXTENDED_GROUPS) {
+    if (!ordered.includes(group)) ordered.push(group);
+  }
+
+  return ordered;
+}
+
+function getFormatsToTry(group, preferredFormat) {
+  const defaults = DEFAULT_FORMATS_BY_GROUP[group];
+  const preferred = preferredFormat ? FORMAT_NAME_MAP[preferredFormat] : null;
+
+  if (!preferred || !defaults.includes(preferred)) {
+    return [defaults];
+  }
+
+  if (defaults.length === 1) {
+    return [defaults];
+  }
+
+  return [[preferred], defaults];
+}
+
+async function loadGroupModule(group) {
+  if (!moduleCache.has(group)) {
+    moduleCache.set(group, GROUP_LOADERS[group]());
+  }
+
+  return moduleCache.get(group);
+}
+
+async function getReader(group, formats) {
+  const key = `${group}:${formats.join(',')}`;
+  if (!readerCache.has(key)) {
+    const module = await loadGroupModule(group);
+    readerCache.set(key, module.createReader(formats));
+  }
+
+  return readerCache.get(key);
 }
 
 function loadImage(src) {
@@ -66,17 +130,17 @@ function cropRegion(img, x, y, w, h) {
 }
 
 async function scanSingle(source, preferredFormat) {
-  const formatsToTry = getFormatsToTry(preferredFormat);
-
-  for (const formats of formatsToTry) {
-    try {
-      const result = await getReader(formats).decodeFromImageElement(source);
-      return {
-        content: result.getText(),
-        format: BarcodeFormat[result.getBarcodeFormat()],
-      };
-    } catch {
-      // Keep trying with the next format set.
+  for (const group of getGroupsToTry(preferredFormat)) {
+    for (const formats of getFormatsToTry(group, preferredFormat)) {
+      try {
+        const result = await (await getReader(group, formats)).decodeFromImageElement(source);
+        return {
+          content: result.getText(),
+          format: BarcodeFormat[result.getBarcodeFormat()],
+        };
+      } catch {
+        // Keep trying with the next group/format set.
+      }
     }
   }
 
@@ -86,7 +150,7 @@ async function scanSingle(source, preferredFormat) {
 export async function scanMultipleBarcodesFromImage(imageDataUrl, options = {}) {
   const results = [];
   const seen = new Set();
-  const preferredFormat = options.preferredFormat;
+  const preferredFormat = normalizePreferredFormat(options.preferredFormat);
   const img = await loadImage(imageDataUrl);
 
   const addResult = (r) => {
