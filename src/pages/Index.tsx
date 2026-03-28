@@ -1,26 +1,38 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
-import type { BatchEditPayload, ImportPayload, StoredSettings } from '@/types/app';
+import type { BatchEditPayload, ImportPayload } from '@/types/app';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
 import { forceRefreshToLatest } from '@/lib/pwa';
 import { validateImportData } from '@/lib/validation';
 import { useDebouncedDbValue } from '@/hooks/use-debounced-db-value';
+import { useWalletBootstrap } from '@/hooks/use-wallet-bootstrap';
 import { Header } from '@/components/layout/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { TicketCard } from '@/components/ticket/TicketCard';
-import { RedeemModal } from '@/components/ticket/RedeemModal';
-import { AddModal } from '@/components/modals/AddModal';
-import { SettingsModal } from '@/components/modals/SettingsModal';
 import { DataActionsModal } from '@/components/modals/DataActionsModal';
 import { ImportConfirmModal } from '@/components/modals/ImportConfirmModal';
-import { BatchEditModal } from '@/components/modals/BatchEditModal';
 import { TagManagerModal } from '@/components/modals/TagManagerModal';
-import { DataHealthCheck } from '@/components/modals/DataHealthCheck';
+
+const RedeemModal = lazy(() =>
+  import('@/components/ticket/RedeemModal').then((module) => ({ default: module.RedeemModal }))
+);
+const AddModal = lazy(() =>
+  import('@/components/modals/AddModal').then((module) => ({ default: module.AddModal }))
+);
+const SettingsModal = lazy(() =>
+  import('@/components/modals/SettingsModal').then((module) => ({ default: module.SettingsModal }))
+);
+const BatchEditModal = lazy(() =>
+  import('@/components/modals/BatchEditModal').then((module) => ({ default: module.BatchEditModal }))
+);
+const DataHealthCheck = lazy(() =>
+  import('@/components/modals/DataHealthCheck').then((module) => ({ default: module.DataHealthCheck }))
+);
 
 const FAR_FUTURE_TIMESTAMP = new Date(9999, 11, 31).getTime();
 
@@ -32,7 +44,6 @@ const getExpiryTimestamp = (expiry?: string) => {
 
 const Index = () => {
   const { isDark, toggleTheme } = useTheme();
-  const [tasks, setTasks] = useState<Ticket[]>([]);
   const [view, setView] = useState<ViewType>('active');
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [sortType, setSortType] = useState<SortType>('expiring');
@@ -45,15 +56,10 @@ const Index = () => {
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
   const [importPendingData, setImportPendingData] = useState<ImportPayload | Ticket[] | null>(null);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [bgHistory, setBgHistory] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
   const [showHealthCheck, setShowHealthCheck] = useState(false);
   const [healthIssueSerials, setHealthIssueSerials] = useState<Set<string>>(new Set());
-  
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const migrateConfig = (config?: Partial<typeof defaultViewConfig>) => ({
     ...defaultViewConfig,
@@ -62,69 +68,17 @@ const Index = () => {
     bgPosY: typeof config?.bgPosY === 'number' ? config.bgPosY : 50,
     bgOpacity: typeof config?.bgOpacity === 'number' ? config.bgOpacity : 1,
   });
-
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        await dbHelper.init();
-        const dbTasks = await dbHelper.getItem<Ticket[]>(DB_KEYS.TASKS);
-        const dbSettings = await dbHelper.getItem<StoredSettings>(DB_KEYS.SETTINGS);
-        const dbBgHistory = await dbHelper.getItem<string[]>(DB_KEYS.BG_HISTORY);
-        const dbTemplates = await dbHelper.getItem<Template[]>(DB_KEYS.TEMPLATES);
-
-        if (dbTasks) setTasks(dbTasks);
-        if (dbSettings) {
-          const mergedSettings = {
-            ...settings,
-            ...dbSettings,
-            bgConfigMap: dbSettings.bgConfigMap || {},
-            specificViewKeywords: dbSettings.specificViewKeywords || ['MOMO', '85度C'],
-            brandLogo: dbSettings.brandLogo || '',
-            viewConfigs: {
-              active: migrateConfig(dbSettings.viewConfigs?.active),
-              completed: migrateConfig(dbSettings.viewConfigs?.completed),
-              deleted: migrateConfig(dbSettings.viewConfigs?.deleted),
-            },
-          };
-          setSettings(mergedSettings);
-        }
-        if (dbBgHistory) setBgHistory(dbBgHistory);
-        if (dbTemplates) setTemplates(dbTemplates);
-        setIsDataLoaded(true);
-
-        // Telegram expiry reminder: only for active (not completed, not deleted) tickets
-        const loadedTasks: Ticket[] = dbTasks || [];
-        const loadedSettings: Settings = dbSettings ? { ...defaultSettings, ...dbSettings } : defaultSettings;
-        if (loadedSettings.tgToken && loadedSettings.tgChatId) {
-          const notifiedMap = (await dbHelper.getItem<Record<string, string>>(DB_KEYS.EXPIRY_NOTIFIED)) || {};
-          const today = new Date().toISOString().slice(0, 10);
-          const expiringTickets = loadedTasks.filter(
-            (t) => !t.completed && !t.isDeleted && t.expiry && checkIsExpiringSoon(t.expiry, loadedSettings.notifyDays) && notifiedMap[t.id] !== today
-          );
-          if (expiringTickets.length > 0) {
-            const pinnedTickets = expiringTickets.filter((t) => t.pinned);
-            const unpinnedTickets = expiringTickets.filter((t) => !t.pinned);
-            const formatLine = (t: typeof expiringTickets[0]) => `• ${t.pinned ? '📌 ' : ''}${t.productName}（${t.expiry}）`;
-            const lines = [...pinnedTickets.map(formatLine), ...unpinnedTickets.map(formatLine)].join('\n');
-            const pinnedNote = pinnedTickets.length > 0 ? `（含 ${pinnedTickets.length} 張優先）` : '';
-            const msg = `⏰ *[到期提醒]* 共 ${expiringTickets.length} 張快到期${pinnedNote}：\n${lines}`;
-            sendTelegramMessage(loadedSettings.tgToken, loadedSettings.tgChatId, msg).then((res) => {
-              if (res.success) {
-                expiringTickets.forEach((t) => { notifiedMap[t.id] = today; });
-                // Clean up old entries for tickets that no longer exist
-                const taskIds = new Set(loadedTasks.map((t) => t.id));
-                Object.keys(notifiedMap).forEach((id) => { if (!taskIds.has(id)) delete notifiedMap[id]; });
-                dbHelper.setItem(DB_KEYS.EXPIRY_NOTIFIED, notifiedMap);
-              }
-            }).catch(console.error);
-          }
-        }
-      } catch (err) {
-        console.error('Database initialization failed:', err);
-      }
-    };
-    initData();
-  }, []);
+  const {
+    tasks,
+    setTasks,
+    settings,
+    setSettings,
+    templates,
+    setTemplates,
+    bgHistory,
+    setBgHistory,
+    isDataLoaded,
+  } = useWalletBootstrap(migrateConfig);
 
   useDebouncedDbValue(DB_KEYS.TASKS, tasks, isDataLoaded);
   useDebouncedDbValue(DB_KEYS.SETTINGS, settings, isDataLoaded);
@@ -765,9 +719,15 @@ const Index = () => {
         />
       </div>
 
-      <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} settings={settings} redeemUrlPresets={settings.redeemUrlPresets} />
-      <AddModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} onAddBatch={handleAddBatch} redeemUrlPresets={settings.redeemUrlPresets} onSaveTemplate={handleSaveTemplate} />
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} bgHistory={bgHistory} onSave={handleSaveSettings} onRemoveHistory={(url) => { if (confirm('移除此背景？')) setBgHistory((prev) => prev.filter((i) => i !== url)); }} onAddToHistory={(bg) => { if (bg) setBgHistory((prev) => [bg, ...prev.filter((b) => b !== bg)].slice(0, 20)); }} />
+      <Suspense fallback={null}>
+        <RedeemModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onToggleComplete={handleToggleComplete} onDelete={handleDelete} onRestore={handleRestore} onUpdate={handleUpdate} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} onSaveTemplate={handleSaveTemplate} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} settings={settings} redeemUrlPresets={settings.redeemUrlPresets} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AddModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} allTags={allTags} specificViewKeywords={settings.specificViewKeywords} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} onAddBatch={handleAddBatch} redeemUrlPresets={settings.redeemUrlPresets} onSaveTemplate={handleSaveTemplate} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} bgHistory={bgHistory} onSave={handleSaveSettings} onRemoveHistory={(url) => { if (confirm('移除此背景？')) setBgHistory((prev) => prev.filter((i) => i !== url)); }} onAddToHistory={(bg) => { if (bg) setBgHistory((prev) => [bg, ...prev.filter((b) => b !== bg)].slice(0, 20)); }} />
+      </Suspense>
       <DataActionsModal 
         isOpen={showDataModal} 
         onClose={() => setShowDataModal(false)} 
@@ -783,9 +743,13 @@ const Index = () => {
         }}
       />
       <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
-      <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} redeemUrlPresets={settings.redeemUrlPresets} />
+      <Suspense fallback={null}>
+        <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} redeemUrlPresets={settings.redeemUrlPresets} />
+      </Suspense>
       <TagManagerModal isOpen={showTagManager} onClose={() => setShowTagManager(false)} tags={allTags} onDeleteTag={handleDeleteTag} />
-      <DataHealthCheck isOpen={showHealthCheck} onClose={() => setShowHealthCheck(false)} onBackup={handleBackup} onMismatchedSerials={setHealthIssueSerials} />
+      <Suspense fallback={null}>
+        <DataHealthCheck isOpen={showHealthCheck} onClose={() => setShowHealthCheck(false)} onBackup={handleBackup} onMismatchedSerials={setHealthIssueSerials} />
+      </Suspense>
     </>
   );
 };
