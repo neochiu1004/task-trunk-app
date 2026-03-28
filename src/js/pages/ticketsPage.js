@@ -1190,13 +1190,6 @@ export class TicketsPage {
             : expiryState === 'soon'
               ? 'ticket-card-expiry--soon ticket-card-expiry--soon-pill'
               : 'ticket-card-expiry--normal ticket-card-expiry--normal-pill';
-        const compactExpiryPrefix = expiryState === 'expired'
-          ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
-          : expiryState === 'today'
-            ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
-            : expiryState === 'soon'
-              ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
-              : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
         const swipeMap = {
           active: { left: '核銷', right: '回收' },
           completed: { left: '還原', right: '回收' },
@@ -1213,7 +1206,7 @@ export class TicketsPage {
                 ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
                 <div class="min-w-0">
                   <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
-                  <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1">${compactExpiryPrefix}到：${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                  <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1"><span class="ticket-card-expiry-date">${escapeHtml(ticket.expiry || '無期限')}</span>${expiryCountdown ? `<span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
                 </div>
               </div>
               <div class="flex items-center gap-1">
@@ -1275,13 +1268,6 @@ export class TicketsPage {
           : expiryState === 'soon'
             ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--soon'
             : 'ticket-card-expiry-highlight ticket-card-expiry-highlight--normal';
-      const standardExpiryPrefix = expiryState === 'expired'
-        ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
-        : expiryState === 'today'
-          ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
-          : expiryState === 'soon'
-            ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
-            : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
       const cardPaddingClass = this.view === 'active'
         ? (compactGrid ? 'p-2.5' : 'p-3')
         : (compactGrid ? 'p-3' : 'p-4');
@@ -1325,7 +1311,7 @@ export class TicketsPage {
                   <div class="min-w-0 flex-1">
                     <h3 class="font-semibold text-wabi-primary text-base truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
                     ${hideTagAndSerial ? '' : `<p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>`}
-                    <p class="${standardExpiryClass}">${standardExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                    <p class="${standardExpiryClass}"><span class="ticket-card-expiry-date">${escapeHtml(ticket.expiry || '無期限')}</span>${expiryCountdown ? `<span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
                   </div>
                   <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
                     <i class="fa-solid fa-thumbtack"></i>
