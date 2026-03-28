@@ -1266,6 +1266,33 @@ export class TicketsPage {
           : expiryState === 'soon'
             ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--soon'
             : 'ticket-card-expiry-highlight ticket-card-expiry-highlight--normal';
+      if (this.view === 'active' && compactGrid) {
+        return `
+          <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border p-2.5 shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}">
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="flex items-start gap-2 min-w-0 flex-1">
+                ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
+                <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight line-clamp-2 min-w-0 flex-1">${escapeHtml(ticket.productName || '未命名票券')}</h3>
+              </div>
+              <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
+                <i class="fa-solid fa-thumbtack"></i>
+              </button>
+            </div>
+
+            ${showThumbnail ? (
+              ticket.image
+                ? `<img src="${ticket.image}" alt="ticket thumbnail" class="w-full h-24 object-cover rounded-lg border border-wabi-border mb-2" />`
+                : `<div class="w-full h-24 rounded-lg border border-dashed border-wabi-border bg-white/70 mb-2 flex items-center justify-center text-wabi-text-secondary text-xs">無縮圖</div>`
+            ) : ''}
+
+            <p class="${standardExpiryClass} mb-2"><span class="ticket-card-expiry-date">${escapeHtml(ticket.expiry || '無期限')}</span>${expiryCountdown ? `<span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+
+            <div class="ticket-card-actions flex gap-2" data-no-swipe="1">
+              ${editButton}
+            </div>
+          </article>
+        `;
+      }
       const cardPaddingClass = this.view === 'active'
         ? (compactGrid ? 'p-2.5' : 'p-3')
         : (compactGrid ? 'p-3' : 'p-4');
