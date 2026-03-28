@@ -8,6 +8,7 @@ import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
 import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
 import { forceRefreshToLatest } from '@/lib/pwa';
 import { validateImportData } from '@/lib/validation';
+import { useDebouncedDbValue } from '@/hooks/use-debounced-db-value';
 import { Header } from '@/components/layout/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { TicketCard } from '@/components/ticket/TicketCard';
@@ -116,10 +117,10 @@ const Index = () => {
     initData();
   }, []);
 
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.TASKS, tasks); }, [tasks, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.SETTINGS, settings); }, [settings, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.BG_HISTORY, bgHistory); }, [bgHistory, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) dbHelper.setItem(DB_KEYS.TEMPLATES, templates); }, [templates, isDataLoaded]);
+  useDebouncedDbValue(DB_KEYS.TASKS, tasks, isDataLoaded);
+  useDebouncedDbValue(DB_KEYS.SETTINGS, settings, isDataLoaded);
+  useDebouncedDbValue(DB_KEYS.BG_HISTORY, bgHistory, isDataLoaded);
+  useDebouncedDbValue(DB_KEYS.TEMPLATES, templates, isDataLoaded);
 
   const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))], [tasks]);
   const duplicateSerials = useMemo(() => {
