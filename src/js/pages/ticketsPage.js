@@ -9,7 +9,7 @@ import {
 
 const VIEW_META = {
   active: { title: '待使用票券', empty: '目前沒有待使用票券', icon: 'fa-ticket' },
-  completed: { title: '已使用票券', empty: '目前沒有已使用票券', icon: 'fa-check-circle' },
+  completed: { title: '已使用票券', empty: '目前沒有已使用票券', icon: 'fa-circle-check' },
   deleted: { title: '回收桶', empty: '回收桶是空的', icon: 'fa-trash' },
 };
 const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
