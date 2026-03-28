@@ -1319,7 +1319,7 @@ export class SettingsPage {
       for (const ticket of candidates) {
         const source = ticket.originalImage || ticket.image;
         try {
-          const results = await scanMultipleBarcodesFromImage(source);
+          const results = await scanMultipleBarcodesFromImage(source, { preferredFormat: ticket.barcodeFormat });
           if (!results.length) {
             report.noBarcode.push(ticket.productName || ticket.id);
             continue;

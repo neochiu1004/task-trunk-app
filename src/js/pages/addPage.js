@@ -380,7 +380,8 @@ export class AddPage {
       const scanSource = originalImage || imageData;
       showToast('正在辨識條碼...');
       const { scanMultipleBarcodesFromImage } = await getBarcodeScanner();
-      const results = await scanMultipleBarcodesFromImage(scanSource);
+      const preferredFormat = root.querySelector('#barcode-format')?.value || '';
+      const results = await scanMultipleBarcodesFromImage(scanSource, { preferredFormat });
       if (!results.length) {
         showToast('未找到條碼', 'error');
         return;
