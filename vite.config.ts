@@ -47,8 +47,27 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globIgnores: [
+          "**/assets/bwip-js-*.js",
+          "**/assets/barcodeService-*.js",
+          "**/assets/qrious-*.js",
+        ],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/(?:bwip-js|barcodeService|qrious)-.*\.js$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "on-demand-barcode-assets",
+              expiration: {
+                maxEntries: 6,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
