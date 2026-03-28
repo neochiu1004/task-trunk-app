@@ -220,6 +220,32 @@ const Index = () => {
         : view === 'deleted'
           ? '刪除的票券會先暫存在這裡，之後可以還原或永久刪除。'
           : '先用下方新增按鈕建立票券，之後就能在這裡集中管理。';
+  const filteredTaskIds = useMemo(() => new Set(filteredTasks.map((t) => t.id)), [filteredTasks]);
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => filteredTaskIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredTaskIds]);
+
+  useEffect(() => {
+    if (isSelectionMode && filteredTasks.length === 0) {
+      setIsSelectionMode(false);
+    }
+  }, [filteredTasks.length, isSelectionMode]);
+
+  useEffect(() => {
+    if (selectedTicket && !tasks.some((t) => t.id === selectedTicket.id)) {
+      setSelectedTicket(null);
+    }
+  }, [selectedTicket, tasks]);
+
+  const handleViewChange = (nextView: ViewType) => {
+    setView(nextView);
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+  };
 
   const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
   const handleUpdate = (updatedTicket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
@@ -699,7 +725,7 @@ const Index = () => {
         
         <BottomNavigation
           view={view}
-          setView={setView}
+          setView={handleViewChange}
           onAddClick={() => setShowAddModal(true)}
           activeCount={viewCounts.active}
           completedCount={viewCounts.completed}
