@@ -12,6 +12,7 @@ import {
 } from '../utils.js';
 
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
+const APP_VERSION = __APP_VERSION__;
 let barcodeServicePromise = null;
 
 async function getBarcodeScanner() {
@@ -49,6 +50,7 @@ export class SettingsPage {
       mode: 'append',
       restoreSettings: true,
     };
+    this.currentTab = 'general';
   }
 
   templateListHtml() {
@@ -521,6 +523,124 @@ export class SettingsPage {
 
   bindEvents() {
     const root = this.app.getRoot();
+    const settingsPage = root.querySelector('.page.active');
+    const settingsForm = root.querySelector('#settings-form');
+    const settingsTabs = [
+      { id: 'general', label: '一般', icon: 'fa-sliders' },
+      { id: 'views', label: '版面', icon: 'fa-table-cells-large' },
+      { id: 'templates', label: '範本', icon: 'fa-layer-group' },
+      { id: 'data', label: '資料', icon: 'fa-database' },
+      { id: 'about', label: '版本', icon: 'fa-circle-info' },
+    ];
+
+    if (settingsPage && settingsForm) {
+      const subtitle = settingsPage.querySelector('.sticky p.text-sm.text-wabi-text-secondary');
+      if (subtitle && !root.querySelector('#settings-version-text')) {
+        const versionText = document.createElement('p');
+        versionText.id = 'settings-version-text';
+        versionText.className = 'text-xs text-wabi-text-secondary mt-1';
+        versionText.textContent = '目前版本 v' + APP_VERSION;
+        subtitle.insertAdjacentElement('afterend', versionText);
+      }
+
+      const topLevelSections = Array.from(settingsPage.children).filter((element) => element.tagName === 'SECTION');
+      const templateSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('範本管理'));
+      const presetSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('兌換網址預設'));
+      const importSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('資料匯入 / 匯出'));
+      const healthSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('資料健康檢查'));
+      const tagsSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('標籤管理'));
+      const versionSection = topLevelSections.find((element) => !element.querySelector('h2') && element.textContent?.includes('版本時間'));
+
+      const formChildren = Array.from(settingsForm.children);
+      const generalIndexes = new Set([0, 1, 2, 3, 4, 6, 10]);
+      const viewIndexes = new Set([7, 8, 9]);
+      const aboutIndexes = new Set([5]);
+      const generalNodes = formChildren.filter((_, index) => generalIndexes.has(index));
+      const viewNodes = formChildren.filter((_, index) => viewIndexes.has(index));
+      const aboutNodes = formChildren.filter((_, index) => aboutIndexes.has(index));
+
+      for (const child of formChildren) {
+        settingsForm.removeChild(child);
+      }
+      for (const node of generalNodes) {
+        settingsForm.appendChild(node);
+      }
+      settingsForm.className = 'bg-white border border-wabi-border rounded-2xl p-4 space-y-3';
+
+      const tabsShell = document.createElement('div');
+      tabsShell.id = 'settings-tabs-shell';
+      tabsShell.className = 'sticky z-20 -mx-4 px-4';
+      tabsShell.style.top = 'calc(var(--safe-top) + 4.5rem)';
+      tabsShell.innerHTML = '<div class="overflow-x-auto pb-1"><div class="flex gap-2 min-w-max">' + settingsTabs.map((tab) => (
+        '<button type="button" data-settings-tab="' + tab.id + '" class="settings-tab-btn inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm whitespace-nowrap">' +
+          '<i class="fa-solid ' + tab.icon + ' text-xs"></i>' +
+          '<span>' + tab.label + '</span>' +
+        '</button>'
+      )).join('') + '</div></div>';
+      settingsForm.before(tabsShell);
+
+      const createPanel = () => {
+        const panel = document.createElement('div');
+        panel.className = 'space-y-4';
+        return panel;
+      };
+
+      const viewsPanel = createPanel();
+      viewsPanel.dataset.settingsPanel = 'views';
+      viewsPanel.insertAdjacentHTML('beforeend', '<section class="bg-white border border-wabi-border rounded-2xl p-4 space-y-3"><h2 class="font-semibold text-wabi-primary">版面與背景</h2><p class="text-sm text-wabi-text-secondary">調整待使用、已使用與回收桶頁面的顯示方式。</p></section>');
+      for (const node of viewNodes) {
+        viewsPanel.appendChild(node);
+      }
+
+      const templatesPanel = createPanel();
+      templatesPanel.dataset.settingsPanel = 'templates';
+      if (templateSection) templatesPanel.appendChild(templateSection);
+      if (presetSection) templatesPanel.appendChild(presetSection);
+
+      const dataPanel = createPanel();
+      dataPanel.dataset.settingsPanel = 'data';
+      if (importSection) dataPanel.appendChild(importSection);
+      if (healthSection) dataPanel.appendChild(healthSection);
+      if (tagsSection) dataPanel.appendChild(tagsSection);
+
+      const aboutPanel = createPanel();
+      aboutPanel.dataset.settingsPanel = 'about';
+      aboutPanel.insertAdjacentHTML('beforeend', '<section class="bg-white border border-wabi-border rounded-2xl p-4 space-y-3"><h2 class="font-semibold text-wabi-primary">版本與更新</h2><div class="grid md:grid-cols-2 gap-3"><div class="rounded-xl border border-wabi-border/70 bg-wabi-bg/50 p-4"><p class="text-sm text-wabi-text-secondary">目前版本</p><p class="text-2xl font-bold text-wabi-primary mt-1">v' + escapeHtml(APP_VERSION) + '</p><p class="text-xs text-wabi-text-secondary mt-2">版本時間：' + escapeHtml(formatDateTime(Date.now())) + '</p></div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><h3 class="text-sm font-semibold text-amber-800">版本說明</h3><p class="text-xs text-amber-700 mt-1">設定頁已改成依功能分頁顯示，並加入版本編號，方便確認目前安裝版本。</p></div></div></section>');
+      for (const node of aboutNodes) {
+        aboutPanel.appendChild(node);
+      }
+      if (versionSection) aboutPanel.appendChild(versionSection);
+
+      settingsForm.dataset.settingsPanel = 'general';
+      settingsForm.after(viewsPanel, templatesPanel, dataPanel, aboutPanel);
+
+      if (!settingsTabs.some((tab) => tab.id === this.currentTab)) {
+        this.currentTab = 'general';
+      }
+
+      const syncSettingsTabs = () => {
+        root.querySelectorAll('[data-settings-tab]').forEach((button) => {
+          const active = button.dataset.settingsTab === this.currentTab;
+          button.className = 'settings-tab-btn inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm whitespace-nowrap ' + (active
+            ? 'bg-wabi-primary text-white border-wabi-primary shadow-sm'
+            : 'bg-white text-wabi-text-secondary border-wabi-border');
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        root.querySelectorAll('[data-settings-panel]').forEach((panel) => {
+          panel.classList.toggle('hidden', panel.dataset.settingsPanel !== this.currentTab);
+        });
+      };
+
+      root.querySelectorAll('[data-settings-tab]').forEach((button) => {
+        button.addEventListener('click', () => {
+          this.currentTab = button.dataset.settingsTab || 'general';
+          syncSettingsTabs();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+      syncSettingsTabs();
+    }
     let activeBackgroundImages = Array.isArray(this.app.state.settings.viewConfigs?.active?.backgroundImages)
       ? this.app.state.settings.viewConfigs.active.backgroundImages.filter(Boolean)
       : [];
