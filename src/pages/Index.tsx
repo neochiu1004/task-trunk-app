@@ -52,6 +52,7 @@ const Index = () => {
   const [showTagManager, setShowTagManager] = useState(false);
   const [showHealthCheck, setShowHealthCheck] = useState(false);
   const [healthIssueSerials, setHealthIssueSerials] = useState<Set<string>>(new Set());
+  const [headerHeight, setHeaderHeight] = useState(220);
 
   const migrateConfig = (config?: Partial<typeof defaultViewConfig>) => ({
     ...defaultViewConfig,
@@ -440,9 +441,13 @@ const Index = () => {
           onToggleTheme={toggleTheme}
           currentView={view}
           onForceUpdate={handleForceUpdate}
+          onHeightChange={setHeaderHeight}
         />
         
-        <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
+        <div
+          className="min-h-[50vh] pb-28 overflow-x-hidden"
+          style={{ paddingTop: `${headerHeight + 12}px` }}
+        >
           <div className="px-4 mb-4 space-y-3">
             <div className="glass-card rounded-2xl px-4 py-3 border border-border/50">
               <div className="flex items-start justify-between gap-3">
