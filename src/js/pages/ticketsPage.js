@@ -6,8 +6,6 @@ import {
   showToast,
   normalizeDateInput,
 } from '../utils.js';
-import bwipjs from 'bwip-js';
-import QRious from 'qrious';
 
 const VIEW_META = {
   active: { title: '待使用票券', empty: '目前沒有待使用票券', icon: 'fa-ticket' },
@@ -18,6 +16,19 @@ const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
 const EXPIRY_URGENT_FILTER_TAG = '__expiry_urgent__';
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
 let swipeHintShownInSession = false;
+let barcodeRendererPromise = null;
+
+async function getBarcodeRenderer() {
+  barcodeRendererPromise ||= Promise.all([
+    import('bwip-js'),
+    import('qrious'),
+  ]).then(([bwipModule, qriousModule]) => ({
+    bwipjs: bwipModule.default,
+    QRious: qriousModule.default,
+  }));
+
+  return barcodeRendererPromise;
+}
 
 function parseExpiryToTime(expiry) {
   if (!expiry) return Number.MAX_SAFE_INTEGER;
@@ -781,7 +792,8 @@ export class TicketsPage {
       });
     };
 
-    const drawBarcodeCanvas = (canvas, targetBcid = safeBcid, scale = 3, height = 10) => {
+    const drawBarcodeCanvas = async (canvas, targetBcid = safeBcid, scale = 3, height = 10) => {
+      const { bwipjs } = await getBarcodeRenderer();
       try {
         bwipjs.toCanvas(canvas, {
           bcid: targetBcid,
@@ -805,7 +817,8 @@ export class TicketsPage {
       }
     };
 
-    const drawQrCanvas = (canvas, size = 180) => {
+    const drawQrCanvas = async (canvas, size = 180) => {
+      const { QRious } = await getBarcodeRenderer();
       new QRious({
         element: canvas,
         value: ticket.serial || '',
@@ -814,7 +827,7 @@ export class TicketsPage {
       });
     };
 
-    const renderStandardBarcodePreview = () => {
+    const renderStandardBarcodePreview = async () => {
       if (!ticket.serial) {
         previewWrap.innerHTML = '<div class="w-48 h-48 flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-300 rounded-2xl font-semibold">無序號</div>';
         return;
@@ -837,11 +850,13 @@ export class TicketsPage {
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas');
       if (!barcodeCanvas || !qrCanvas) return;
 
-      drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10);
-      drawQrCanvas(qrCanvas, 180);
+      await Promise.all([
+        drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10),
+        drawQrCanvas(qrCanvas, 180),
+      ]);
     };
 
-    const renderMomoBarcodePreview = () => {
+    const renderMomoBarcodePreview = async () => {
       if (!ticket.serial) {
         previewWrap.innerHTML = '<div class="w-48 h-48 flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-300 rounded-2xl font-semibold">無序號</div>';
         return;
@@ -891,23 +906,25 @@ export class TicketsPage {
       const barcodeCanvas = previewWrap.querySelector('#redeem-barcode-canvas-momo');
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas-momo');
       if (!barcodeCanvas || !qrCanvas) return;
-      drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10);
-      drawQrCanvas(qrCanvas, 110);
+      await Promise.all([
+        drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10),
+        drawQrCanvas(qrCanvas, 110),
+      ]);
     };
 
-    const renderBarcodePreview = () => {
+    const renderBarcodePreview = async () => {
       if (barcodeVariant === 'momo') {
-        renderMomoBarcodePreview();
+        await renderMomoBarcodePreview();
         return;
       }
-      renderStandardBarcodePreview();
+      await renderStandardBarcodePreview();
     };
 
-    const renderPreview = () => {
+    const renderPreview = async () => {
       if (mode === 'original') {
         if (!hasOriginalImage) {
           mode = 'barcode';
-          renderPreview();
+          await renderPreview();
           return;
         }
         previewWrap.innerHTML = `
@@ -919,11 +936,12 @@ export class TicketsPage {
 
       if (!hasBarcodeSource) {
         mode = 'original';
-        renderPreview();
+        await renderPreview();
         return;
       }
 
-      renderBarcodePreview();
+      previewWrap.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-500 text-sm">正在載入條碼預覽...</div>';
+      await renderBarcodePreview();
       updateModeButtonState();
     };
 
@@ -994,7 +1012,7 @@ export class TicketsPage {
         const nextMode = btn.dataset.redeemMode;
         if (!nextMode) return;
         mode = nextMode;
-        renderPreview();
+        void renderPreview();
       });
     });
 
@@ -1003,8 +1021,7 @@ export class TicketsPage {
         const nextVariant = btn.dataset.barcodeVariant;
         if (!nextVariant) return;
         barcodeVariant = nextVariant;
-        renderBarcodePreview();
-        updateModeButtonState();
+        void renderPreview();
       });
     });
 
@@ -1097,7 +1114,7 @@ export class TicketsPage {
 
     document.body.appendChild(modal);
     window.addEventListener('keydown', onKeydown);
-    renderPreview();
+    void renderPreview();
   }
 
   buildCards(tickets, options = {}) {
