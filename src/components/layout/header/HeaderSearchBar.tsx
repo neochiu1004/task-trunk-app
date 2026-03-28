@@ -8,13 +8,13 @@ interface HeaderSearchBarProps {
 
 export const HeaderSearchBar = ({ onChange, value }: HeaderSearchBarProps) => (
   <div className="relative">
-    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/80" />
+    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
     <input
       type="text"
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder="搜尋票券、標籤或序號..."
-      className="w-full rounded-[1.35rem] border border-white/55 bg-white/72 py-3 pl-11 pr-10 text-sm font-medium outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-md transition-all duration-200 placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+      className="w-full rounded-[1.35rem] border border-white/50 bg-card/85 py-3 pl-11 pr-10 text-sm font-medium outline-none transition-all duration-200 placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
     />
     <AnimatePresence>
       {value && (

@@ -464,9 +464,6 @@ const Index = () => {
       <div className="max-w-md mx-auto min-h-screen relative z-10 overflow-x-hidden" style={{ backgroundColor: currentConfig.backgroundImage ? 'transparent' : undefined }}>
         <Header
           appTitle={settings.appTitle}
-          activeCount={tasks.filter((t) => !t.completed && !t.isDeleted).length}
-          completedCount={tasks.filter((t) => t.completed && !t.isDeleted).length}
-          deletedCount={tasks.filter((t) => t.isDeleted).length}
           onTitleChange={(t) => setSettings((s) => ({ ...s, appTitle: t }))}
           onOpenSettings={() => setShowSettings(true)}
           onOpenMenu={() => setShowDataModal(true)}
@@ -499,7 +496,7 @@ const Index = () => {
           onForceUpdate={handleForceUpdate}
         />
         
-        <div className="pt-[438px] min-h-[50vh] pb-32 overflow-x-hidden">
+        <div className="pt-[280px] min-h-[50vh] pb-28 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={view + activeTags.join(',') + sortType}
@@ -507,7 +504,7 @@ const Index = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={isCompact ? `grid gap-3 px-4 ${(currentConfig.gridColumns || 2) === 3 ? 'grid-cols-3' : 'grid-cols-2'}` : "space-y-1"}
+              className={isCompact ? `grid gap-3 px-4 ${(currentConfig.gridColumns || 2) === 3 ? 'grid-cols-3' : 'grid-cols-2'}` : ""}
             >
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((t, index) => (
@@ -536,13 +533,10 @@ const Index = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mx-4 overflow-hidden rounded-[2rem] border border-white/55 bg-white/75 px-6 py-12 text-center text-muted-foreground shadow-[0_26px_60px_-30px_rgba(15,23,42,0.4)] backdrop-blur-xl"
+                  className="text-center py-24 text-muted-foreground"
                 >
-                  <span className="mb-5 block text-6xl opacity-20">🎫</span>
-                  <p className="text-lg font-semibold text-foreground">這個分類目前還沒有票券</p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    用下方的新增按鈕建立票券，或透過搜尋與標籤切換目前的清單視角。
-                  </p>
+                  <span className="text-6xl mb-6 block opacity-20">🎫</span>
+                  <p className="font-medium text-sm">暫無票券</p>
                 </motion.div>
               )}
             </motion.div>

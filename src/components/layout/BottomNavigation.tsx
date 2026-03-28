@@ -23,7 +23,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-md pointer-events-auto">
-        <nav className="mx-3 mb-3 flex items-center justify-around rounded-[32px] border border-white/50 bg-white/78 px-4 pb-5 pt-3 shadow-[0_26px_60px_-30px_rgba(15,23,42,0.42)] backdrop-blur-2xl">
+        <nav className="mx-3 mb-3 flex items-center justify-around rounded-[28px] border border-border/60 bg-card/88 px-4 pb-5 pt-3 shadow-glass-lg backdrop-blur-xl">
           <NavItem
             icon={navItems[0].icon}
             label={navItems[0].label}
@@ -39,7 +39,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           >
             <div className="relative">
               <motion.div
-                className="absolute -inset-3 rounded-2xl bg-gradient-to-tr from-[hsl(var(--brand-amber))] via-[hsl(var(--accent))] to-[hsl(var(--primary))] shadow-lg shadow-primary/25"
+                className="absolute -inset-3 rounded-2xl bg-gradient-to-tr from-[hsl(var(--accent))] via-[hsl(var(--brand-olive))] to-[hsl(var(--primary))] shadow-lg shadow-primary/25"
               />
               <Plus size={22} className="relative z-10 text-primary-foreground" />
             </div>
@@ -86,7 +86,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, isActive, onClick 
         {isActive && (
           <motion.div
             layoutId="bottomNavIndicator"
-            className="absolute -inset-2.5 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/12"
+            className="absolute -inset-2.5 rounded-2xl bg-primary/12"
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           />
         )}

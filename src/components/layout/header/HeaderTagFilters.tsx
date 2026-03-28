@@ -71,7 +71,7 @@ export const HeaderTagFilters = ({
   onOpenTagManager,
   toggleTag,
 }: HeaderTagFiltersProps) => (
-  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2.5 -mx-4 px-4 pt-0.5">
+  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2.5 -mx-4 px-4">
     <motion.button
       whileTap={{ scale: 0.95 }}
       whileHover={{ scale: 1.02 }}

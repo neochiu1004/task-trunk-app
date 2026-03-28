@@ -12,9 +12,6 @@ import vouchyLogo from '@/assets/vouchy-logo.png';
 
 interface HeaderProps {
   appTitle: string;
-  activeCount: number;
-  completedCount: number;
-  deletedCount: number;
   onTitleChange: (title: string) => void;
   onOpenMenu: () => void;
   onOpenSettings: () => void;
@@ -56,9 +53,6 @@ const headerButtonTones = {
 
 export const Header: React.FC<HeaderProps> = ({
   appTitle,
-  activeCount,
-  completedCount,
-  deletedCount,
   onTitleChange,
   onOpenMenu,
   onOpenSettings,
@@ -128,28 +122,6 @@ export const Header: React.FC<HeaderProps> = ({
       logoInputRef.current.value = '';
     }
   };
-
-  const viewMeta = {
-    active: {
-      eyebrow: 'Ready To Redeem',
-      title: `${activeCount} 張待使用票券`,
-      description: activeCount > 0 ? '把常用票券排前面，快到期與重複項目會先被拉出來。' : '現在可以開始建立你的第一批票券收藏。',
-      tone: 'from-[hsl(var(--primary))] via-[hsl(var(--brand-strong))] to-[hsl(var(--brand-olive))]',
-    },
-    completed: {
-      eyebrow: 'Redeemed Archive',
-      title: `${completedCount} 張已使用票券`,
-      description: completedCount > 0 ? '這裡保留已核銷紀錄，方便回頭對帳與查詢時間。' : '目前還沒有核銷紀錄，完成後的票券會出現在這裡。',
-      tone: 'from-slate-700 via-slate-600 to-slate-500',
-    },
-    deleted: {
-      eyebrow: 'Recycle Bin',
-      title: `${deletedCount} 張回收票券`,
-      description: deletedCount > 0 ? '回收桶保留刪除票券，必要時可以還原或永久清除。' : '回收桶目前是空的，已刪除的票券會暫存在這裡。',
-      tone: 'from-rose-700 via-orange-600 to-amber-500',
-    },
-  } as const;
-  const currentViewMeta = viewMeta[(currentView as keyof typeof viewMeta) || 'active'];
 
   return (
     <motion.div
@@ -256,44 +228,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="mt-3">
             <HeaderSearchBar value={searchQuery} onChange={setSearchQuery} />
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-[2rem] border border-white/45 bg-white/70 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.45)] backdrop-blur-xl">
-          <div className={`relative overflow-hidden bg-gradient-to-br ${currentViewMeta.tone} px-5 pb-5 pt-4 text-white`}>
-            <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at top right, rgba(255,255,255,0.38), transparent 28%), radial-gradient(circle at bottom left, rgba(255,255,255,0.18), transparent 30%)' }} />
-            <div className="relative">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">
-                {currentViewMeta.eyebrow}
-              </div>
-              <div className="mt-2 flex items-end justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-[1.6rem] font-semibold leading-tight">{currentViewMeta.title}</h2>
-                  <p className="mt-2 max-w-[18rem] text-sm leading-6 text-white/76">
-                    {currentViewMeta.description}
-                  </p>
-                </div>
-                <div className="rounded-[1.4rem] border border-white/20 bg-white/12 px-3 py-2 text-right backdrop-blur-md">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-white/65">目前排序</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {currentView === 'completed' ? '核銷時間' : sortType === 'expiring' ? '依到期日' : sortType === 'newest' ? '最新建立' : '最早建立'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-px bg-border/70">
-            {[
-              { label: '待使用', value: activeCount },
-              { label: '已使用', value: completedCount },
-              { label: '回收桶', value: deletedCount },
-            ].map((item) => (
-              <div key={item.label} className="bg-white/80 px-4 py-3 text-center backdrop-blur-sm">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{item.label}</div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{item.value}</div>
-              </div>
-            ))}
           </div>
         </div>
 
