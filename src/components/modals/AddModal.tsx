@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { X, Plus, LayoutDashboard, Image as ImageIcon, Maximize2, Search, Loader2, ScanLine, RotateCcw, Link, Pin } from 'lucide-react';
+import { X, LayoutDashboard, Search, Loader2, ScanLine, RotateCcw, Pin, ChevronDown } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
 import { generateId } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -70,6 +70,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   const [isScanningSerial, setIsScanningSerial] = useState(false);
   const [hasAppliedTemplate, setHasAppliedTemplate] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   // Multi-barcode selection state
@@ -120,6 +121,7 @@ export const AddModal: React.FC<AddModalProps> = ({
     setBarcodeFormat(undefined);
     setHasAppliedTemplate(false);
     setIsPinned(false);
+    setShowAdvanced(false);
     toast({
       title: "已清除",
       description: "所有範本資料已清除",
@@ -214,6 +216,7 @@ export const AddModal: React.FC<AddModalProps> = ({
     setOriginalImage('');
     setBarcodeFormat(undefined);
     setIsPinned(false);
+    setShowAdvanced(false);
     onClose();
   };
 
@@ -256,43 +259,213 @@ export const AddModal: React.FC<AddModalProps> = ({
             </div>
           )}
 
-          {/* Image Uploads */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">封面縮圖</span>
-                <button
-                  onClick={() => setShowWebSearch(true)}
-                  className="text-[10px] text-primary flex items-center gap-1 hover:underline"
-                >
-                  <Search size={10} /> 網路搜尋
-                </button>
-              </div>
-              <ImageUpload
-                value={images[0] || ''}
-                onChange={(base64) => setImages([base64])}
-                onClear={() => setImages([])}
-                type="thumbnail"
-              />
-            </div>
-            <div className="space-y-1 relative">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">核銷原圖</span>
-                {isScanning && (
-                  <Loader2 size={10} className="animate-spin text-primary" />
+          <div className="rounded-[24px] border border-border/50 glass-card p-4 space-y-4">
+            <div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2">基本資料</div>
+              <div className="relative">
+                <input
+                  className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-medium text-base focus:ring-2 focus:ring-primary/30 transition-all"
+                  placeholder="票券名稱 (必填)"
+                  value={manualData.name}
+                  onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
+                />
+                {manualData.name && (
+                  <button
+                    type="button"
+                    onClick={() => setManualData({ ...manualData, name: '' })}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
+                  >
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
                 )}
               </div>
-              <ImageUpload
-                value={originalImage}
-                onChange={handleOriginalImageChange}
-                onClear={() => {
-                  setOriginalImage('');
-                  setBarcodeFormat(undefined);
-                }}
-                type="original"
+            </div>
+
+            <div className="w-full max-w-full overflow-x-hidden">
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2">券號與期限</div>
+              <div className="flex items-center gap-2 w-full max-w-full">
+                <div className="relative flex-1 min-w-0">
+                  <input
+                    className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-mono text-base focus:ring-2 focus:ring-primary/30 transition-all"
+                    placeholder="序號/代碼"
+                    value={manualData.serial}
+                    onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
+                  />
+                  {manualData.serial && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManualData({ ...manualData, serial: '' });
+                        setBarcodeFormat(undefined);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
+                    >
+                      <X size={14} strokeWidth={2.5} />
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={scanInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleStandaloneScan}
+                />
+                <button
+                  onClick={() => scanInputRef.current?.click()}
+                  disabled={isScanningSerial}
+                  className="shrink-0 p-3.5 glass-card rounded-xl text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                  title="掃描條碼圖片"
+                >
+                  {isScanningSerial ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <ScanLine size={18} />
+                  )}
+                </button>
+              </div>
+              <div className="mt-1 pl-1 text-[11px] text-muted-foreground">
+                可直接貼上券號，或用右側按鈕從圖片掃描。
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <input
+                type="date"
+                className="w-full p-3.5 glass-card rounded-xl outline-none text-base font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
+                value={manualData.expiry}
+                onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
               />
+              <div className="pl-1 text-[11px] text-muted-foreground">
+                沒有期限可以留空，之後也能再補。
+              </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((prev) => !prev)}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl glass-card border border-border/50 text-left"
+          >
+            <div>
+              <div className="text-sm font-semibold text-foreground">圖片與進階設定</div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                封面縮圖、原圖掃碼、標籤、跳轉網址與置頂設定
+              </div>
+            </div>
+            <ChevronDown
+              size={18}
+              className={`text-muted-foreground transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          <AnimatePresence initial={false}>
+            {showAdvanced && (
+              <div className="rounded-[24px] border border-border/50 glass-card p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">封面縮圖</span>
+                      <button
+                        onClick={() => setShowWebSearch(true)}
+                        className="text-[10px] text-primary flex items-center gap-1 hover:underline"
+                      >
+                        <Search size={10} /> 網路搜尋
+                      </button>
+                    </div>
+                    <ImageUpload
+                      value={images[0] || ''}
+                      onChange={(base64) => setImages([base64])}
+                      onClear={() => setImages([])}
+                      type="thumbnail"
+                    />
+                  </div>
+                  <div className="space-y-1 relative">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">核銷原圖</span>
+                      {isScanning && (
+                        <Loader2 size={10} className="animate-spin text-primary" />
+                      )}
+                    </div>
+                    <ImageUpload
+                      value={originalImage}
+                      onChange={handleOriginalImageChange}
+                      onClear={() => {
+                        setOriginalImage('');
+                        setBarcodeFormat(undefined);
+                      }}
+                      type="original"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-muted-foreground">
+                  上傳原圖後會自動嘗試辨識條碼，之後在核銷時也會優先顯示原圖。
+                </div>
+
+                <div>
+                  <TagSelectInput
+                    allTags={allTags}
+                    selectedTags={manualTags}
+                    onTagsChange={setManualTags}
+                    extraSuggestions={specificViewKeywords}
+                  />
+                </div>
+
+                <div>
+                  <RedeemUrlPresetSelect
+                    presets={redeemUrlPresets || []}
+                    value={manualData.redeemUrl}
+                    onChange={(url) => setManualData({ ...manualData, redeemUrl: url })}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPinned(!isPinned)}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all shadow-sm border ${
+                    isPinned
+                      ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
+                      : 'glass-card border-border/50 text-muted-foreground'
+                  }`}
+                  title="設定是否置頂"
+                >
+                  <span className="text-sm font-medium">置頂顯示</span>
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <Pin size={18} className={isPinned ? 'fill-amber-500' : ''} />
+                    {isPinned ? '已置頂' : '未置頂'}
+                  </span>
+                </button>
+
+                {onSaveTemplate && (
+                  <button
+                    type="button"
+                    disabled={!manualData.name.trim()}
+                    onClick={() => {
+                      const name = prompt('請輸入範本名稱', manualData.name);
+                      if (name) {
+                        const matchingPreset = redeemUrlPresets?.find(p => p.url === manualData.redeemUrl);
+                        onSaveTemplate({
+                          label: name,
+                          productName: manualData.name,
+                          image: images[0] || undefined,
+                          tags: manualTags,
+                          serial: manualData.serial,
+                          expiry: manualData.expiry,
+                          redeemUrlPresetId: matchingPreset?.id,
+                        });
+                      }
+                    }}
+                    className="w-full p-3.5 rounded-2xl border transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed bg-ticket-success/10 border-ticket-success/30 text-ticket-success hover:bg-ticket-success/20 disabled:hover:bg-ticket-success/10 flex items-center justify-center gap-2"
+                    title={manualData.name.trim() ? '儲存為範本' : '請先輸入票券名稱'}
+                  >
+                    <LayoutDashboard size={18} />
+                    儲存為範本
+                  </button>
+                )}
+              </div>
+            )}
+          </AnimatePresence>
 
           {/* Web Image Search Modal */}
           <WebImageSearch
@@ -301,151 +474,17 @@ export const AddModal: React.FC<AddModalProps> = ({
             onSelectImage={(base64) => setImages([base64])}
           />
 
-          {/* Name Input */}
-          <div className="relative">
-            <input
-              className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-medium text-base focus:ring-2 focus:ring-primary/30 transition-all"
-              placeholder="票券名稱 (必填)"
-              value={manualData.name}
-              onChange={(e) => setManualData({ ...manualData, name: e.target.value })}
-            />
-            {manualData.name && (
+          <div className="space-y-3">
+            <div className="flex gap-3">
               <button
-                type="button"
-                onClick={() => setManualData({ ...manualData, name: '' })}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
+                onClick={handleManualSubmit}
+                className="flex-1 bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all active:scale-[0.98]"
               >
-                <X size={14} strokeWidth={2.5} />
-              </button>
-            )}
-          </div>
-
-          {/* Tags */}
-          <div>
-            <TagSelectInput
-              allTags={allTags}
-              selectedTags={manualTags}
-              onTagsChange={setManualTags}
-              extraSuggestions={specificViewKeywords}
-            />
-          </div>
-
-          {/* Serial Input with Scan Button */}
-          <div className="w-full max-w-full overflow-x-hidden">
-            <div className="flex items-center gap-2 w-full max-w-full">
-              <div className="relative flex-1 min-w-0">
-                <input
-                  className="w-full p-3.5 pr-10 glass-card rounded-xl outline-none font-mono text-base focus:ring-2 focus:ring-primary/30 transition-all"
-                  placeholder="序號/代碼"
-                  value={manualData.serial}
-                  onChange={(e) => setManualData({ ...manualData, serial: e.target.value })}
-                />
-                {manualData.serial && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setManualData({ ...manualData, serial: '' });
-                      setBarcodeFormat(undefined);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-muted hover:bg-primary/20 text-foreground shadow-sm border border-border/50 transition-colors"
-                  >
-                    <X size={14} strokeWidth={2.5} />
-                  </button>
-                )}
-              </div>
-              <input
-                ref={scanInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleStandaloneScan}
-              />
-              <button
-                onClick={() => scanInputRef.current?.click()}
-                disabled={isScanningSerial}
-                className="shrink-0 p-3.5 glass-card rounded-xl text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                title="掃描條碼圖片"
-              >
-                {isScanningSerial ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <ScanLine size={18} />
-                )}
+                確認新增
               </button>
             </div>
-          </div>
-
-          {/* Expiry Input */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pl-1">兌換期限</label>
-            <input
-              type="date"
-              className="w-full p-3.5 glass-card rounded-xl outline-none text-base font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
-              value={manualData.expiry}
-              onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
-            />
-          </div>
-
-          {/* Redeem URL */}
-          <div>
-            <RedeemUrlPresetSelect
-              presets={redeemUrlPresets || []}
-              value={manualData.redeemUrl}
-              onChange={(url) => setManualData({ ...manualData, redeemUrl: url })}
-            />
-          </div>
-
-          {/* Pin + Submit */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setIsPinned(!isPinned)}
-              className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all shadow-sm border ${
-                isPinned
-                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
-                  : 'glass-card border-border/50 text-muted-foreground'
-              }`}
-              title="設定是否置頂"
-            >
-              <span className="text-sm font-medium">置頂顯示</span>
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <Pin size={18} className={isPinned ? 'fill-amber-500' : ''} />
-                {isPinned ? '已置頂' : '未置頂'}
-              </span>
-            </button>
-
-            <div className="flex gap-3">
-            {onSaveTemplate && (
-              <button
-                type="button"
-                disabled={!manualData.name.trim()}
-                onClick={() => {
-                  const name = prompt('請輸入範本名稱', manualData.name);
-                  if (name) {
-                    const matchingPreset = redeemUrlPresets?.find(p => p.url === manualData.redeemUrl);
-                    onSaveTemplate({
-                      label: name,
-                      productName: manualData.name,
-                      image: images[0] || undefined,
-                      tags: manualTags,
-                      serial: manualData.serial,
-                      expiry: manualData.expiry,
-                      redeemUrlPresetId: matchingPreset?.id,
-                    });
-                  }
-                }}
-                className="p-3.5 rounded-2xl border transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed bg-ticket-success/10 border-ticket-success/30 text-ticket-success hover:bg-ticket-success/20 disabled:hover:bg-ticket-success/10"
-                title={manualData.name.trim() ? '儲存為範本' : '請先輸入票券名稱'}
-              >
-                <LayoutDashboard size={20} />
-              </button>
-            )}
-            <button
-              onClick={handleManualSubmit}
-              className="flex-1 bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold shadow-lg transition-all active:scale-[0.98]"
-            >
-              確認新增
-            </button>
+            <div className="text-center text-[11px] text-muted-foreground">
+              先填票券名稱就能建立，其他資訊都可以之後再補。
             </div>
           </div>
         </div>
