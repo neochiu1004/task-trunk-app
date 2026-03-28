@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+// @ts-ignore
 import bwipjs from 'bwip-js';
 import { getBcidFromFormat } from '@/lib/barcodeScanner';
 

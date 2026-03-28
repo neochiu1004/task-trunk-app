@@ -1,20 +1,8 @@
-import type { ImportPayload } from "@/types/app";
-import type { Ticket } from "@/types/ticket";
-
-type ImportValidationResult =
-  | { success: true; data: ImportPayload | Ticket[] }
-  | { success: false; error: string };
-
-export const validateImportData = (data: unknown): ImportValidationResult => {
-  if (Array.isArray(data)) {
-    return { success: true, data: data as Ticket[] };
+export const validateImportData = (data: any): { success: boolean; data?: any; error?: string } => {
+  if (!data || typeof data !== 'object') {
+    return { success: false, error: '資料格式非物件' };
   }
-
-  if (!data || typeof data !== "object") {
-    return { success: false, error: "資料格式非物件" };
-  }
-
-  return { success: true, data: data as ImportPayload };
+  return { success: true, data };
 };
 
 export const isValidHttpUrl = (url: string): boolean => {

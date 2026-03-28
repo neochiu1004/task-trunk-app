@@ -23,7 +23,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-md pointer-events-auto">
-        <nav className="mx-3 mb-3 flex items-center justify-around rounded-[28px] border border-border/60 bg-card/88 px-4 pb-5 pt-3 shadow-glass-lg backdrop-blur-xl">
+        {/* Navigation Bar */}
+        <nav className="glass-header border-t border-border/40 px-4 pt-2 pb-6 flex items-center justify-around">
           <NavItem
             icon={navItems[0].icon}
             label={navItems[0].label}
@@ -31,19 +32,20 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             onClick={() => setView(navItems[0].id)}
           />
           
+          {/* Add Button in center - highlighted */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             whileHover={{ scale: 1.05 }}
             onClick={onAddClick}
-            className="flex flex-col items-center gap-1 rounded-2xl px-4 py-1.5 transition-all"
+            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
           >
             <div className="relative">
               <motion.div
-                className="absolute -inset-3 rounded-2xl bg-gradient-to-tr from-[hsl(var(--accent))] via-[hsl(var(--brand-olive))] to-[hsl(var(--primary))] shadow-lg shadow-primary/25"
+                className="absolute -inset-2.5 bg-gradient-to-tr from-[#6A9C89] to-[#4f8070] rounded-xl shadow-md"
               />
               <Plus size={22} className="relative z-10 text-primary-foreground" />
             </div>
-            <span className="text-[10px] font-semibold text-[hsl(var(--brand-olive))]">新增</span>
+            <span className="text-[10px] font-semibold text-[#4f8070]">新增</span>
           </motion.button>
           
           <NavItem
@@ -76,9 +78,9 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, isActive, onClick 
     <motion.button
       whileTap={{ scale: 0.9 }}
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl transition-colors ${
+      className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${
         isActive 
-          ? 'text-primary' 
+          ? 'text-[#334A52]' 
           : 'text-muted-foreground hover:text-foreground'
       }`}
     >
@@ -86,7 +88,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, isActive, onClick 
         {isActive && (
           <motion.div
             layoutId="bottomNavIndicator"
-            className="absolute -inset-2.5 rounded-2xl bg-primary/12"
+            className="absolute -inset-2 bg-[#6A9C89]/15 rounded-xl"
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           />
         )}
