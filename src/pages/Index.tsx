@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
@@ -6,10 +6,12 @@ import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
 import type { BatchEditPayload, ImportPayload } from '@/types/app';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
-import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
+import { formatDateTime, sendTelegramMessage } from '@/lib/helpers';
 import { forceRefreshToLatest } from '@/lib/pwa';
 import { validateImportData } from '@/lib/validation';
 import { useDebouncedDbValue } from '@/hooks/use-debounced-db-value';
+import { useTicketFilters } from '@/hooks/use-ticket-filters';
+import { useTicketSelection } from '@/hooks/use-ticket-selection';
 import { useWalletBootstrap } from '@/hooks/use-wallet-bootstrap';
 import { Header } from '@/components/layout/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
@@ -34,14 +36,6 @@ const DataHealthCheck = lazy(() =>
   import('@/components/modals/DataHealthCheck').then((module) => ({ default: module.DataHealthCheck }))
 );
 
-const FAR_FUTURE_TIMESTAMP = new Date(9999, 11, 31).getTime();
-
-const getExpiryTimestamp = (expiry?: string) => {
-  if (!expiry) return FAR_FUTURE_TIMESTAMP;
-  const parsed = new Date(expiry.replace(/\//g, '-')).getTime();
-  return Number.isNaN(parsed) ? FAR_FUTURE_TIMESTAMP : parsed;
-};
-
 const Index = () => {
   const { isDark, toggleTheme } = useTheme();
   const [view, setView] = useState<ViewType>('active');
@@ -51,8 +45,6 @@ const Index = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isCompact, setIsCompact] = useState(false);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
   const [importPendingData, setImportPendingData] = useState<ImportPayload | Ticket[] | null>(null);
@@ -85,129 +77,46 @@ const Index = () => {
   useDebouncedDbValue(DB_KEYS.BG_HISTORY, bgHistory, isDataLoaded);
   useDebouncedDbValue(DB_KEYS.TEMPLATES, templates, isDataLoaded);
 
-  const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))], [tasks]);
-  const normalizedSearchQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
-  const duplicateSerials = useMemo(() => {
-    const counts: Record<string, number> = {};
-    tasks.forEach((t) => { if (!t.isDeleted && t.serial) counts[t.serial] = (counts[t.serial] || 0) + 1; });
-    return new Set(Object.keys(counts).filter((s) => counts[s] > 1));
-  }, [tasks]);
+  const {
+    allTags,
+    currentViewCount,
+    duplicateSerials,
+    emptyStateDescription,
+    emptyStateTitle,
+    filteredTaskIds,
+    filteredTasks,
+    hasActiveFilters,
+    viewCounts,
+    viewLabelMap,
+  } = useTicketFilters({
+    tasks,
+    view,
+    activeTags,
+    searchQuery,
+    sortType,
+    notifyDays: settings.notifyDays,
+    healthIssueSerials,
+  });
+
+  const {
+    clearSelection,
+    handleSelect,
+    handleSelectAll,
+    isSelectionMode,
+    selectedIds,
+    setIsSelectionMode,
+    setSelectedIds,
+  } = useTicketSelection({
+    filteredTaskIds,
+    filteredTaskLength: filteredTasks.length,
+    view,
+  });
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
-
-  const matchesTag = (t: Ticket, tag: string): boolean => {
-    if (tag === 'special_expiring') return checkIsExpiringSoon(t.expiry, settings.notifyDays) && !t.completed && !t.isDeleted;
-    if (tag === 'special_duplicate') return duplicateSerials.has(t.serial) && !t.completed && !t.isDeleted;
-    if (tag === 'special_has_original') return !!t.originalImage && !t.completed && !t.isDeleted;
-    if (tag === 'special_pinned') return !!t.pinned && !t.completed && !t.isDeleted;
-    return !!(t.tags && t.tags.includes(tag));
-  };
-
-  const normalizedTasks = useMemo(() => tasks.map((ticket) => ({
-    ticket,
-    searchText: [
-      ticket.productName,
-      ticket.note || '',
-      ticket.serial || '',
-      ...(ticket.tags || []),
-    ].join(' ').toLowerCase(),
-    expiryTimestamp: getExpiryTimestamp(ticket.expiry),
-    isHealthIssue: !ticket.completed && !ticket.isDeleted && healthIssueSerials.has(ticket.serial || ''),
-    isPinned: !ticket.completed && !ticket.isDeleted && !!ticket.pinned,
-    isExpiring: !ticket.completed && !ticket.isDeleted && checkIsExpiringSoon(ticket.expiry, settings.notifyDays),
-  })), [tasks, healthIssueSerials, settings.notifyDays]);
-
-  const filteredTasks = useMemo(() => {
-    const result = normalizedTasks.filter(({ ticket: t, searchText }) => {
-      if (view === 'active' && (t.completed || t.isDeleted)) return false;
-      if (view === 'completed' && (!t.completed || t.isDeleted)) return false;
-      if (view === 'deleted' && !t.isDeleted) return false;
-      
-      // Multi-select tag filter (OR union)
-      if (activeTags.length > 0) {
-        if (!activeTags.some((tag) => matchesTag(t, tag))) return false;
-      }
-
-      if (normalizedSearchQuery) {
-        return searchText.includes(normalizedSearchQuery);
-      }
-      return true;
-    });
-    result.sort((a, b) => {
-      if (view === 'completed') {
-        return (b.ticket.completedAt || 0) - (a.ticket.completedAt || 0);
-      }
-      if (a.isHealthIssue !== b.isHealthIssue) return a.isHealthIssue ? -1 : 1;
-      
-      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-      
-      if (a.isExpiring !== b.isExpiring) return a.isExpiring ? -1 : 1;
-      if (sortType === 'newest') return b.ticket.createdAt - a.ticket.createdAt;
-      if (sortType === 'oldest') return a.ticket.createdAt - b.ticket.createdAt;
-      if (sortType === 'expiring') {
-        return a.expiryTimestamp - b.expiryTimestamp;
-      }
-      return 0;
-    });
-    return result.map(({ ticket }) => ticket);
-  }, [normalizedTasks, view, activeTags, normalizedSearchQuery, sortType, duplicateSerials]);
-
-  const viewCounts = useMemo(() => ({
-    active: tasks.filter((t) => !t.completed && !t.isDeleted).length,
-    completed: tasks.filter((t) => t.completed && !t.isDeleted).length,
-    deleted: tasks.filter((t) => t.isDeleted).length,
-  }), [tasks]);
-
-  const currentViewCount = viewCounts[view];
-  const hasActiveFilters = activeTags.length > 0 || !!searchQuery.trim();
-  const viewLabelMap: Record<ViewType, string> = {
-    active: '待使用',
-    completed: '已使用',
-    deleted: '回收桶',
-  };
-  const emptyStateTitle = searchQuery.trim()
-    ? '找不到符合搜尋的票券'
-    : activeTags.length > 0
-      ? '目前沒有符合標籤條件的票券'
-      : view === 'completed'
-        ? '目前沒有已使用票券'
-        : view === 'deleted'
-          ? '回收桶是空的'
-          : '目前沒有待使用票券';
-  const emptyStateDescription = searchQuery.trim()
-    ? '可以試試別的關鍵字，或先清除搜尋與標籤篩選。'
-    : activeTags.length > 0
-      ? '清掉目前篩選後，就可以回到完整票券清單。'
-      : view === 'completed'
-        ? '核銷後的票券會集中在這裡，方便回頭查詢。'
-        : view === 'deleted'
-          ? '刪除的票券會先暫存在這裡，之後可以還原或永久刪除。'
-          : '先用下方新增按鈕建立票券，之後就能在這裡集中管理。';
-  const filteredTaskIds = useMemo(() => new Set(filteredTasks.map((t) => t.id)), [filteredTasks]);
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = new Set(Array.from(prev).filter((id) => filteredTaskIds.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [filteredTaskIds]);
-
-  useEffect(() => {
-    if (isSelectionMode && filteredTasks.length === 0) {
-      setIsSelectionMode(false);
-    }
-  }, [filteredTasks.length, isSelectionMode]);
-
-  useEffect(() => {
-    if (view !== 'active' && isSelectionMode) {
-      setIsSelectionMode(false);
-      setSelectedIds(new Set());
-    }
-  }, [view, isSelectionMode]);
 
   useEffect(() => {
     if (selectedTicket && !tasks.some((t) => t.id === selectedTicket.id)) {
@@ -217,8 +126,7 @@ const Index = () => {
 
   const handleViewChange = (nextView: ViewType) => {
     setView(nextView);
-    setIsSelectionMode(false);
-    setSelectedIds(new Set());
+    clearSelection();
   };
 
   const handleAddBatch = (newItems: Ticket[]) => setTasks((prev) => [...newItems, ...prev]);
@@ -336,8 +244,6 @@ const Index = () => {
     alert('已清除到期提醒快取，重新整理後會以目前票券重新計算提醒。');
     window.location.reload();
   };
-  const handleSelect = (id: string) => { const s = new Set(selectedIds); if (s.has(id)) s.delete(id); else s.add(id); setSelectedIds(s); };
-  const handleSelectAll = () => setSelectedIds(selectedIds.size === filteredTasks.length ? new Set() : new Set(filteredTasks.map((t) => t.id)));
   const handleBatchEdit = (payload: BatchEditPayload) => {
     setTasks((prev) => prev.map((t) => {
       if (!selectedIds.has(t.id)) return t;
@@ -353,7 +259,7 @@ const Index = () => {
         ...(payload.setPinned === true ? { pinned: true } : payload.setPinned === false ? { pinned: false } : {}),
       };
     }));
-    setSelectedIds(new Set()); setIsSelectionMode(false);
+    clearSelection();
   };
   const handleSaveSettings = (newSettings: Settings) => {
     setSettings(newSettings);
