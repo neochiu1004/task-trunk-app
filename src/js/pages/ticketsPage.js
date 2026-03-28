@@ -1330,8 +1330,11 @@ export class TicketsPage {
     const sortType = this.app.state.ui.sort;
     const activeTags = this.app.state.ui.activeTags;
     const notifyDays = this.app.state.settings.notifyDays;
+    const derivedMap = this.buildTicketDerivedMap(notifyDays);
+    const sortComparator = getSortComparator(sortType);
 
     let list = this.app.state.tasks.filter((ticket) => {
+      const derived = derivedMap.get(ticket.id);
       if (this.view === 'active' && (ticket.completed || ticket.isDeleted)) return false;
       if (this.view === 'completed' && (!ticket.completed || ticket.isDeleted)) return false;
       if (this.view === 'deleted' && !ticket.isDeleted) return false;
@@ -1340,7 +1343,7 @@ export class TicketsPage {
         if (tag === ORIGINAL_IMAGE_FILTER_TAG) return !!ticket.originalImage;
         if (tag === EXPIRY_URGENT_FILTER_TAG) {
           if (this.view !== 'active') return false;
-          const state = getExpiryState(ticket.expiry, notifyDays);
+          const state = derived?.expiryState || 'normal';
           return ['expired', 'today', 'soon'].includes(state);
         }
         return (ticket.tags || []).includes(tag);
@@ -1349,16 +1352,7 @@ export class TicketsPage {
       }
 
       if (!search) return true;
-
-      const haystack = [
-        ticket.productName,
-        ticket.serial,
-        ticket.note,
-        ticket.redeemUrl,
-        ...(ticket.tags || []),
-      ].filter(Boolean).join(' ').toLowerCase();
-
-      return haystack.includes(search);
+      return (derived?.searchText || '').includes(search);
     });
 
     list.sort((a, b) => {
@@ -1376,16 +1370,32 @@ export class TicketsPage {
           soon: 2,
           normal: 3,
         };
-        const stateA = getExpiryState(a.expiry, this.app.state.settings.notifyDays);
-        const stateB = getExpiryState(b.expiry, this.app.state.settings.notifyDays);
+        const stateA = derivedMap.get(a.id)?.expiryState || 'normal';
+        const stateB = derivedMap.get(b.id)?.expiryState || 'normal';
         const rankA = urgencyRank[stateA] ?? urgencyRank.normal;
         const rankB = urgencyRank[stateB] ?? urgencyRank.normal;
         if (rankA !== rankB) return rankA - rankB;
       }
-      return getSortComparator(sortType)(a, b);
+      return sortComparator(a, b);
     });
 
     return list;
+  }
+
+  buildTicketDerivedMap(notifyDays = this.app.state.settings.notifyDays) {
+    return this.app.state.tasks.reduce((map, ticket) => {
+      map.set(ticket.id, {
+        searchText: [
+          ticket.productName,
+          ticket.serial,
+          ticket.note,
+          ticket.redeemUrl,
+          ...(ticket.tags || []),
+        ].filter(Boolean).join(' ').toLowerCase(),
+        expiryState: getExpiryState(ticket.expiry, notifyDays),
+      });
+      return map;
+    }, new Map());
   }
 
   collectTicketSummary() {
