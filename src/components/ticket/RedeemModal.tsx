@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -23,7 +23,6 @@ import { Ticket, Template, Settings, RedeemUrlPreset } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
 import { BarcodeCanvas } from './BarcodeCanvas';
 import { QRCodeCanvas } from './QRCodeCanvas';
-import { MomoTemplate } from './MomoTemplate';
 import { TagSelectInput } from './TagSelectInput';
 import { RedeemUrlPresetSelect } from './RedeemUrlPresetSelect';
 import { DraggableTemplateList } from './DraggableTemplateList';
@@ -52,8 +51,6 @@ interface RedeemModalProps {
   redeemUrlPresets?: RedeemUrlPreset[];
 }
 
-type ViewModeType = 'standard' | 'image' | 'momo';
-
 export const RedeemModal: React.FC<RedeemModalProps> = ({
   ticket,
   onClose,
@@ -62,7 +59,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   onRestore,
   onUpdate,
   allTags,
-  specificViewKeywords,
+  specificViewKeywords: _specificViewKeywords,
   onSaveTemplate,
   templates,
   onDeleteTemplate,
@@ -83,26 +80,10 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [editBarcodeFormat, setEditBarcodeFormat] = useState<string | undefined>(undefined);
   const [editRedeemUrl, setEditRedeemUrl] = useState('');
   const [editPinned, setEditPinned] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewModeType>('standard');
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-
-  const isSpecificView = useMemo(() => {
-    if (!ticket) return false;
-    const keywords = specificViewKeywords?.length > 0 ? specificViewKeywords : ['MOMO', '85度C'];
-    const searchTarget = (ticket.productName + (ticket.tags || []).join('')).toUpperCase();
-    return keywords.some((kw) => searchTarget.includes(kw.toUpperCase()));
-  }, [ticket, specificViewKeywords]);
-
-  const getInitialViewMode = (): ViewModeType => {
-    if (!ticket) return 'standard';
-    if (ticket.originalImage) return 'image';
-    if (isSpecificView) return 'momo';
-    if (ticket.image && !ticket.serial) return 'image';
-    return 'standard';
-  };
 
   useEffect(() => {
     if (ticket) {
@@ -115,12 +96,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditBarcodeFormat(ticket.barcodeFormat);
       setEditRedeemUrl(ticket.redeemUrl || '');
       setEditPinned(!!ticket.pinned);
-      setViewMode(getInitialViewMode());
-      if (ticket.originalImage) {
-        setShowFullScreen(true);
-      } else {
-        setShowFullScreen(false);
-      }
+      setShowFullScreen(false);
     } else {
       setShowFullScreen(false);
     }
@@ -241,8 +217,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     toast({ title: "下載成功", description: "原圖已儲存" });
   };
 
-  const hasAnyImage = !!ticket.image || !!ticket.originalImage;
-  const isMomoMode = viewMode === 'momo';
+  const hasOriginalImage = !!ticket.originalImage;
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -281,9 +256,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={`glass-card w-full max-w-sm rounded-[28px] overflow-hidden relative flex flex-col border border-border/50 ${
-                isMomoMode ? 'h-[85vh] sm:h-auto' : 'max-h-[90vh]'
-              }`}
+              className="glass-card w-full max-w-sm max-h-[90vh] rounded-[28px] overflow-hidden relative flex flex-col border border-border/50"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Redeem Animation Overlay */}
@@ -333,15 +306,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                       placeholder="請輸入票券名稱"
                     />
                   ) : (
-                    !isMomoMode && (
-                      <motion.h3
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-base font-bold text-foreground break-words leading-tight px-4 mb-2"
-                      >
-                        {ticket.productName}
-                      </motion.h3>
-                    )
+                    <motion.h3
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-base font-bold text-foreground break-words leading-tight px-4 mb-2"
+                    >
+                      {ticket.productName}
+                    </motion.h3>
                   )}
                   
                   {isEditing && (
@@ -514,79 +485,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 
                 {!isEditing && (
                   <div className="flex-1 flex flex-col min-h-0">
-                    {!isMomoMode && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="flex justify-center shrink-0"
-                      >
-                        <div className="flex glass-card p-1 rounded-xl mb-3">
-                          <motion.button
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setViewMode('standard')}
-                            className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
-                              viewMode === 'standard' ? 'text-primary' : 'text-muted-foreground'
-                            }`}
-                          >
-                            {viewMode === 'standard' && (
-                              <motion.div
-                                layoutId="viewModeTab"
-                                className="absolute inset-0 bg-card shadow-sm rounded-lg"
-                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                              />
-                            )}
-                            <span className="relative z-10">條碼</span>
-                          </motion.button>
-                          {hasAnyImage && (
-                            <motion.button
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                setViewMode('image');
-                                if (ticket.originalImage) setShowFullScreen(true);
-                              }}
-                              className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all flex items-center gap-1 ${
-                                viewMode === 'image' ? 'text-primary' : 'text-muted-foreground'
-                              }`}
-                            >
-                              {viewMode === 'image' && (
-                                <motion.div
-                                  layoutId="viewModeTab"
-                                  className="absolute inset-0 bg-card shadow-sm rounded-lg"
-                                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                                />
-                              )}
-                              <span className="relative z-10 flex items-center gap-1">
-                                {ticket.originalImage && <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>}
-                                原圖
-                              </span>
-                            </motion.button>
-                          )}
-                          {isSpecificView && (
-                            <motion.button
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setViewMode('momo')}
-                              className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
-                                isMomoMode ? 'text-ticket-momo' : 'text-ticket-momo/60'
-                              }`}
-                            >
-                              {isMomoMode && (
-                                <motion.div
-                                  layoutId="viewModeTab"
-                                  className="absolute inset-0 bg-ticket-momo/20 shadow-sm rounded-lg"
-                                  transition={{ type: "spring" as const, stiffness: 400, damping: 30 }}
-                                />
-                              )}
-                              <span className="relative z-10">專屬</span>
-                            </motion.button>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                    
                     <div className="flex-1 min-h-0 relative overflow-y-auto no-scrollbar pb-4">
                       <AnimatePresence mode="wait">
-                        {viewMode === 'image' ? (
+                        {hasOriginalImage ? (
                           <motion.div
                             key="image"
                             initial={{ opacity: 0, x: 20 }}
@@ -607,22 +508,10 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               onClick={() => setShowFullScreen(true)}
                             >
                               <img
-                                src={ticket.originalImage || ticket.image}
-                                className={`max-h-full w-auto rounded-xl shadow-md border border-border transition-opacity ${
-                                  !ticket.originalImage ? 'opacity-70 grayscale-[0.3]' : 'opacity-100'
-                                }`}
+                                src={ticket.originalImage}
+                                className="max-h-full w-auto rounded-xl shadow-md border border-border transition-opacity"
                                 alt=""
                               />
-
-                              {!ticket.originalImage && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: -10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur-md text-primary-foreground px-4 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 shadow-lg"
-                                >
-                                  <AlertCircle size={12} /> 預覽模式 (建議上傳原圖)
-                                </motion.div>
-                              )}
                             </div>
 
                             {ticket.serial && (
@@ -635,16 +524,6 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                                 </div>
                               </div>
                             )}
-                          </motion.div>
-                        ) : isMomoMode ? (
-                          <motion.div
-                            key="momo"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="h-full py-1"
-                          >
-                            <MomoTemplate ticket={ticket} onContentClick={onClose} />
                           </motion.div>
                         ) : (
                           <motion.div
