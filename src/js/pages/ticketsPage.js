@@ -142,6 +142,7 @@ export class TicketsPage {
     this.continueBatchHint = false;
     this.continueBatchHintTimer = null;
     this.searchIsComposing = false;
+    this.searchRenderTimer = null;
   }
 
   isTouchGestureAvailable() {
@@ -1703,6 +1704,10 @@ export class TicketsPage {
 
   bindEvents() {
     const root = this.app.getRoot();
+    if (this.searchRenderTimer) {
+      clearTimeout(this.searchRenderTimer);
+      this.searchRenderTimer = null;
+    }
     if (this.toolbarScrollHandler) {
       window.removeEventListener('scroll', this.toolbarScrollHandler);
       this.toolbarScrollHandler = null;
@@ -1750,9 +1755,31 @@ export class TicketsPage {
       await rerenderWithSearchFocus(event.target.selectionStart, event.target.selectionEnd);
     };
 
+    const scheduleSearchRender = (event, delay = 120) => {
+      const cursorStart = event.target.selectionStart;
+      const cursorEnd = event.target.selectionEnd;
+      const nextValue = event.target.value;
+
+      if (this.searchRenderTimer) {
+        clearTimeout(this.searchRenderTimer);
+      }
+
+      this.searchRenderTimer = setTimeout(async () => {
+        this.searchRenderTimer = null;
+        this.app.state.ui.search = nextValue;
+        const pruned = pruneSelectionToVisible();
+        if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+        await rerenderWithSearchFocus(cursorStart, cursorEnd);
+      }, delay);
+    };
+
     const searchInput = root.querySelector('#ticket-search');
     searchInput?.addEventListener('compositionstart', () => {
       this.searchIsComposing = true;
+      if (this.searchRenderTimer) {
+        clearTimeout(this.searchRenderTimer);
+        this.searchRenderTimer = null;
+      }
     });
     searchInput?.addEventListener('compositionend', async (event) => {
       this.searchIsComposing = false;
@@ -1760,7 +1787,7 @@ export class TicketsPage {
     });
     searchInput?.addEventListener('input', async (event) => {
       if (this.searchIsComposing || event.isComposing) return;
-      await handleSearchValueChange(event);
+      scheduleSearchRender(event);
     });
 
     root.querySelector('#ticket-sort')?.addEventListener('change', (event) => {
