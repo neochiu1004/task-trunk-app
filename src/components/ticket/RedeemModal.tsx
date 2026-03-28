@@ -218,6 +218,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   };
 
   const hasOriginalImage = !!ticket.originalImage;
+  const hasDownloadableImage = !!(ticket.originalImage || ticket.image);
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -697,6 +698,16 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             >
                               📌 {ticket.pinned ? '取消優先' : '優先'}
                             </motion.button>
+                            {hasDownloadableImage && (
+                              <motion.button
+                                variants={buttonVariants}
+                                whileTap="tap"
+                                onClick={handleDownloadOriginal}
+                                className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
+                              >
+                                <Download size={14} /> 下載原圖
+                              </motion.button>
+                            )}
                           </>
                         )}
                         <motion.button
