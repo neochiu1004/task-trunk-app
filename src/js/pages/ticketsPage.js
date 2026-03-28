@@ -1271,7 +1271,9 @@ export class TicketsPage {
         : (compactGrid ? 'p-3' : 'p-4');
       const headerMarginClass = this.view === 'active' ? 'mb-2' : 'mb-3';
       const imageClass = this.view === 'active'
-        ? 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--active-floating'
+        ? (compactGrid
+          ? 'w-full h-24 object-cover rounded-lg border border-wabi-border mb-2'
+          : 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--active-floating')
         : (compactGrid
           ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
           : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
@@ -1293,7 +1295,7 @@ export class TicketsPage {
       const swipeAttrs = swipeConfig
         ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
         : '';
-      const hasFloatingThumbnail = showThumbnail && ticket.image && this.view === 'active';
+      const hasFloatingThumbnail = showThumbnail && ticket.image && this.view === 'active' && !compactGrid;
       const contentPaddingClass = hasFloatingThumbnail ? 'pr-[6.75rem]' : '';
 
       return `
@@ -1319,7 +1321,7 @@ export class TicketsPage {
             </div>
           </div>
 
-          ${showThumbnail && ticket.image && this.view !== 'active' ? (
+          ${showThumbnail && ticket.image && (this.view !== 'active' || compactGrid) ? (
             compactGrid
               ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
               : `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
