@@ -436,12 +436,17 @@ export class TicketsPage {
         resolve(template || null);
       };
 
-      modal.querySelector('[data-cancel-template]')?.addEventListener('click', () => cleanup(null));
-      modal.querySelectorAll('[data-pick-template]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const index = Number(btn.dataset.pickTemplate);
-          cleanup(templates[index]);
-        });
+      modal.addEventListener('click', (event) => {
+        const cancelButton = event.target.closest('[data-cancel-template]');
+        if (cancelButton) {
+          cleanup(null);
+          return;
+        }
+
+        const pickButton = event.target.closest('[data-pick-template]');
+        if (!pickButton) return;
+        const index = Number(pickButton.dataset.pickTemplate);
+        cleanup(templates[index]);
       });
     });
   }
@@ -478,18 +483,29 @@ export class TicketsPage {
       };
 
       const input = modal.querySelector('#batch-redeem-url-input');
-      modal.querySelectorAll('[data-pick-preset]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const index = Number(btn.dataset.pickPreset);
+      modal.addEventListener('click', (event) => {
+        const presetButton = event.target.closest('[data-pick-preset]');
+        if (presetButton) {
+          const index = Number(presetButton.dataset.pickPreset);
           const picked = presets[index];
-          if (!picked) return;
-          input.value = picked.url || '';
-        });
-      });
+          if (picked) input.value = picked.url || '';
+          return;
+        }
 
-      modal.querySelector('[data-clear-url]')?.addEventListener('click', () => cleanup('', false));
-      modal.querySelector('[data-cancel-url]')?.addEventListener('click', () => cleanup('', true));
-      modal.querySelector('[data-confirm-url]')?.addEventListener('click', () => cleanup((input.value || '').trim(), false));
+        if (event.target.closest('[data-clear-url]')) {
+          cleanup('', false);
+          return;
+        }
+
+        if (event.target.closest('[data-cancel-url]')) {
+          cleanup('', true);
+          return;
+        }
+
+        if (event.target.closest('[data-confirm-url]')) {
+          cleanup((input.value || '').trim(), false);
+        }
+      });
       input.focus();
     });
   }
@@ -523,26 +539,32 @@ export class TicketsPage {
         resolve(payload || { cancelled: true, tags: [] });
       };
 
-      modal.querySelectorAll('[data-tag-chip]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const tag = btn.dataset.tagChip;
+      const input = modal.querySelector('#batch-tags-input');
+      modal.addEventListener('click', (event) => {
+        const chipButton = event.target.closest('[data-tag-chip]');
+        if (chipButton) {
+          const tag = chipButton.dataset.tagChip;
           if (!tag) return;
           if (selectedTags.has(tag)) {
             selectedTags.delete(tag);
-            btn.classList.remove('bg-wabi-primary', 'text-white', 'border-wabi-primary');
+            chipButton.classList.remove('bg-wabi-primary', 'text-white', 'border-wabi-primary');
           } else {
             selectedTags.add(tag);
-            btn.classList.add('bg-wabi-primary', 'text-white', 'border-wabi-primary');
+            chipButton.classList.add('bg-wabi-primary', 'text-white', 'border-wabi-primary');
           }
-        });
-      });
+          return;
+        }
 
-      const input = modal.querySelector('#batch-tags-input');
-      modal.querySelector('[data-cancel-tags]')?.addEventListener('click', () => cleanup({ cancelled: true, tags: [] }));
-      modal.querySelector('[data-confirm-tags]')?.addEventListener('click', () => {
-        const inputTags = parseTags(input.value || '');
-        const tags = [...new Set([...selectedTags, ...inputTags])];
-        cleanup({ cancelled: false, tags });
+        if (event.target.closest('[data-cancel-tags]')) {
+          cleanup({ cancelled: true, tags: [] });
+          return;
+        }
+
+        if (event.target.closest('[data-confirm-tags]')) {
+          const inputTags = parseTags(input.value || '');
+          const tags = [...new Set([...selectedTags, ...inputTags])];
+          cleanup({ cancelled: false, tags });
+        }
       });
       input.focus();
     });
