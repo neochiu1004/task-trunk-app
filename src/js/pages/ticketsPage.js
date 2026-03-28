@@ -296,165 +296,6 @@ export class TicketsPage {
     return false;
   }
 
-  bindCardSwipeGesture(card) {
-    if (!this.isTouchGestureAvailable()) return;
-    if (!this.isSwipeGestureEnabled()) return;
-    if (!card.dataset.swipeEnabled) return;
-
-    const interactiveSelector = 'button, a, input, textarea, select, label, [data-no-swipe], .ticket-card-actions';
-    const SWIPE_LOCK_DISTANCE = 10;
-    const SWIPE_TRIGGER_DISTANCE = this.getSwipeTriggerDistance();
-    const SWIPE_HINT_DISTANCE = Math.max(24, Math.floor(SWIPE_TRIGGER_DISTANCE * 0.55));
-    const SWIPE_CLAMP_DISTANCE = 92;
-    const SWIPE_PREVENT_CLICK_DISTANCE = 16;
-    const LONG_PRESS_MS = 430;
-    const LONG_PRESS_MOVE_TOLERANCE = 10;
-    let tracking = false;
-    let horizontalSwipe = false;
-    let startX = 0;
-    let startY = 0;
-    let currentOffset = 0;
-    let swipeHintNotified = false;
-    let longPressTriggered = false;
-    let longPressTimer = null;
-
-    const clearLongPressTimer = () => {
-      if (!longPressTimer) return;
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    };
-
-    const resetSwipeVisual = (animated = true) => {
-      card.classList.remove('ticket-card--swiping', 'ticket-card--swipe-left', 'ticket-card--swipe-right', 'ticket-card--swipe-ready');
-      if (animated) {
-        card.classList.add('ticket-card--swipe-release');
-      } else {
-        card.classList.remove('ticket-card--swipe-release');
-      }
-      card.style.removeProperty('--ticket-swipe-offset');
-      swipeHintNotified = false;
-    };
-
-    const setSwipeOffset = (offset) => {
-      const limited = Math.max(-SWIPE_CLAMP_DISTANCE, Math.min(SWIPE_CLAMP_DISTANCE, offset));
-      currentOffset = limited;
-      const absOffset = Math.abs(limited);
-      card.style.setProperty('--ticket-swipe-offset', `${limited}px`);
-      card.classList.add('ticket-card--swiping');
-      card.classList.toggle('ticket-card--swipe-left', limited < -18);
-      card.classList.toggle('ticket-card--swipe-right', limited > 18);
-      const ready = absOffset >= SWIPE_HINT_DISTANCE;
-      card.classList.toggle('ticket-card--swipe-ready', ready);
-      if (ready && !swipeHintNotified) {
-        swipeHintNotified = true;
-        this.triggerHapticFeedback(8);
-      }
-    };
-
-    card.addEventListener('transitionend', () => {
-      if (Math.abs(currentOffset) > 0.5) return;
-      card.classList.remove('ticket-card--swipe-release');
-    });
-
-    card.addEventListener('touchstart', (event) => {
-      if (event.touches.length !== 1) return;
-      if (event.target.closest(interactiveSelector)) return;
-      const inSelectionMode = this.app.state.ui.selectionMode;
-      tracking = true;
-      horizontalSwipe = false;
-      longPressTriggered = false;
-      startX = event.touches[0].clientX;
-      startY = event.touches[0].clientY;
-      currentOffset = 0;
-      swipeHintNotified = false;
-      card.dataset.swipeSuppressClick = '0';
-      card.classList.remove('ticket-card--swipe-release');
-
-      clearLongPressTimer();
-      if (!inSelectionMode) {
-        longPressTimer = setTimeout(() => {
-          longPressTimer = null;
-          if (!tracking) return;
-          const ticketId = card.dataset.ticketId;
-          if (!ticketId) return;
-          longPressTriggered = true;
-          tracking = false;
-          horizontalSwipe = false;
-          currentOffset = 0;
-          card.dataset.swipeSuppressClick = '1';
-          resetSwipeVisual(false);
-          this.app.state.ui.selectionMode = true;
-          this.app.state.ui.selectedIds.add(ticketId);
-          this.hideContinueBatchHint();
-          this.triggerHapticFeedback([12, 30, 12]);
-          showToast('已進入多選模式', 'success', 900);
-          this.render();
-        }, LONG_PRESS_MS);
-      }
-    }, { passive: true });
-
-    card.addEventListener('touchmove', (event) => {
-      if (!tracking || event.touches.length !== 1) return;
-      const dx = event.touches[0].clientX - startX;
-      const dy = event.touches[0].clientY - startY;
-      if (Math.abs(dx) > LONG_PRESS_MOVE_TOLERANCE || Math.abs(dy) > LONG_PRESS_MOVE_TOLERANCE) {
-        clearLongPressTimer();
-      }
-
-      if (!horizontalSwipe) {
-        if (Math.abs(dx) < SWIPE_LOCK_DISTANCE && Math.abs(dy) < SWIPE_LOCK_DISTANCE) return;
-        horizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.15;
-        if (!horizontalSwipe) {
-          tracking = false;
-          resetSwipeVisual(false);
-          return;
-        }
-      }
-
-      event.preventDefault();
-      setSwipeOffset(dx);
-      if (Math.abs(dx) >= SWIPE_PREVENT_CLICK_DISTANCE) {
-        card.dataset.swipeSuppressClick = '1';
-      }
-    }, { passive: false });
-
-    card.addEventListener('touchcancel', () => {
-      clearLongPressTimer();
-      tracking = false;
-      horizontalSwipe = false;
-      longPressTriggered = false;
-      currentOffset = 0;
-      resetSwipeVisual(true);
-    });
-
-    card.addEventListener('touchend', async () => {
-      clearLongPressTimer();
-      if (longPressTriggered) {
-        longPressTriggered = false;
-        return;
-      }
-      if (!tracking) return;
-      tracking = false;
-      const finalOffset = currentOffset;
-      const ticketId = card.dataset.ticketId;
-      const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
-      const shouldTrigger = horizontalSwipe && Math.abs(finalOffset) >= SWIPE_TRIGGER_DISTANCE;
-      horizontalSwipe = false;
-      currentOffset = 0;
-      if (!shouldTrigger || !ticket) {
-        resetSwipeVisual(true);
-        return;
-      }
-
-      const direction = finalOffset < 0 ? 'left' : 'right';
-      try {
-        await this.handleSwipeAction(ticket, direction);
-      } finally {
-        resetSwipeVisual(true);
-      }
-    }, { passive: true });
-  }
-
   clearCardGestureHandlers() {
     if (!this.cardGestureHandlers) return;
     const root = this.app.getRoot();
@@ -1519,6 +1360,43 @@ export class TicketsPage {
     return list;
   }
 
+  collectTicketSummary() {
+    const summary = {
+      allTags: new Set(),
+      urgentActiveCount: 0,
+      completedTotalCount: 0,
+      deletedTotalCount: 0,
+    };
+
+    for (const ticket of this.app.state.tasks) {
+      for (const tag of ticket.tags || []) {
+        summary.allTags.add(tag);
+      }
+
+      if (ticket.isDeleted) {
+        summary.deletedTotalCount += 1;
+        continue;
+      }
+
+      if (ticket.completed) {
+        summary.completedTotalCount += 1;
+        continue;
+      }
+
+      const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
+      if (state === 'expired' || state === 'today' || state === 'soon') {
+        summary.urgentActiveCount += 1;
+      }
+    }
+
+    return {
+      allTags: [...summary.allTags].sort(),
+      urgentActiveCount: summary.urgentActiveCount,
+      completedTotalCount: summary.completedTotalCount,
+      deletedTotalCount: summary.deletedTotalCount,
+    };
+  }
+
   async render() {
     this.clearBackgroundRotationTimer();
     this.clearBackgroundInsetHandler();
@@ -1570,14 +1448,12 @@ export class TicketsPage {
     const backgroundLayerHtml = initialBackgroundImage && showBackground
       ? `<div class="ticket-view-bg-layer" style="background-image: url('${escapeHtml(initialBackgroundImage)}'); opacity: ${bgOpacity};"></div>`
       : '';
-    const allTags = [...new Set(this.app.state.tasks.flatMap((t) => t.tags || []))].sort();
-    const urgentActiveCount = this.app.state.tasks.filter((ticket) => {
-      if (ticket.completed || ticket.isDeleted) return false;
-      const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
-      return state === 'expired' || state === 'today' || state === 'soon';
-    }).length;
-    const completedTotalCount = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted).length;
-    const deletedTotalCount = this.app.state.tasks.filter((ticket) => ticket.isDeleted).length;
+    const {
+      allTags,
+      urgentActiveCount,
+      completedTotalCount,
+      deletedTotalCount,
+    } = this.collectTicketSummary();
     const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
       tag === ORIGINAL_IMAGE_FILTER_TAG
         ? '原圖'
