@@ -677,50 +677,14 @@ export class TicketsPage {
     svg.classList.add('w-full', 'h-auto', 'block');
   }
 
-  mountDeferredRedeemBarcode(ticket, container, targetBcid, scale = 3, height = 10) {
+  async mountDeferredRedeemBarcode(ticket, container, targetBcid, scale = 3, height = 10) {
     if (!container) return;
-    container.innerHTML = `
-      <button
-        type="button"
-        data-load-barcode
-        data-redeem-ignore-swipe="1"
-        class="w-full min-h-[160px] rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-wabi-primary hover:bg-white"
-      >
-        <span class="block text-sm font-semibold text-slate-700">載入條碼預覽</span>
-        <span class="mt-1 block text-xs text-slate-500">需要時再下載條碼模組，開啟會更快</span>
-      </button>
-    `;
-
-    const button = container.querySelector('[data-load-barcode]');
-    if (!button) return;
-
-    button.addEventListener('click', async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      button.disabled = true;
-      button.classList.add('opacity-70', 'cursor-wait');
-      button.innerHTML = `
-        <span class="block text-sm font-semibold text-slate-700">正在載入條碼...</span>
-        <span class="mt-1 block text-xs text-slate-500">首次載入可能需要幾秒</span>
-      `;
-
-      try {
-        await this.drawRedeemBarcodeSvg(ticket, container, targetBcid, scale, height);
-      } catch (_error) {
-        container.innerHTML = `
-          <button
-            type="button"
-            data-load-barcode
-            data-redeem-ignore-swipe="1"
-            class="w-full min-h-[160px] rounded-lg border border-dashed border-rose-300 bg-rose-50 px-4 py-6 text-center transition hover:border-rose-400"
-          >
-            <span class="block text-sm font-semibold text-rose-700">條碼載入失敗，點我重試</span>
-            <span class="mt-1 block text-xs text-rose-500">可先使用 QR Code 或原圖模式</span>
-          </button>
-        `;
-        this.mountDeferredRedeemBarcode(ticket, container, targetBcid, scale, height);
-      }
-    }, { once: true });
+    container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-500 text-sm">正在載入條碼預覽...</div>';
+    try {
+      await this.drawRedeemBarcodeSvg(ticket, container, targetBcid, scale, height);
+    } catch (_error) {
+      container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-rose-500 text-sm">條碼載入失敗</div>';
+    }
   }
 
   async drawRedeemQrCanvas(ticket, canvas, size = 180) {
