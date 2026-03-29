@@ -88,6 +88,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const lastTouchActionAtRef = useRef(0);
 
   useEffect(() => {
+    lastTouchActionAtRef.current = 0;
     if (ticket) {
       setEditName(ticket.productName);
       setEditSerial(ticket.serial || '');
@@ -191,6 +192,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     event.stopPropagation();
     action();
   };
+
+  const handleAction = (action: () => void) => (event: React.TouchEvent | React.MouseEvent) =>
+    handleTouchAction(event, action);
 
   const handleFullscreenBack = () => {
     if (isConfirmingRedeem) {
@@ -680,8 +684,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           variants={buttonVariants}
                           whileTap="tap"
                           whileHover="hover"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          onClick={handleAction(() => {
                             if (!ticket.isDeleted && isConfirmingRedeem) {
                               handleCloseModal();
                               return;
@@ -693,7 +696,21 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               onDelete(ticket.id, !ticket.isDeleted, true);
                               handleCloseModal();
                             }
-                          }}
+                          })}
+                          onTouchEnd={handleAction(() => {
+                            if (!ticket.isDeleted && isConfirmingRedeem) {
+                              handleCloseModal();
+                              return;
+                            }
+                            const confirmMessage = ticket.isDeleted 
+                              ? '確定永久刪除此票券？此操作無法復原。'
+                              : '確定刪除此票券並視同核銷通知嗎？';
+                            if (window.confirm(confirmMessage)) {
+                              onDelete(ticket.id, !ticket.isDeleted, true);
+                              handleCloseModal();
+                            }
+                          })}
+                          style={{ touchAction: 'manipulation' }}
                           className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
                             !ticket.isDeleted && isConfirmingRedeem ? 'flex-[1.2] bg-muted' : 'flex-1 bg-ticket-warning'
                           }`}
@@ -710,7 +727,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             variants={buttonVariants}
                             whileTap="tap"
                             whileHover="hover"
-                            onClick={handleToggleCompleteWithAnimation}
+                            onClick={handleAction(handleToggleCompleteWithAnimation)}
+                            onTouchEnd={handleAction(handleToggleCompleteWithAnimation)}
+                            style={{ touchAction: 'manipulation' }}
                             className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
                               isConfirmingRedeem ? 'flex-[1.8] bg-primary' : 'flex-[2] bg-ticket-success'
                             }`}
@@ -737,10 +756,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           <motion.button
                             variants={buttonVariants}
                             whileTap="tap"
-                            onClick={() => {
+                            onClick={handleAction(() => {
                               onRestore(ticket);
                               handleCloseModal();
-                            }}
+                            })}
+                            onTouchEnd={handleAction(() => {
+                              onRestore(ticket);
+                              handleCloseModal();
+                            })}
+                            style={{ touchAction: 'manipulation' }}
                             className="flex-1 bg-ticket-success/10 text-ticket-success text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                           >
                             <RefreshCcw size={14} /> 還原
@@ -750,7 +774,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             <motion.button
                               variants={buttonVariants}
                               whileTap="tap"
-                              onClick={() => setIsEditing(true)}
+                              onClick={handleAction(() => setIsEditing(true))}
+                              onTouchEnd={handleAction(() => setIsEditing(true))}
+                              style={{ touchAction: 'manipulation' }}
                               className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                             >
                               <Pencil size={14} /> 編輯
@@ -758,10 +784,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             <motion.button
                               variants={buttonVariants}
                               whileTap="tap"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={handleAction(() => {
                                 onUpdate({ ...ticket, pinned: !ticket.pinned });
-                              }}
+                              })}
+                              onTouchEnd={handleAction(() => {
+                                onUpdate({ ...ticket, pinned: !ticket.pinned });
+                              })}
+                              style={{ touchAction: 'manipulation' }}
                               className={`flex-1 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 ${
                                 ticket.pinned 
                                   ? 'bg-amber-500/15 text-amber-500' 
@@ -774,7 +803,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               <motion.button
                                 variants={buttonVariants}
                                 whileTap="tap"
-                                onClick={handleDownloadOriginal}
+                                onClick={handleAction(handleDownloadOriginal)}
+                                onTouchEnd={handleAction(handleDownloadOriginal)}
+                                style={{ touchAction: 'manipulation' }}
                                 className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                               >
                                 <Download size={14} /> 下載原圖
@@ -785,7 +816,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                         <motion.button
                           variants={buttonVariants}
                           whileTap="tap"
-                          onClick={handleCloseModal}
+                          onClick={handleAction(handleCloseModal)}
+                          onTouchEnd={handleAction(handleCloseModal)}
+                          style={{ touchAction: 'manipulation' }}
                           className="flex-1 glass-card text-muted-foreground font-semibold rounded-xl flex items-center justify-center text-xs"
                         >
                           關閉
