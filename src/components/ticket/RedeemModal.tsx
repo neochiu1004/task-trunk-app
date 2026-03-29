@@ -659,10 +659,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   ) : (
                     <>
                       <div className="flex gap-2 mb-1">
-                        <motion.button
-                          variants={buttonVariants}
-                          whileTap="tap"
-                          whileHover="hover"
+                        <button
+                          type="button"
                           onClick={() => {
                             if (!ticket.isDeleted && isConfirmingRedeem) {
                               handleCloseModal();
@@ -685,13 +683,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           ) : (
                             <><Trash2 size={18} /> {ticket.isDeleted ? '永久刪除' : '刪除'}</>
                           )}
-                        </motion.button>
+                        </button>
 
                         {!ticket.isDeleted && (
-                          <motion.button
-                            variants={buttonVariants}
-                            whileTap="tap"
-                            whileHover="hover"
+                          <button
+                            type="button"
                             onClick={handleToggleCompleteWithAnimation}
                             className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
                               isConfirmingRedeem ? 'flex-[1.8] bg-primary' : 'flex-[2] bg-ticket-success'
@@ -710,7 +706,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                                 <CheckCircle2 size={18} /> 立即核銷
                               </>
                             )}
-                          </motion.button>
+                          </button>
                         )}
                       </div>
 
@@ -763,14 +759,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             )}
                           </>
                         )}
-                        <motion.button
-                          variants={buttonVariants}
-                          whileTap="tap"
+                        <button
+                          type="button"
                           onClick={handleCloseModal}
                           className="flex-1 glass-card text-muted-foreground font-semibold rounded-xl flex items-center justify-center text-xs"
                         >
                           關閉
-                        </motion.button>
+                        </button>
                       </div>
                     </>
                   )}
@@ -792,10 +787,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             onClick={handleCloseModal}
           >
             {/* Close button - top right (closes entire modal) */}
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              whileTap={{ scale: 0.9 }}
+            <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleCloseModal();
@@ -803,7 +796,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
             >
               <X size={24} />
-            </motion.button>
+            </button>
             
             {/* Image container - click to close entire modal */}
             <div 
@@ -828,32 +821,29 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.02 }}
+              <button
+                type="button"
                 onClick={handleFullscreenBack}
                 className="flex-1 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
                 {isConfirmingRedeem ? '取消' : '返回詳情'}
-              </motion.button>
+              </button>
               
               {/* Download button */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.02 }}
+              <button
+                type="button"
                 onClick={handleDownloadOriginal}
                 className="w-14 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
                 <Download size={18} />
-              </motion.button>
+              </button>
               
               {/* Quick Redeem button - emerald green */}
               {!ticket.isDeleted && (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  whileHover={{ scale: 1.02 }}
+                <button
+                  type="button"
                   onClick={handleFullscreenRedeem}
                   className={`flex-[2] min-h-14 py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
                     ticket.completed 
@@ -877,7 +867,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                       <CheckCircle2 size={18} /> 快速核銷
                     </>
                   )}
-                </motion.button>
+                </button>
               )}
             </motion.div>
           </motion.div>
