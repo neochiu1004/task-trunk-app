@@ -241,6 +241,18 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     toast({ title: "下載成功", description: "原圖已儲存" });
   };
 
+  const handleClosePress = (event: React.PointerEvent | React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClose();
+  };
+
+  const handleFullscreenBackPress = (event: React.PointerEvent | React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShowFullScreen(false);
+  };
+
   const hasAnyImage = !!ticket.image || !!ticket.originalImage;
   const isMomoMode = viewMode === 'momo';
 
@@ -594,13 +606,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             exit={{ opacity: 0, x: -20 }}
                             className="h-full flex flex-col items-center gap-3 relative group"
                           >
-                            <motion.button
-                              whileTap={{ scale: 0.9 }}
-                              onClick={onClose}
+                            <button
+                              type="button"
+                              onPointerUp={handleClosePress}
+                              onClick={(e) => e.preventDefault()}
                               className="absolute top-2 right-2 z-10 w-8 h-8 glass-button text-muted-foreground rounded-full flex items-center justify-center"
+                              style={{ touchAction: 'manipulation' }}
                             >
                               <X size={18} />
-                            </motion.button>
+                            </button>
 
                             <div
                               className="relative w-full flex-1 min-h-0 flex items-center justify-center cursor-zoom-in group"
@@ -820,14 +834,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             </motion.button>
                           </>
                         )}
-                        <motion.button
-                          variants={buttonVariants}
-                          whileTap="tap"
-                          onClick={onClose}
+                        <button
+                          type="button"
+                          onPointerUp={handleClosePress}
+                          onClick={(e) => e.preventDefault()}
                           className="flex-1 glass-card text-muted-foreground font-semibold rounded-xl flex items-center justify-center text-xs"
+                          style={{ touchAction: 'manipulation' }}
                         >
                           關閉
-                        </motion.button>
+                        </button>
                       </div>
                     </>
                   )}
@@ -848,18 +863,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             onClick={onClose}
           >
             {/* Close button - top right (closes entire modal) */}
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
+            <button
+              type="button"
+              onPointerUp={handleClosePress}
+              onClick={(e) => e.preventDefault()}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
+              style={{ touchAction: 'manipulation' }}
             >
               <X size={24} />
-            </motion.button>
+            </button>
             
             {/* Image container - click to close entire modal */}
             <div 
@@ -884,15 +896,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Back button - returns to detail view only */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => setShowFullScreen(false)}
+              <button
+                type="button"
+                onPointerUp={handleFullscreenBackPress}
+                onClick={(e) => e.preventDefault()}
                 className="flex-1 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
-                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)', touchAction: 'manipulation' }}
               >
                 返回詳情
-              </motion.button>
+              </button>
               
               {/* Download button */}
               <motion.button
