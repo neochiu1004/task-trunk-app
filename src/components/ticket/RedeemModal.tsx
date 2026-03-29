@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Trash2,
@@ -69,10 +69,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   settings,
   redeemUrlPresets,
 }) => {
-  const SWIPE_CLOSE_DISTANCE = 72;
-  const SWIPE_CLOSE_VELOCITY = 420;
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [isConfirmingRedeem, setIsConfirmingRedeem] = useState(false);
   const [editName, setEditName] = useState('');
   const [editSerial, setEditSerial] = useState('');
   const [editExpiry, setEditExpiry] = useState('');
@@ -99,15 +98,14 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditRedeemUrl(ticket.redeemUrl || '');
       setEditPinned(!!ticket.pinned);
       setShowFullScreen(false);
+      setIsConfirmingRedeem(false);
     } else {
       setShowFullScreen(false);
+      setIsConfirmingRedeem(false);
     }
   }, [ticket]);
 
   if (!ticket) return null;
-
-  const shouldCloseFromSwipe = (info: PanInfo) =>
-    info.offset.y > SWIPE_CLOSE_DISTANCE || info.velocity.y > SWIPE_CLOSE_VELOCITY;
 
   const handleOriginalImageChange = async (base64: string) => {
     setEditOriginalImage(base64);
@@ -170,41 +168,45 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   };
 
   const handleToggleCompleteWithAnimation = () => {
-    if (ticket.completed || window.confirm('確定核銷？')) {
-      setIsRedeemAnimating(true);
-      
-      // 核銷時自動複製序號到剪貼簿（根據設定）
-      const shouldAutoCopy = settings?.autoCopySerialOnRedeem !== false;
-      if (!ticket.completed && ticket.serial && shouldAutoCopy) {
-        navigator.clipboard.writeText(ticket.serial).then(() => {
-          toast({
-            title: "已複製序號",
-            description: ticket.serial.length > 30 ? ticket.serial.substring(0, 30) + '...' : ticket.serial,
-          });
-        }).catch(() => {
-          // 複製失敗時不阻斷流程
-        });
-      }
-      
-      setTimeout(() => {
-        onToggleComplete(ticket);
-        setIsRedeemAnimating(false);
-        onClose();
-        // 核銷後詢問是否跳轉網址 (with URL validation)
-        if (!ticket.completed && ticket.redeemUrl) {
-          setTimeout(() => {
-            const urlValidation = validateRedeemUrl(ticket.redeemUrl);
-            if (!urlValidation.valid) {
-              alert(`無法開啟連結：${urlValidation.error}`);
-              return;
-            }
-            if (window.confirm('是否開啟跳轉連結？')) {
-              window.open(ticket.redeemUrl, '_blank', 'noopener,noreferrer');
-            }
-          }, 300);
-        }
-      }, 600);
+    if (!ticket.completed && !isConfirmingRedeem) {
+      setIsConfirmingRedeem(true);
+      return;
     }
+
+    setIsRedeemAnimating(true);
+    
+    // 核銷時自動複製序號到剪貼簿（根據設定）
+    const shouldAutoCopy = settings?.autoCopySerialOnRedeem !== false;
+    if (!ticket.completed && ticket.serial && shouldAutoCopy) {
+      navigator.clipboard.writeText(ticket.serial).then(() => {
+        toast({
+          title: "已複製序號",
+          description: ticket.serial.length > 30 ? ticket.serial.substring(0, 30) + '...' : ticket.serial,
+        });
+      }).catch(() => {
+        // 複製失敗時不阻斷流程
+      });
+    }
+    
+    setTimeout(() => {
+      onToggleComplete(ticket);
+      setIsRedeemAnimating(false);
+      setIsConfirmingRedeem(false);
+      onClose();
+      // 核銷後詢問是否跳轉網址 (with URL validation)
+      if (!ticket.completed && ticket.redeemUrl) {
+        setTimeout(() => {
+          const urlValidation = validateRedeemUrl(ticket.redeemUrl);
+          if (!urlValidation.valid) {
+            alert(`無法開啟連結：${urlValidation.error}`);
+            return;
+          }
+          if (window.confirm('是否開啟跳轉連結？')) {
+            window.open(ticket.redeemUrl, '_blank', 'noopener,noreferrer');
+          }
+        }, 300);
+      }
+    }, 600);
   };
 
   const handleDownloadOriginal = () => {
@@ -262,18 +264,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               initial="hidden"
               animate="visible"
               exit="exit"
-              drag={!isEditing && !isRedeemAnimating ? 'y' : false}
-              dragDirectionLock
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
-              dragMomentum={false}
-              onDragEnd={(_, info) => {
-                if (!isEditing && !isRedeemAnimating && shouldCloseFromSwipe(info)) {
+              className="glass-card w-full max-w-sm max-h-[90vh] rounded-[28px] overflow-hidden relative flex flex-col border border-border/50"
+              onDoubleClick={() => {
+                if (!isEditing && !isRedeemAnimating) {
                   onClose();
                 }
               }}
-              className="glass-card w-full max-w-sm max-h-[90vh] rounded-[28px] overflow-hidden relative flex flex-col border border-border/50"
-              style={{ touchAction: isEditing ? 'auto' : 'pan-x' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Redeem Animation Overlay */}
@@ -504,7 +500,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   <div className="flex-1 flex flex-col min-h-0">
                     <div className="flex-1 min-h-0 relative overflow-y-auto no-scrollbar pb-4">
                       <div className="mb-3 text-center text-[11px] text-muted-foreground/80">
-                        下滑可關閉
+                        雙擊畫面可關閉
                       </div>
                       <AnimatePresence mode="wait">
                         {hasOriginalImage ? (
@@ -645,6 +641,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           whileHover="hover"
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (!ticket.isDeleted && isConfirmingRedeem) {
+                              setIsConfirmingRedeem(false);
+                              onClose();
+                              return;
+                            }
                             const confirmMessage = ticket.isDeleted 
                               ? '確定永久刪除此票券？此操作無法復原。'
                               : '確定刪除此票券並視同核銷通知嗎？';
@@ -653,9 +654,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               onClose();
                             }
                           }}
-                          className="flex-1 py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground bg-ticket-warning transition-all"
+                          className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
+                            !ticket.isDeleted && isConfirmingRedeem ? 'flex-[1.2] bg-muted' : 'flex-1 bg-ticket-warning'
+                          }`}
                         >
-                          <Trash2 size={18} /> {ticket.isDeleted ? '永久刪除' : '刪除'}
+                          {!ticket.isDeleted && isConfirmingRedeem ? (
+                            <>取消</>
+                          ) : (
+                            <><Trash2 size={18} /> {ticket.isDeleted ? '永久刪除' : '刪除'}</>
+                          )}
                         </motion.button>
 
                         {!ticket.isDeleted && (
@@ -664,11 +671,17 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             whileTap="tap"
                             whileHover="hover"
                             onClick={handleToggleCompleteWithAnimation}
-                            className="flex-[2] py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground bg-ticket-success transition-all"
+                            className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
+                              isConfirmingRedeem ? 'flex-[1.8] bg-primary' : 'flex-[2] bg-ticket-success'
+                            }`}
                           >
                             {ticket.completed ? (
                               <>
                                 <RotateCcw size={18} /> 標記未用
+                              </>
+                            ) : isConfirmingRedeem ? (
+                              <>
+                                <CheckCircle2 size={18} /> 確定核銷
                               </>
                             ) : (
                               <>
@@ -753,18 +766,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            drag="y"
-            dragDirectionLock
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.18}
-            dragMomentum={false}
-            onDragEnd={(_, info) => {
-              if (shouldCloseFromSwipe(info)) {
-                onClose();
-              }
-            }}
             className="fixed inset-0 bg-black z-[60] flex flex-col"
-            style={{ touchAction: 'pan-x' }}
+            onDoubleClick={onClose}
             onClick={onClose}
           >
             {/* Close button - top right (closes entire modal) */}
