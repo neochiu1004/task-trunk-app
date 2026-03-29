@@ -88,6 +88,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [showBarcodePreview, setShowBarcodePreview] = useState(false);
 
   const isSpecificView = useMemo(() => {
     if (!ticket) return false;
@@ -116,6 +117,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditRedeemUrl(ticket.redeemUrl || '');
       setEditPinned(!!ticket.pinned);
       setViewMode(getInitialViewMode());
+      setShowBarcodePreview(false);
       if (ticket.originalImage) {
         setShowFullScreen(true);
       } else {
@@ -123,6 +125,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       }
     } else {
       setShowFullScreen(false);
+      setShowBarcodePreview(false);
     }
   }, [ticket]);
 
@@ -641,12 +644,24 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
 
                             {ticket.serial && (
                               <div className="w-full space-y-2 shrink-0 pb-4">
-                                <div className="glass-card p-2 rounded-xl">
-                                  <BarcodeCanvas text={ticket.serial} format={ticket.barcodeFormat} />
-                                </div>
-                                <div className="flex justify-center p-2 glass-card rounded-xl shrink-0">
-                                  <QRCodeCanvas text={ticket.serial} size={100} />
-                                </div>
+                                {showBarcodePreview ? (
+                                  <>
+                                    <div className="glass-card p-2 rounded-xl">
+                                      <BarcodeCanvas text={ticket.serial} format={ticket.barcodeFormat} />
+                                    </div>
+                                    <div className="flex justify-center p-2 glass-card rounded-xl shrink-0">
+                                      <QRCodeCanvas text={ticket.serial} size={100} />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowBarcodePreview(true)}
+                                    className="w-full py-3 rounded-xl glass-card text-sm font-semibold text-muted-foreground"
+                                  >
+                                    載入條碼預覽
+                                  </button>
+                                )}
                               </div>
                             )}
                           </motion.div>
@@ -669,27 +684,43 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             className="h-full flex flex-col items-center justify-center gap-5 py-4"
                           >
                             {ticket.serial && (
+                              showBarcodePreview ? (
+                                <motion.div
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={onClose}
+                                  className="w-full glass-card p-3 rounded-xl cursor-pointer"
+                                >
+                                  <BarcodeCanvas text={ticket.serial} format={ticket.barcodeFormat} />
+                                </motion.div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowBarcodePreview(true)}
+                                  className="w-full glass-card p-3 rounded-xl text-sm font-semibold text-muted-foreground"
+                                >
+                                  載入條碼預覽
+                                </button>
+                              )
+                            )}
+                            {showBarcodePreview ? (
                               <motion.div
                                 whileTap={{ scale: 0.98 }}
                                 onClick={onClose}
-                                className="w-full glass-card p-3 rounded-xl cursor-pointer"
+                                className="p-4 glass-card rounded-[32px] cursor-pointer"
                               >
-                                <BarcodeCanvas text={ticket.serial} format={ticket.barcodeFormat} />
+                                {ticket.serial ? (
+                                  <QRCodeCanvas text={ticket.serial} size={180} />
+                                ) : (
+                                  <div className="w-40 h-40 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-2xl font-semibold">
+                                    無序號
+                                  </div>
+                                )}
                               </motion.div>
+                            ) : (
+                              <div className="w-full max-w-[240px] p-6 glass-card rounded-[32px] text-center text-sm font-semibold text-muted-foreground">
+                                條碼預覽未載入
+                              </div>
                             )}
-                            <motion.div
-                              whileTap={{ scale: 0.98 }}
-                              onClick={onClose}
-                              className="p-4 glass-card rounded-[32px] cursor-pointer"
-                            >
-                              {ticket.serial ? (
-                                <QRCodeCanvas text={ticket.serial} size={180} />
-                              ) : (
-                                <div className="w-40 h-40 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-2xl font-semibold">
-                                  無序號
-                                </div>
-                              )}
-                            </motion.div>
                             <div className="text-center">
                               <span className="text-[11px] font-medium text-muted-foreground block mb-1">電子券號</span>
                               <span className="font-mono text-lg font-bold text-foreground glass-card px-4 py-1 rounded-full">
