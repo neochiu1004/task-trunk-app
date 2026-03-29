@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -85,6 +85,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const lastTouchActionAtRef = useRef(0);
 
   useEffect(() => {
     if (ticket) {
@@ -179,9 +180,33 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     event: React.TouchEvent | React.MouseEvent,
     action: () => void
   ) => {
+    const now = Date.now();
+    if (now - lastTouchActionAtRef.current < 450) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    lastTouchActionAtRef.current = now;
     event.preventDefault();
     event.stopPropagation();
     action();
+  };
+
+  const handleFullscreenBack = () => {
+    if (isConfirmingRedeem) {
+      handleCloseModal();
+      return;
+    }
+    setShowFullScreen(false);
+  };
+
+  const handleFullscreenRedeem = () => {
+    if (!ticket.completed && !isConfirmingRedeem) {
+      setIsConfirmingRedeem(true);
+      return;
+    }
+    setShowFullScreen(false);
+    setTimeout(() => handleToggleCompleteWithAnimation(), 300);
   };
 
   const handleToggleCompleteWithAnimation = () => {
@@ -790,10 +815,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCloseModal();
-              }}
+              onClick={(e) => handleTouchAction(e, handleCloseModal)}
               onTouchEnd={(e) => handleTouchAction(e, handleCloseModal)}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
             >
@@ -826,22 +848,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
-                onClick={() => {
-                  if (isConfirmingRedeem) {
-                    handleCloseModal();
-                    return;
-                  }
-                  setShowFullScreen(false);
-                }}
-                onTouchEnd={(e) =>
-                  handleTouchAction(e, () => {
-                    if (isConfirmingRedeem) {
-                      handleCloseModal();
-                      return;
-                    }
-                    setShowFullScreen(false);
-                  })
-                }
+                onClick={(e) => handleTouchAction(e, handleFullscreenBack)}
+                onTouchEnd={(e) => handleTouchAction(e, handleFullscreenBack)}
                 className="flex-1 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
@@ -852,7 +860,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
-                onClick={handleDownloadOriginal}
+                onClick={(e) => handleTouchAction(e, handleDownloadOriginal)}
                 onTouchEnd={(e) => handleTouchAction(e, handleDownloadOriginal)}
                 className="w-14 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
@@ -865,24 +873,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.02 }}
-                  onClick={() => {
-                    if (!ticket.completed && !isConfirmingRedeem) {
-                      setIsConfirmingRedeem(true);
-                      return;
-                    }
-                    setShowFullScreen(false);
-                    setTimeout(() => handleToggleCompleteWithAnimation(), 300);
-                  }}
-                  onTouchEnd={(e) =>
-                    handleTouchAction(e, () => {
-                      if (!ticket.completed && !isConfirmingRedeem) {
-                        setIsConfirmingRedeem(true);
-                        return;
-                      }
-                      setShowFullScreen(false);
-                      setTimeout(() => handleToggleCompleteWithAnimation(), 300);
-                    })
-                  }
+                  onClick={(e) => handleTouchAction(e, handleFullscreenRedeem)}
+                  onTouchEnd={(e) => handleTouchAction(e, handleFullscreenRedeem)}
                   className={`flex-[2] min-h-14 py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
                     ticket.completed 
                       ? 'bg-ticket-warning shadow-ticket-warning/25' 
