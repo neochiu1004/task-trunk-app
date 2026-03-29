@@ -806,15 +806,21 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               className="fixed bottom-0 left-0 right-0 p-4 pb-8 flex gap-3 z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Back button - returns to detail view only */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
-                onClick={() => setShowFullScreen(false)}
+                onClick={() => {
+                  if (isConfirmingRedeem) {
+                    setIsConfirmingRedeem(false);
+                    onClose();
+                    return;
+                  }
+                  setShowFullScreen(false);
+                }}
                 className="flex-1 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
-                返回詳情
+                {isConfirmingRedeem ? '取消' : '返回詳情'}
               </motion.button>
               
               {/* Download button */}
@@ -834,19 +840,29 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.02 }}
                   onClick={() => {
+                    if (!ticket.completed && !isConfirmingRedeem) {
+                      setIsConfirmingRedeem(true);
+                      return;
+                    }
                     setShowFullScreen(false);
                     setTimeout(() => handleToggleCompleteWithAnimation(), 300);
                   }}
                   className={`flex-[2] py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
                     ticket.completed 
                       ? 'bg-ticket-warning shadow-ticket-warning/25' 
-                      : 'bg-ticket-success shadow-ticket-success/25'
+                      : isConfirmingRedeem
+                        ? 'bg-primary shadow-primary/25'
+                        : 'bg-ticket-success shadow-ticket-success/25'
                   }`}
                   style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
                 >
                   {ticket.completed ? (
                     <>
                       <RotateCcw size={18} /> 標記未用
+                    </>
+                  ) : isConfirmingRedeem ? (
+                    <>
+                      <CheckCircle2 size={18} /> 確定核銷
                     </>
                   ) : (
                     <>
