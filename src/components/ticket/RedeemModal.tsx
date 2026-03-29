@@ -175,6 +175,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     onClose();
   };
 
+  const handleTouchAction = (
+    event: React.TouchEvent | React.MouseEvent,
+    action: () => void
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    action();
+  };
+
   const handleToggleCompleteWithAnimation = () => {
     if (!ticket.completed && !isConfirmingRedeem) {
       setIsConfirmingRedeem(true);
@@ -785,6 +794,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 e.stopPropagation();
                 handleCloseModal();
               }}
+              onTouchEnd={(e) => handleTouchAction(e, handleCloseModal)}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
             >
               <X size={24} />
@@ -809,7 +819,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2, type: "spring" as const, stiffness: 300, damping: 25 }}
-              className="fixed bottom-0 left-0 right-0 p-4 pb-8 flex gap-3 z-10"
+              className="fixed bottom-0 left-0 right-0 p-4 flex gap-3 z-[80]"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}
               onClick={(e) => e.stopPropagation()}
             >
               <motion.button
@@ -822,7 +833,16 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   }
                   setShowFullScreen(false);
                 }}
-                className="flex-1 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
+                onTouchEnd={(e) =>
+                  handleTouchAction(e, () => {
+                    if (isConfirmingRedeem) {
+                      handleCloseModal();
+                      return;
+                    }
+                    setShowFullScreen(false);
+                  })
+                }
+                className="flex-1 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
                 {isConfirmingRedeem ? '取消' : '返回詳情'}
@@ -833,7 +853,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
                 onClick={handleDownloadOriginal}
-                className="w-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
+                onTouchEnd={(e) => handleTouchAction(e, handleDownloadOriginal)}
+                className="w-14 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
                 <Download size={18} />
@@ -852,7 +873,17 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     setShowFullScreen(false);
                     setTimeout(() => handleToggleCompleteWithAnimation(), 300);
                   }}
-                  className={`flex-[2] py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
+                  onTouchEnd={(e) =>
+                    handleTouchAction(e, () => {
+                      if (!ticket.completed && !isConfirmingRedeem) {
+                        setIsConfirmingRedeem(true);
+                        return;
+                      }
+                      setShowFullScreen(false);
+                      setTimeout(() => handleToggleCompleteWithAnimation(), 300);
+                    })
+                  }
+                  className={`flex-[2] min-h-14 py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
                     ticket.completed 
                       ? 'bg-ticket-warning shadow-ticket-warning/25' 
                       : isConfirmingRedeem
