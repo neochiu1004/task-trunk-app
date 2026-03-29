@@ -1545,8 +1545,8 @@ export class TicketsPage {
     this.app.mount(`
       ${backgroundLayerHtml}
       <section class="page active relative z-10 px-4 pt-0 pb-24 md:pb-8 max-w-5xl mx-auto">
-        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.5rem);">
-          <header class="flex items-center justify-between mb-4 gap-2">
+        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pb-2 mb-2 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.4rem);">
+          <header class="flex items-center justify-between mb-3 gap-2">
             <div>
               <h1 class="text-2xl font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
               <p class="text-sm text-wabi-text-secondary">${meta.title}</p>
@@ -1573,18 +1573,24 @@ export class TicketsPage {
             </div>
           </header>
 
-          <div class="grid md:grid-cols-3 gap-3 mb-4">
-            <input id="ticket-search" value="${escapeHtml(this.app.state.ui.search)}" placeholder="搜尋票券、標籤或序號" class="md:col-span-2 w-full px-3 py-2 rounded-lg border border-wabi-border bg-white" />
-            <select id="ticket-sort" class="w-full px-3 py-2 rounded-lg border border-wabi-border bg-white">
+          <div class="flex items-center gap-2 mb-2">
+            <label class="relative flex-1 min-w-0">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-wabi-text-secondary"></i>
+              <input id="ticket-search" value="${escapeHtml(this.app.state.ui.search)}" placeholder="搜尋票券、標籤或序號" class="w-full pl-9 ${searchKeyword ? 'pr-9' : 'pr-3'} py-2 rounded-lg border border-wabi-border bg-white text-sm" />
+              ${searchKeyword
+                ? `<button type="button" data-clear-search="1" class="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-slate-400 hover:text-slate-700" aria-label="清除搜尋"><i class="fa-solid fa-xmark text-xs"></i></button>`
+                : ''}
+            </label>
+            <select id="ticket-sort" class="w-[8.8rem] shrink-0 px-3 py-2 rounded-lg border border-wabi-border bg-white text-sm">
               ${this.view === 'completed'
                 ? `
-                  <option value="redeemed-newest" ${this.app.state.ui.sort === 'redeemed-newest' || this.app.state.ui.sort === 'expiring' ? 'selected' : ''}>核銷時間（新到舊）</option>
-                  <option value="redeemed-oldest" ${this.app.state.ui.sort === 'redeemed-oldest' ? 'selected' : ''}>核銷時間（舊到新）</option>
+                  <option value="redeemed-newest" ${this.app.state.ui.sort === 'redeemed-newest' || this.app.state.ui.sort === 'expiring' ? 'selected' : ''}>核銷新到舊</option>
+                  <option value="redeemed-oldest" ${this.app.state.ui.sort === 'redeemed-oldest' ? 'selected' : ''}>核銷舊到新</option>
                   <option value="newest" ${this.app.state.ui.sort === 'newest' ? 'selected' : ''}>最新建立</option>
                   <option value="oldest" ${this.app.state.ui.sort === 'oldest' ? 'selected' : ''}>最早建立</option>
                 `
                 : `
-                  <option value="expiring" ${this.app.state.ui.sort === 'expiring' ? 'selected' : ''}>依到期排序</option>
+                  <option value="expiring" ${this.app.state.ui.sort === 'expiring' ? 'selected' : ''}>即將到期</option>
                   <option value="newest" ${this.app.state.ui.sort === 'newest' ? 'selected' : ''}>最新建立</option>
                   <option value="oldest" ${this.app.state.ui.sort === 'oldest' ? 'selected' : ''}>最早建立</option>
                 `
@@ -1592,14 +1598,21 @@ export class TicketsPage {
             </select>
           </div>
 
-          <div class="flex flex-wrap gap-2">
-            <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${this.app.state.ui.activeTags.length === 0 ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">全部</button>
-            ${this.view === 'active'
-              ? `<button data-filter-tag="${EXPIRY_URGENT_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>到期警示<span class="ml-1 ${urgentActiveCount > 0 ? '' : 'opacity-60'}">(${urgentActiveCount})</span></button>`
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-[11px] text-wabi-text-secondary truncate">${compactScopeText}</p>
+            ${(searchKeyword || this.app.state.ui.activeTags.length > 0)
+              ? `<button type="button" data-clear-scope="1" class="shrink-0 text-[11px] px-2.5 py-1 rounded-full border border-wabi-border bg-white text-wabi-text-secondary">清除</button>`
               : ''}
-            <button data-filter-tag="${ORIGINAL_IMAGE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-regular fa-image mr-1"></i>原圖</button>
+          </div>
+
+          <div class="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${this.app.state.ui.activeTags.length === 0 ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">全部</button>
+            ${this.view === 'active'
+              ? `<button data-filter-tag="${EXPIRY_URGENT_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>到期警示<span class="ml-1 ${urgentActiveCount > 0 ? '' : 'opacity-60'}">(${urgentActiveCount})</span></button>`
+              : ''}
+            <button data-filter-tag="${ORIGINAL_IMAGE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-regular fa-image mr-1"></i>原圖</button>
             ${allTags.map((tag) => `
-              <button data-filter-tag="${escapeHtml(tag)}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(tag) ? 'true' : 'false'}" class="px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(tag) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">#${escapeHtml(tag)}</button>
+              <button data-filter-tag="${escapeHtml(tag)}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(tag) ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(tag) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">#${escapeHtml(tag)}</button>
             `).join('')}
           </div>
         </div>
@@ -1713,6 +1726,23 @@ export class TicketsPage {
     searchInput?.addEventListener('input', async (event) => {
       if (this.searchIsComposing || event.isComposing) return;
       await handleSearchValueChange(event);
+    });
+
+    root.querySelector('[data-clear-search]')?.addEventListener('click', async () => {
+      this.app.state.ui.search = '';
+      const pruned = pruneSelectionToVisible();
+      if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+      await this.render();
+      const nextSearchInput = this.app.getRoot().querySelector('#ticket-search');
+      nextSearchInput?.focus({ preventScroll: true });
+    });
+
+    root.querySelector('[data-clear-scope]')?.addEventListener('click', async () => {
+      this.app.state.ui.search = '';
+      this.app.state.ui.activeTags = [];
+      const pruned = pruneSelectionToVisible();
+      if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+      await this.render();
     });
 
     root.querySelector('#ticket-sort')?.addEventListener('change', (event) => {
