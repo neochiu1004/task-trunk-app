@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -85,10 +85,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const lastTouchActionAtRef = useRef(0);
 
   useEffect(() => {
-    lastTouchActionAtRef.current = 0;
     if (ticket) {
       setEditName(ticket.productName);
       setEditSerial(ticket.serial || '');
@@ -176,25 +174,6 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setIsRedeemAnimating(false);
     onClose();
   };
-
-  const handleTouchAction = (
-    event: React.TouchEvent | React.MouseEvent,
-    action: () => void
-  ) => {
-    const now = Date.now();
-    if (now - lastTouchActionAtRef.current < 450) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    lastTouchActionAtRef.current = now;
-    event.preventDefault();
-    event.stopPropagation();
-    action();
-  };
-
-  const handleAction = (action: () => void) => (event: React.TouchEvent | React.MouseEvent) =>
-    handleTouchAction(event, action);
 
   const handleFullscreenBack = () => {
     if (isConfirmingRedeem) {
@@ -684,7 +663,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           variants={buttonVariants}
                           whileTap="tap"
                           whileHover="hover"
-                          onClick={handleAction(() => {
+                          onClick={() => {
                             if (!ticket.isDeleted && isConfirmingRedeem) {
                               handleCloseModal();
                               return;
@@ -696,21 +675,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               onDelete(ticket.id, !ticket.isDeleted, true);
                               handleCloseModal();
                             }
-                          })}
-                          onTouchEnd={handleAction(() => {
-                            if (!ticket.isDeleted && isConfirmingRedeem) {
-                              handleCloseModal();
-                              return;
-                            }
-                            const confirmMessage = ticket.isDeleted 
-                              ? '確定永久刪除此票券？此操作無法復原。'
-                              : '確定刪除此票券並視同核銷通知嗎？';
-                            if (window.confirm(confirmMessage)) {
-                              onDelete(ticket.id, !ticket.isDeleted, true);
-                              handleCloseModal();
-                            }
-                          })}
-                          style={{ touchAction: 'manipulation' }}
+                          }}
                           className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
                             !ticket.isDeleted && isConfirmingRedeem ? 'flex-[1.2] bg-muted' : 'flex-1 bg-ticket-warning'
                           }`}
@@ -727,9 +692,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             variants={buttonVariants}
                             whileTap="tap"
                             whileHover="hover"
-                            onClick={handleAction(handleToggleCompleteWithAnimation)}
-                            onTouchEnd={handleAction(handleToggleCompleteWithAnimation)}
-                            style={{ touchAction: 'manipulation' }}
+                            onClick={handleToggleCompleteWithAnimation}
                             className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
                               isConfirmingRedeem ? 'flex-[1.8] bg-primary' : 'flex-[2] bg-ticket-success'
                             }`}
@@ -756,15 +719,10 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           <motion.button
                             variants={buttonVariants}
                             whileTap="tap"
-                            onClick={handleAction(() => {
+                            onClick={() => {
                               onRestore(ticket);
                               handleCloseModal();
-                            })}
-                            onTouchEnd={handleAction(() => {
-                              onRestore(ticket);
-                              handleCloseModal();
-                            })}
-                            style={{ touchAction: 'manipulation' }}
+                            }}
                             className="flex-1 bg-ticket-success/10 text-ticket-success text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                           >
                             <RefreshCcw size={14} /> 還原
@@ -774,9 +732,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             <motion.button
                               variants={buttonVariants}
                               whileTap="tap"
-                              onClick={handleAction(() => setIsEditing(true))}
-                              onTouchEnd={handleAction(() => setIsEditing(true))}
-                              style={{ touchAction: 'manipulation' }}
+                              onClick={() => setIsEditing(true)}
                               className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                             >
                               <Pencil size={14} /> 編輯
@@ -784,13 +740,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             <motion.button
                               variants={buttonVariants}
                               whileTap="tap"
-                              onClick={handleAction(() => {
+                              onClick={() => {
                                 onUpdate({ ...ticket, pinned: !ticket.pinned });
-                              })}
-                              onTouchEnd={handleAction(() => {
-                                onUpdate({ ...ticket, pinned: !ticket.pinned });
-                              })}
-                              style={{ touchAction: 'manipulation' }}
+                              }}
                               className={`flex-1 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 ${
                                 ticket.pinned 
                                   ? 'bg-amber-500/15 text-amber-500' 
@@ -803,9 +755,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               <motion.button
                                 variants={buttonVariants}
                                 whileTap="tap"
-                                onClick={handleAction(handleDownloadOriginal)}
-                                onTouchEnd={handleAction(handleDownloadOriginal)}
-                                style={{ touchAction: 'manipulation' }}
+                                onClick={handleDownloadOriginal}
                                 className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                               >
                                 <Download size={14} /> 下載原圖
@@ -816,9 +766,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                         <motion.button
                           variants={buttonVariants}
                           whileTap="tap"
-                          onClick={handleAction(handleCloseModal)}
-                          onTouchEnd={handleAction(handleCloseModal)}
-                          style={{ touchAction: 'manipulation' }}
+                          onClick={handleCloseModal}
                           className="flex-1 glass-card text-muted-foreground font-semibold rounded-xl flex items-center justify-center text-xs"
                         >
                           關閉
@@ -848,8 +796,10 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={(e) => handleTouchAction(e, handleCloseModal)}
-              onTouchEnd={(e) => handleTouchAction(e, handleCloseModal)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCloseModal();
+              }}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
             >
               <X size={24} />
@@ -881,8 +831,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
-                onClick={(e) => handleTouchAction(e, handleFullscreenBack)}
-                onTouchEnd={(e) => handleTouchAction(e, handleFullscreenBack)}
+                onClick={handleFullscreenBack}
                 className="flex-1 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
@@ -893,8 +842,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.02 }}
-                onClick={(e) => handleTouchAction(e, handleDownloadOriginal)}
-                onTouchEnd={(e) => handleTouchAction(e, handleDownloadOriginal)}
+                onClick={handleDownloadOriginal}
                 className="w-14 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
@@ -906,8 +854,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.02 }}
-                  onClick={(e) => handleTouchAction(e, handleFullscreenRedeem)}
-                  onTouchEnd={(e) => handleTouchAction(e, handleFullscreenRedeem)}
+                  onClick={handleFullscreenRedeem}
                   className={`flex-[2] min-h-14 py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
                     ticket.completed 
                       ? 'bg-ticket-warning shadow-ticket-warning/25' 
