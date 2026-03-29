@@ -167,6 +167,14 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setIsEditing(false);
   };
 
+  const handleCloseModal = () => {
+    setShowFullScreen(false);
+    setIsConfirmingRedeem(false);
+    setIsEditing(false);
+    setIsRedeemAnimating(false);
+    onClose();
+  };
+
   const handleToggleCompleteWithAnimation = () => {
     if (!ticket.completed && !isConfirmingRedeem) {
       setIsConfirmingRedeem(true);
@@ -191,8 +199,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setTimeout(() => {
       onToggleComplete(ticket);
       setIsRedeemAnimating(false);
-      setIsConfirmingRedeem(false);
-      onClose();
+      handleCloseModal();
       // 核銷後詢問是否跳轉網址 (with URL validation)
       if (!ticket.completed && ticket.redeemUrl) {
         setTimeout(() => {
@@ -257,7 +264,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-foreground/70 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
-            onClick={onClose}
+            onClick={handleCloseModal}
           >
             <motion.div
               variants={modalVariants}
@@ -267,7 +274,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               className="glass-card w-full max-w-sm max-h-[90vh] rounded-[28px] overflow-hidden relative flex flex-col border border-border/50"
               onDoubleClick={() => {
                 if (!isEditing && !isRedeemAnimating) {
-                  onClose();
+                  handleCloseModal();
                 }
               }}
               onClick={(e) => e.stopPropagation()}
@@ -642,8 +649,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                           onClick={(e) => {
                             e.stopPropagation();
                             if (!ticket.isDeleted && isConfirmingRedeem) {
-                              setIsConfirmingRedeem(false);
-                              onClose();
+                              handleCloseModal();
                               return;
                             }
                             const confirmMessage = ticket.isDeleted 
@@ -651,7 +657,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               : '確定刪除此票券並視同核銷通知嗎？';
                             if (window.confirm(confirmMessage)) {
                               onDelete(ticket.id, !ticket.isDeleted, true);
-                              onClose();
+                              handleCloseModal();
                             }
                           }}
                           className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
@@ -699,7 +705,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             whileTap="tap"
                             onClick={() => {
                               onRestore(ticket);
-                              onClose();
+                              handleCloseModal();
                             }}
                             className="flex-1 bg-ticket-success/10 text-ticket-success text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                           >
@@ -745,7 +751,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                         <motion.button
                           variants={buttonVariants}
                           whileTap="tap"
-                          onClick={onClose}
+                          onClick={handleCloseModal}
                           className="flex-1 glass-card text-muted-foreground font-semibold rounded-xl flex items-center justify-center text-xs"
                         >
                           關閉
@@ -767,8 +773,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black z-[60] flex flex-col"
-            onDoubleClick={onClose}
-            onClick={onClose}
+            onDoubleClick={handleCloseModal}
+            onClick={handleCloseModal}
           >
             {/* Close button - top right (closes entire modal) */}
             <motion.button
@@ -777,7 +783,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();
-                onClose();
+                handleCloseModal();
               }}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
             >
@@ -787,7 +793,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             {/* Image container - click to close entire modal */}
             <div 
               className="flex-1 flex items-center justify-center p-4 pb-32 cursor-pointer"
-              onClick={onClose}
+              onClick={handleCloseModal}
             >
               <motion.img
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -811,8 +817,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 whileHover={{ scale: 1.02 }}
                 onClick={() => {
                   if (isConfirmingRedeem) {
-                    setIsConfirmingRedeem(false);
-                    onClose();
+                    handleCloseModal();
                     return;
                   }
                   setShowFullScreen(false);
