@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -23,6 +23,7 @@ import { Ticket, Template, Settings, RedeemUrlPreset } from '@/types/ticket';
 import { compressImage } from '@/lib/helpers';
 import { BarcodeCanvas } from './BarcodeCanvas';
 import { QRCodeCanvas } from './QRCodeCanvas';
+import { MomoTemplate } from './MomoTemplate';
 import { TagSelectInput } from './TagSelectInput';
 import { RedeemUrlPresetSelect } from './RedeemUrlPresetSelect';
 import { DraggableTemplateList } from './DraggableTemplateList';
@@ -51,6 +52,8 @@ interface RedeemModalProps {
   redeemUrlPresets?: RedeemUrlPreset[];
 }
 
+type ViewModeType = 'standard' | 'image' | 'momo';
+
 export const RedeemModal: React.FC<RedeemModalProps> = ({
   ticket,
   onClose,
@@ -59,7 +62,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   onRestore,
   onUpdate,
   allTags,
-  specificViewKeywords: _specificViewKeywords,
+  specificViewKeywords,
   onSaveTemplate,
   templates,
   onDeleteTemplate,
@@ -71,7 +74,6 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [isConfirmingRedeem, setIsConfirmingRedeem] = useState(false);
   const [editName, setEditName] = useState('');
   const [editSerial, setEditSerial] = useState('');
   const [editExpiry, setEditExpiry] = useState('');
@@ -81,10 +83,26 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [editBarcodeFormat, setEditBarcodeFormat] = useState<string | undefined>(undefined);
   const [editRedeemUrl, setEditRedeemUrl] = useState('');
   const [editPinned, setEditPinned] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewModeType>('standard');
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+
+  const isSpecificView = useMemo(() => {
+    if (!ticket) return false;
+    const keywords = specificViewKeywords?.length > 0 ? specificViewKeywords : ['MOMO', '85度C'];
+    const searchTarget = (ticket.productName + (ticket.tags || []).join('')).toUpperCase();
+    return keywords.some((kw) => searchTarget.includes(kw.toUpperCase()));
+  }, [ticket, specificViewKeywords]);
+
+  const getInitialViewMode = (): ViewModeType => {
+    if (!ticket) return 'standard';
+    if (ticket.originalImage) return 'image';
+    if (isSpecificView) return 'momo';
+    if (ticket.image && !ticket.serial) return 'image';
+    return 'standard';
+  };
 
   useEffect(() => {
     if (ticket) {
@@ -97,11 +115,14 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditBarcodeFormat(ticket.barcodeFormat);
       setEditRedeemUrl(ticket.redeemUrl || '');
       setEditPinned(!!ticket.pinned);
-      setShowFullScreen(false);
-      setIsConfirmingRedeem(false);
+      setViewMode(getInitialViewMode());
+      if (ticket.originalImage) {
+        setShowFullScreen(true);
+      } else {
+        setShowFullScreen(false);
+      }
     } else {
       setShowFullScreen(false);
-      setIsConfirmingRedeem(false);
     }
   }, [ticket]);
 
@@ -167,70 +188,42 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setIsEditing(false);
   };
 
-  const handleCloseModal = () => {
-    setShowFullScreen(false);
-    setIsConfirmingRedeem(false);
-    setIsEditing(false);
-    setIsRedeemAnimating(false);
-    onClose();
-  };
-
-  const handleFullscreenBack = () => {
-    if (isConfirmingRedeem) {
-      handleCloseModal();
-      return;
-    }
-    setShowFullScreen(false);
-  };
-
-  const handleFullscreenRedeem = () => {
-    if (!ticket.completed && !isConfirmingRedeem) {
-      setIsConfirmingRedeem(true);
-      return;
-    }
-    setShowFullScreen(false);
-    setTimeout(() => handleToggleCompleteWithAnimation(), 300);
-  };
-
   const handleToggleCompleteWithAnimation = () => {
-    if (!ticket.completed && !isConfirmingRedeem) {
-      setIsConfirmingRedeem(true);
-      return;
-    }
-
-    setIsRedeemAnimating(true);
-    
-    // 核銷時自動複製序號到剪貼簿（根據設定）
-    const shouldAutoCopy = settings?.autoCopySerialOnRedeem !== false;
-    if (!ticket.completed && ticket.serial && shouldAutoCopy) {
-      navigator.clipboard.writeText(ticket.serial).then(() => {
-        toast({
-          title: "已複製序號",
-          description: ticket.serial.length > 30 ? ticket.serial.substring(0, 30) + '...' : ticket.serial,
+    if (ticket.completed || window.confirm('確定核銷？')) {
+      setIsRedeemAnimating(true);
+      
+      // 核銷時自動複製序號到剪貼簿（根據設定）
+      const shouldAutoCopy = settings?.autoCopySerialOnRedeem !== false;
+      if (!ticket.completed && ticket.serial && shouldAutoCopy) {
+        navigator.clipboard.writeText(ticket.serial).then(() => {
+          toast({
+            title: "已複製序號",
+            description: ticket.serial.length > 30 ? ticket.serial.substring(0, 30) + '...' : ticket.serial,
+          });
+        }).catch(() => {
+          // 複製失敗時不阻斷流程
         });
-      }).catch(() => {
-        // 複製失敗時不阻斷流程
-      });
-    }
-    
-    setTimeout(() => {
-      onToggleComplete(ticket);
-      setIsRedeemAnimating(false);
-      handleCloseModal();
-      // 核銷後詢問是否跳轉網址 (with URL validation)
-      if (!ticket.completed && ticket.redeemUrl) {
-        setTimeout(() => {
-          const urlValidation = validateRedeemUrl(ticket.redeemUrl);
-          if (!urlValidation.valid) {
-            alert(`無法開啟連結：${urlValidation.error}`);
-            return;
-          }
-          if (window.confirm('是否開啟跳轉連結？')) {
-            window.open(ticket.redeemUrl, '_blank', 'noopener,noreferrer');
-          }
-        }, 300);
       }
-    }, 600);
+      
+      setTimeout(() => {
+        onToggleComplete(ticket);
+        setIsRedeemAnimating(false);
+        onClose();
+        // 核銷後詢問是否跳轉網址 (with URL validation)
+        if (!ticket.completed && ticket.redeemUrl) {
+          setTimeout(() => {
+            const urlValidation = validateRedeemUrl(ticket.redeemUrl);
+            if (!urlValidation.valid) {
+              alert(`無法開啟連結：${urlValidation.error}`);
+              return;
+            }
+            if (window.confirm('是否開啟跳轉連結？')) {
+              window.open(ticket.redeemUrl, '_blank', 'noopener,noreferrer');
+            }
+          }, 300);
+        }
+      }, 600);
+    }
   };
 
   const handleDownloadOriginal = () => {
@@ -248,8 +241,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     toast({ title: "下載成功", description: "原圖已儲存" });
   };
 
-  const hasOriginalImage = !!ticket.originalImage;
-  const hasDownloadableImage = !!(ticket.originalImage || ticket.image);
+  const hasAnyImage = !!ticket.image || !!ticket.originalImage;
+  const isMomoMode = viewMode === 'momo';
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -281,19 +274,16 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-foreground/70 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
-            onClick={handleCloseModal}
+            onClick={onClose}
           >
             <motion.div
               variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="glass-card w-full max-w-sm max-h-[90vh] rounded-[28px] overflow-hidden relative flex flex-col border border-border/50"
-              onDoubleClick={() => {
-                if (!isEditing && !isRedeemAnimating) {
-                  handleCloseModal();
-                }
-              }}
+              className={`glass-card w-full max-w-sm rounded-[28px] overflow-hidden relative flex flex-col border border-border/50 ${
+                isMomoMode ? 'h-[85vh] sm:h-auto' : 'max-h-[90vh]'
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Redeem Animation Overlay */}
@@ -343,13 +333,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                       placeholder="請輸入票券名稱"
                     />
                   ) : (
-                    <motion.h3
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-base font-bold text-foreground break-words leading-tight px-4 mb-2"
-                    >
-                      {ticket.productName}
-                    </motion.h3>
+                    !isMomoMode && (
+                      <motion.h3
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-base font-bold text-foreground break-words leading-tight px-4 mb-2"
+                      >
+                        {ticket.productName}
+                      </motion.h3>
+                    )
                   )}
                   
                   {isEditing && (
@@ -522,12 +514,79 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 
                 {!isEditing && (
                   <div className="flex-1 flex flex-col min-h-0">
+                    {!isMomoMode && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex justify-center shrink-0"
+                      >
+                        <div className="flex glass-card p-1 rounded-xl mb-3">
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setViewMode('standard')}
+                            className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+                              viewMode === 'standard' ? 'text-primary' : 'text-muted-foreground'
+                            }`}
+                          >
+                            {viewMode === 'standard' && (
+                              <motion.div
+                                layoutId="viewModeTab"
+                                className="absolute inset-0 bg-card shadow-sm rounded-lg"
+                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                              />
+                            )}
+                            <span className="relative z-10">條碼</span>
+                          </motion.button>
+                          {hasAnyImage && (
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => {
+                                setViewMode('image');
+                                if (ticket.originalImage) setShowFullScreen(true);
+                              }}
+                              className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all flex items-center gap-1 ${
+                                viewMode === 'image' ? 'text-primary' : 'text-muted-foreground'
+                              }`}
+                            >
+                              {viewMode === 'image' && (
+                                <motion.div
+                                  layoutId="viewModeTab"
+                                  className="absolute inset-0 bg-card shadow-sm rounded-lg"
+                                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                />
+                              )}
+                              <span className="relative z-10 flex items-center gap-1">
+                                {ticket.originalImage && <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>}
+                                原圖
+                              </span>
+                            </motion.button>
+                          )}
+                          {isSpecificView && (
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => setViewMode('momo')}
+                              className={`relative px-4 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+                                isMomoMode ? 'text-ticket-momo' : 'text-ticket-momo/60'
+                              }`}
+                            >
+                              {isMomoMode && (
+                                <motion.div
+                                  layoutId="viewModeTab"
+                                  className="absolute inset-0 bg-ticket-momo/20 shadow-sm rounded-lg"
+                                  transition={{ type: "spring" as const, stiffness: 400, damping: 30 }}
+                                />
+                              )}
+                              <span className="relative z-10">專屬</span>
+                            </motion.button>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                    
                     <div className="flex-1 min-h-0 relative overflow-y-auto no-scrollbar pb-4">
-                      <div className="mb-3 text-center text-[11px] text-muted-foreground/80">
-                        雙擊畫面可關閉
-                      </div>
                       <AnimatePresence mode="wait">
-                        {hasOriginalImage ? (
+                        {viewMode === 'image' ? (
                           <motion.div
                             key="image"
                             initial={{ opacity: 0, x: 20 }}
@@ -548,10 +607,22 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                               onClick={() => setShowFullScreen(true)}
                             >
                               <img
-                                src={ticket.originalImage}
-                                className="max-h-full w-auto rounded-xl shadow-md border border-border transition-opacity"
+                                src={ticket.originalImage || ticket.image}
+                                className={`max-h-full w-auto rounded-xl shadow-md border border-border transition-opacity ${
+                                  !ticket.originalImage ? 'opacity-70 grayscale-[0.3]' : 'opacity-100'
+                                }`}
                                 alt=""
                               />
+
+                              {!ticket.originalImage && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur-md text-primary-foreground px-4 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 shadow-lg"
+                                >
+                                  <AlertCircle size={12} /> 預覽模式 (建議上傳原圖)
+                                </motion.div>
+                              )}
                             </div>
 
                             {ticket.serial && (
@@ -564,6 +635,16 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                                 </div>
                               </div>
                             )}
+                          </motion.div>
+                        ) : isMomoMode ? (
+                          <motion.div
+                            key="momo"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="h-full py-1"
+                          >
+                            <MomoTemplate ticket={ticket} onContentClick={onClose} />
                           </motion.div>
                         ) : (
                           <motion.div
@@ -659,54 +740,43 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   ) : (
                     <>
                       <div className="flex gap-2 mb-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!ticket.isDeleted && isConfirmingRedeem) {
-                              handleCloseModal();
-                              return;
-                            }
+                        <motion.button
+                          variants={buttonVariants}
+                          whileTap="tap"
+                          whileHover="hover"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const confirmMessage = ticket.isDeleted 
                               ? '確定永久刪除此票券？此操作無法復原。'
                               : '確定刪除此票券並視同核銷通知嗎？';
                             if (window.confirm(confirmMessage)) {
                               onDelete(ticket.id, !ticket.isDeleted, true);
-                              handleCloseModal();
+                              onClose();
                             }
                           }}
-                          className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
-                            !ticket.isDeleted && isConfirmingRedeem ? 'flex-[1.2] bg-muted' : 'flex-1 bg-ticket-warning'
-                          }`}
+                          className="flex-1 py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground bg-ticket-warning transition-all"
                         >
-                          {!ticket.isDeleted && isConfirmingRedeem ? (
-                            <>取消</>
-                          ) : (
-                            <><Trash2 size={18} /> {ticket.isDeleted ? '永久刪除' : '刪除'}</>
-                          )}
-                        </button>
+                          <Trash2 size={18} /> {ticket.isDeleted ? '永久刪除' : '刪除'}
+                        </motion.button>
 
                         {!ticket.isDeleted && (
-                          <button
-                            type="button"
+                          <motion.button
+                            variants={buttonVariants}
+                            whileTap="tap"
+                            whileHover="hover"
                             onClick={handleToggleCompleteWithAnimation}
-                            className={`py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground transition-all ${
-                              isConfirmingRedeem ? 'flex-[1.8] bg-primary' : 'flex-[2] bg-ticket-success'
-                            }`}
+                            className="flex-[2] py-4 text-sm font-semibold rounded-2xl shadow-lg flex items-center justify-center gap-2 text-primary-foreground bg-ticket-success transition-all"
                           >
                             {ticket.completed ? (
                               <>
                                 <RotateCcw size={18} /> 標記未用
-                              </>
-                            ) : isConfirmingRedeem ? (
-                              <>
-                                <CheckCircle2 size={18} /> 確定核銷
                               </>
                             ) : (
                               <>
                                 <CheckCircle2 size={18} /> 立即核銷
                               </>
                             )}
-                          </button>
+                          </motion.button>
                         )}
                       </div>
 
@@ -717,7 +787,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             whileTap="tap"
                             onClick={() => {
                               onRestore(ticket);
-                              handleCloseModal();
+                              onClose();
                             }}
                             className="flex-1 bg-ticket-success/10 text-ticket-success text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
                           >
@@ -736,7 +806,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             <motion.button
                               variants={buttonVariants}
                               whileTap="tap"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 onUpdate({ ...ticket, pinned: !ticket.pinned });
                               }}
                               className={`flex-1 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 ${
@@ -747,25 +818,16 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             >
                               📌 {ticket.pinned ? '取消優先' : '優先'}
                             </motion.button>
-                            {hasDownloadableImage && (
-                              <motion.button
-                                variants={buttonVariants}
-                                whileTap="tap"
-                                onClick={handleDownloadOriginal}
-                                className="flex-1 glass-card text-muted-foreground text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5"
-                              >
-                                <Download size={14} /> 下載原圖
-                              </motion.button>
-                            )}
                           </>
                         )}
-                        <button
-                          type="button"
-                          onClick={handleCloseModal}
+                        <motion.button
+                          variants={buttonVariants}
+                          whileTap="tap"
+                          onClick={onClose}
                           className="flex-1 glass-card text-muted-foreground font-semibold rounded-xl flex items-center justify-center text-xs"
                         >
                           關閉
-                        </button>
+                        </motion.button>
                       </div>
                     </>
                   )}
@@ -783,25 +845,26 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black z-[60] flex flex-col"
-            onDoubleClick={handleCloseModal}
-            onClick={handleCloseModal}
+            onClick={onClose}
           >
             {/* Close button - top right (closes entire modal) */}
-            <button
-              type="button"
+            <motion.button
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();
-                handleCloseModal();
+                onClose();
               }}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
             >
               <X size={24} />
-            </button>
+            </motion.button>
             
             {/* Image container - click to close entire modal */}
             <div 
               className="flex-1 flex items-center justify-center p-4 pb-32 cursor-pointer"
-              onClick={handleCloseModal}
+              onClick={onClose}
             >
               <motion.img
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -817,40 +880,44 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2, type: "spring" as const, stiffness: 300, damping: 25 }}
-              className="fixed bottom-0 left-0 right-0 p-4 flex gap-3 z-[80]"
-              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}
+              className="fixed bottom-0 left-0 right-0 p-4 pb-8 flex gap-3 z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                type="button"
-                onClick={handleFullscreenBack}
-                className="flex-1 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
+              {/* Back button - returns to detail view only */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => setShowFullScreen(false)}
+                className="flex-1 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center gap-2 shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
-                {isConfirmingRedeem ? '取消' : '返回詳情'}
-              </button>
+                返回詳情
+              </motion.button>
               
               {/* Download button */}
-              <button
-                type="button"
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
                 onClick={handleDownloadOriginal}
-                className="w-14 min-h-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
+                className="w-14 py-4 rounded-2xl font-semibold text-white bg-black/30 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg"
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
               >
                 <Download size={18} />
-              </button>
+              </motion.button>
               
               {/* Quick Redeem button - emerald green */}
               {!ticket.isDeleted && (
-                <button
-                  type="button"
-                  onClick={handleFullscreenRedeem}
-                  className={`flex-[2] min-h-14 py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => {
+                    setShowFullScreen(false);
+                    setTimeout(() => handleToggleCompleteWithAnimation(), 300);
+                  }}
+                  className={`flex-[2] py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
                     ticket.completed 
                       ? 'bg-ticket-warning shadow-ticket-warning/25' 
-                      : isConfirmingRedeem
-                        ? 'bg-primary shadow-primary/25'
-                        : 'bg-ticket-success shadow-ticket-success/25'
+                      : 'bg-ticket-success shadow-ticket-success/25'
                   }`}
                   style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
                 >
@@ -858,16 +925,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     <>
                       <RotateCcw size={18} /> 標記未用
                     </>
-                  ) : isConfirmingRedeem ? (
-                    <>
-                      <CheckCircle2 size={18} /> 確定核銷
-                    </>
                   ) : (
                     <>
                       <CheckCircle2 size={18} /> 快速核銷
                     </>
                   )}
-                </button>
+                </motion.button>
               )}
             </motion.div>
           </motion.div>
