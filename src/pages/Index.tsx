@@ -36,6 +36,8 @@ const DataHealthCheck = lazy(() =>
   import('@/components/modals/DataHealthCheck').then((module) => ({ default: module.DataHealthCheck }))
 );
 
+const APP_VERSION = __APP_VERSION__;
+
 const Index = () => {
   const { isDark, toggleTheme } = useTheme();
   const [view, setView] = useState<ViewType>('active');
@@ -457,6 +459,9 @@ const Index = () => {
                   </div>
                   <div className="mt-1 text-sm font-semibold text-foreground">
                     {viewLabelMap[view]} {filteredTasks.length} / {currentViewCount} 張
+                  </div>
+                  <div className="mt-1 text-[11px] font-medium text-primary">
+                    版本 v{APP_VERSION}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {searchQuery.trim() && (
