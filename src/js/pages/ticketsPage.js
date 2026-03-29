@@ -722,7 +722,12 @@ export class TicketsPage {
 
         <div id="redeem-preview-wrap" class="flex-1 min-h-0 rounded-lg border border-wabi-border bg-slate-100 p-0 flex items-center justify-center overflow-hidden"></div>
 
+        <div id="redeem-original-actions" data-redeem-keepopen="1" class="hidden fixed right-4 bottom-4 z-[96]">
+          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2 rounded-full bg-white/92 text-wabi-primary text-sm font-semibold border border-wabi-border shadow-lg backdrop-blur-sm">下載原圖</button>
+        </div>
+
         <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
+          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border bg-white text-sm md:text-base">${hasOriginalImage ? '下載原圖' : '下載圖片'}</button>
           <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
         </div>
       </div>
@@ -736,6 +741,8 @@ export class TicketsPage {
     const modeSwitch = modal.querySelector('#redeem-mode-switch');
     const barcodeVariantSwitch = modal.querySelector('#barcode-variant-switch');
     const footer = modal.querySelector('#redeem-footer');
+    const originalActions = modal.querySelector('#redeem-original-actions');
+    const downloadSource = ticket.originalImage || ticket.image || '';
 
     const updateModeButtonState = () => {
       modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
@@ -750,6 +757,7 @@ export class TicketsPage {
       header?.classList.toggle('hidden', immersiveOriginal);
       modeSwitch?.classList.toggle('hidden', immersiveOriginal);
       footer?.classList.toggle('hidden', immersiveOriginal);
+      originalActions?.classList.toggle('hidden', !(immersiveOriginal && downloadSource));
 
       if (shell) {
         shell.classList.toggle('p-0', immersiveOriginal);
@@ -931,6 +939,24 @@ export class TicketsPage {
       if (event.key === 'Escape') cleanup();
     };
 
+    const triggerImageDownload = () => {
+      if (!downloadSource) {
+        showToast('此票券沒有可下載圖片', 'error');
+        return;
+      }
+
+      const baseName = (ticket.productName || 'ticket').trim().replace(/[\\/:*?"<>|]+/g, '-').slice(0, 40) || 'ticket';
+      const fileName = `${baseName}-${ticket.id || 'image'}.jpg`;
+      const link = document.createElement('a');
+      link.href = downloadSource;
+      link.download = fileName;
+      link.rel = 'noopener';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
+
     let redeeming = false;
     let suppressNextModalClick = false;
     let suppressPreviewClick = false;
@@ -1010,6 +1036,14 @@ export class TicketsPage {
 
     modal.querySelector('[data-confirm-redeem]')?.addEventListener('click', () => {
       redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true });
+    });
+
+    modal.querySelectorAll('[data-download-image]').forEach((btn) => {
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        triggerImageDownload();
+      });
     });
 
     previewWrap?.addEventListener('click', (event) => {
