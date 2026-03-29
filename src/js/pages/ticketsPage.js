@@ -1554,21 +1554,26 @@ export class TicketsPage {
                 ? `<p class="text-xs text-amber-700 mt-1">已保留 ${selectedCount} 張選取（重新開啟多選可繼續操作）</p>`
                 : ''}
             </div>
-            <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-center gap-1.5 shrink-0 relative">
             ${this.view === 'active'
               ? `<button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="${gridIconClass}"></i></button>`
               : ''}
-            <button id="toggle-ultra-compact-btn" title="${ultraCompactCard ? '切換標準卡片' : '切換超精簡卡片'}" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid ${ultraCompactCard ? 'fa-expand' : 'fa-compress'}"></i></button>
-            ${this.view === 'completed'
-              ? `<button id="quick-clear-completed-to-trash" title="全部移到回收桶（${completedTotalCount}）" class="h-9 w-9 rounded-lg bg-red-100 border border-red-200 text-red-700 text-[13px] flex items-center justify-center ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive"></i></button>`
-              : ''}
-            ${this.view === 'deleted'
-              ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="h-9 w-9 rounded-lg bg-red-100 border border-red-200 text-red-700 text-[13px] flex items-center justify-center ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can"></i></button>`
-              : ''}
-            ${backgroundImages.length > 0
-              ? `<button id="toggle-view-background" title="${showBackground ? '隱藏背景' : '顯示背景'}" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid ${showBackground ? 'fa-eye-slash' : 'fa-image'}"></i></button>`
-              : ''}
               <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" title="${this.app.state.ui.selectionMode ? '取消多選' : '開啟多選'}" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid ${this.app.state.ui.selectionMode ? 'fa-check-double' : 'fa-rectangle-list'}"></i></button>
+              <button id="toggle-toolbar-menu" aria-expanded="false" title="更多功能" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid fa-ellipsis"></i></button>
+              <div id="toolbar-more-menu" class="hidden absolute right-11 top-0 w-44 rounded-xl border border-wabi-border bg-white shadow-xl p-2 space-y-1">
+                <button id="toggle-ultra-compact-btn" title="${ultraCompactCard ? '切換標準卡片' : '切換超精簡卡片'}" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent">
+                  <i class="fa-solid ${ultraCompactCard ? 'fa-expand' : 'fa-compress'} mr-2 text-xs"></i>${ultraCompactCard ? '標準卡片' : '超精簡卡片'}
+                </button>
+                ${backgroundImages.length > 0
+                  ? `<button id="toggle-view-background" title="${showBackground ? '隱藏背景' : '顯示背景'}" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent"><i class="fa-solid ${showBackground ? 'fa-eye-slash' : 'fa-image'} mr-2 text-xs"></i>${showBackground ? '隱藏背景' : '顯示背景'}</button>`
+                  : ''}
+                ${this.view === 'completed'
+                  ? `<button id="quick-clear-completed-to-trash" title="全部移到回收桶（${completedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive mr-2 text-xs"></i>全部移到回收桶</button>`
+                  : ''}
+                ${this.view === 'deleted'
+                  ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can mr-2 text-xs"></i>全部永久刪除</button>`
+                  : ''}
+              </div>
               <a href="#settings" title="設定" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid fa-gear"></i></a>
             </div>
           </header>
@@ -1750,6 +1755,36 @@ export class TicketsPage {
       const pruned = pruneSelectionToVisible();
       if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
       this.render();
+    });
+
+    const toolbarMenuButton = root.querySelector('#toggle-toolbar-menu');
+    const toolbarMoreMenu = root.querySelector('#toolbar-more-menu');
+    let toolbarMenuOpen = false;
+
+    const closeToolbarMenu = () => {
+      if (!toolbarMoreMenu || !toolbarMenuButton) return;
+      toolbarMenuOpen = false;
+      toolbarMoreMenu.classList.add('hidden');
+      toolbarMenuButton.setAttribute('aria-expanded', 'false');
+    };
+
+    toolbarMenuButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!toolbarMoreMenu) return;
+      toolbarMenuOpen = !toolbarMenuOpen;
+      toolbarMoreMenu.classList.toggle('hidden', !toolbarMenuOpen);
+      toolbarMenuButton.setAttribute('aria-expanded', toolbarMenuOpen ? 'true' : 'false');
+    });
+
+    toolbarMoreMenu?.addEventListener('click', () => {
+      closeToolbarMenu();
+    });
+
+    root.addEventListener('click', (event) => {
+      if (!toolbarMenuOpen) return;
+      if (event.target.closest('#toolbar-more-menu, #toggle-toolbar-menu')) return;
+      closeToolbarMenu();
     });
 
     root.querySelector('#quick-grid-columns')?.addEventListener('click', async () => {
