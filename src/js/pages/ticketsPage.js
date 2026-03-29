@@ -6,31 +6,18 @@ import {
   showToast,
   normalizeDateInput,
 } from '../utils.js';
+import bwipjs from 'bwip-js';
+import QRious from 'qrious';
 
 const VIEW_META = {
   active: { title: '待使用票券', empty: '目前沒有待使用票券', icon: 'fa-ticket' },
-  completed: { title: '已使用票券', empty: '目前沒有已使用票券', icon: 'fa-circle-check' },
+  completed: { title: '已使用票券', empty: '目前沒有已使用票券', icon: 'fa-check-circle' },
   deleted: { title: '回收桶', empty: '回收桶是空的', icon: 'fa-trash' },
 };
 const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
 const EXPIRY_URGENT_FILTER_TAG = '__expiry_urgent__';
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
 let swipeHintShownInSession = false;
-let barcodeSvgRendererPromise = null;
-let qrRendererPromise = null;
-
-async function getBarcodeSvgRenderer() {
-  barcodeSvgRendererPromise ||= import('bwip-js/generic').then((module) => ({
-    toSVG: module.toSVG,
-  }));
-
-  return barcodeSvgRendererPromise;
-}
-
-async function getQrRenderer() {
-  qrRendererPromise ||= import('qrious').then((module) => module.default);
-  return qrRendererPromise;
-}
 
 function parseExpiryToTime(expiry) {
   if (!expiry) return Number.MAX_SAFE_INTEGER;
@@ -142,8 +129,6 @@ export class TicketsPage {
     this.continueBatchHint = false;
     this.continueBatchHintTimer = null;
     this.searchIsComposing = false;
-    this.searchRenderTimer = null;
-    this.cardGestureHandlers = null;
   }
 
   isTouchGestureAvailable() {
@@ -296,16 +281,163 @@ export class TicketsPage {
     return false;
   }
 
-  clearCardGestureHandlers() {
-    if (!this.cardGestureHandlers) return;
-    const root = this.app.getRoot();
-    if (root) {
-      root.removeEventListener('touchstart', this.cardGestureHandlers.touchstart);
-      root.removeEventListener('touchmove', this.cardGestureHandlers.touchmove);
-      root.removeEventListener('touchcancel', this.cardGestureHandlers.touchcancel);
-      root.removeEventListener('touchend', this.cardGestureHandlers.touchend);
-    }
-    this.cardGestureHandlers = null;
+  bindCardSwipeGesture(card) {
+    if (!this.isTouchGestureAvailable()) return;
+    if (!this.isSwipeGestureEnabled()) return;
+    if (!card.dataset.swipeEnabled) return;
+
+    const interactiveSelector = 'button, a, input, textarea, select, label, [data-no-swipe], .ticket-card-actions';
+    const SWIPE_LOCK_DISTANCE = 10;
+    const SWIPE_TRIGGER_DISTANCE = this.getSwipeTriggerDistance();
+    const SWIPE_HINT_DISTANCE = Math.max(24, Math.floor(SWIPE_TRIGGER_DISTANCE * 0.55));
+    const SWIPE_CLAMP_DISTANCE = 92;
+    const SWIPE_PREVENT_CLICK_DISTANCE = 16;
+    const LONG_PRESS_MS = 430;
+    const LONG_PRESS_MOVE_TOLERANCE = 10;
+    let tracking = false;
+    let horizontalSwipe = false;
+    let startX = 0;
+    let startY = 0;
+    let currentOffset = 0;
+    let swipeHintNotified = false;
+    let longPressTriggered = false;
+    let longPressTimer = null;
+
+    const clearLongPressTimer = () => {
+      if (!longPressTimer) return;
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    };
+
+    const resetSwipeVisual = (animated = true) => {
+      card.classList.remove('ticket-card--swiping', 'ticket-card--swipe-left', 'ticket-card--swipe-right', 'ticket-card--swipe-ready');
+      if (animated) {
+        card.classList.add('ticket-card--swipe-release');
+      } else {
+        card.classList.remove('ticket-card--swipe-release');
+      }
+      card.style.removeProperty('--ticket-swipe-offset');
+      swipeHintNotified = false;
+    };
+
+    const setSwipeOffset = (offset) => {
+      const limited = Math.max(-SWIPE_CLAMP_DISTANCE, Math.min(SWIPE_CLAMP_DISTANCE, offset));
+      currentOffset = limited;
+      const absOffset = Math.abs(limited);
+      card.style.setProperty('--ticket-swipe-offset', `${limited}px`);
+      card.classList.add('ticket-card--swiping');
+      card.classList.toggle('ticket-card--swipe-left', limited < -18);
+      card.classList.toggle('ticket-card--swipe-right', limited > 18);
+      const ready = absOffset >= SWIPE_HINT_DISTANCE;
+      card.classList.toggle('ticket-card--swipe-ready', ready);
+      if (ready && !swipeHintNotified) {
+        swipeHintNotified = true;
+        this.triggerHapticFeedback(8);
+      }
+    };
+
+    card.addEventListener('transitionend', () => {
+      if (Math.abs(currentOffset) > 0.5) return;
+      card.classList.remove('ticket-card--swipe-release');
+    });
+
+    card.addEventListener('touchstart', (event) => {
+      if (event.touches.length !== 1) return;
+      if (event.target.closest(interactiveSelector)) return;
+      const inSelectionMode = this.app.state.ui.selectionMode;
+      tracking = true;
+      horizontalSwipe = false;
+      longPressTriggered = false;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      currentOffset = 0;
+      swipeHintNotified = false;
+      card.dataset.swipeSuppressClick = '0';
+      card.classList.remove('ticket-card--swipe-release');
+
+      clearLongPressTimer();
+      if (!inSelectionMode) {
+        longPressTimer = setTimeout(() => {
+          longPressTimer = null;
+          if (!tracking) return;
+          const ticketId = card.dataset.ticketId;
+          if (!ticketId) return;
+          longPressTriggered = true;
+          tracking = false;
+          horizontalSwipe = false;
+          currentOffset = 0;
+          card.dataset.swipeSuppressClick = '1';
+          resetSwipeVisual(false);
+          this.app.state.ui.selectionMode = true;
+          this.app.state.ui.selectedIds.add(ticketId);
+          this.hideContinueBatchHint();
+          this.triggerHapticFeedback([12, 30, 12]);
+          showToast('已進入多選模式', 'success', 900);
+          this.render();
+        }, LONG_PRESS_MS);
+      }
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (event) => {
+      if (!tracking || event.touches.length !== 1) return;
+      const dx = event.touches[0].clientX - startX;
+      const dy = event.touches[0].clientY - startY;
+      if (Math.abs(dx) > LONG_PRESS_MOVE_TOLERANCE || Math.abs(dy) > LONG_PRESS_MOVE_TOLERANCE) {
+        clearLongPressTimer();
+      }
+
+      if (!horizontalSwipe) {
+        if (Math.abs(dx) < SWIPE_LOCK_DISTANCE && Math.abs(dy) < SWIPE_LOCK_DISTANCE) return;
+        horizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.15;
+        if (!horizontalSwipe) {
+          tracking = false;
+          resetSwipeVisual(false);
+          return;
+        }
+      }
+
+      event.preventDefault();
+      setSwipeOffset(dx);
+      if (Math.abs(dx) >= SWIPE_PREVENT_CLICK_DISTANCE) {
+        card.dataset.swipeSuppressClick = '1';
+      }
+    }, { passive: false });
+
+    card.addEventListener('touchcancel', () => {
+      clearLongPressTimer();
+      tracking = false;
+      horizontalSwipe = false;
+      longPressTriggered = false;
+      currentOffset = 0;
+      resetSwipeVisual(true);
+    });
+
+    card.addEventListener('touchend', async () => {
+      clearLongPressTimer();
+      if (longPressTriggered) {
+        longPressTriggered = false;
+        return;
+      }
+      if (!tracking) return;
+      tracking = false;
+      const finalOffset = currentOffset;
+      const ticketId = card.dataset.ticketId;
+      const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
+      const shouldTrigger = horizontalSwipe && Math.abs(finalOffset) >= SWIPE_TRIGGER_DISTANCE;
+      horizontalSwipe = false;
+      currentOffset = 0;
+      if (!shouldTrigger || !ticket) {
+        resetSwipeVisual(true);
+        return;
+      }
+
+      const direction = finalOffset < 0 ? 'left' : 'right';
+      try {
+        await this.handleSwipeAction(ticket, direction);
+      } finally {
+        resetSwipeVisual(true);
+      }
+    }, { passive: true });
   }
 
   clearBackgroundRotationTimer() {
@@ -316,7 +448,6 @@ export class TicketsPage {
   }
 
   clearBackgroundInsetHandler() {
-    this.clearCardGestureHandlers();
     if (this.backgroundInsetHandler) {
       window.removeEventListener('resize', this.backgroundInsetHandler);
       window.removeEventListener('orientationchange', this.backgroundInsetHandler);
@@ -378,42 +509,12 @@ export class TicketsPage {
     }, 2000);
   }
 
-  createBatchModal(contentHtml, { onCancel } = {}) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
-    modal.innerHTML = contentHtml;
-
-    const handleCancel = () => {
-      onCancel?.();
-    };
-
-    const onKeydown = (event) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      handleCancel();
-    };
-
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) {
-        handleCancel();
-      }
-    });
-
-    document.body.appendChild(modal);
-    window.addEventListener('keydown', onKeydown);
-
-    const destroy = () => {
-      window.removeEventListener('keydown', onKeydown);
-      modal.remove();
-    };
-
-    return { modal, destroy };
-  }
-
   pickTemplateForBatch() {
     const templates = this.app.state.templates || [];
     return new Promise((resolve) => {
-      const { modal, destroy } = this.createBatchModal(`
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
+      modal.innerHTML = `
         <div class="w-full max-w-md rounded-2xl border border-wabi-border bg-white shadow-2xl p-4">
           <h3 class="text-lg font-semibold text-wabi-primary mb-1">選擇範本</h3>
           <p class="text-sm text-wabi-text-secondary mb-3">請選擇要批次套用的範本</p>
@@ -429,32 +530,41 @@ export class TicketsPage {
             <button type="button" data-cancel-template class="px-4 py-2 rounded-lg border border-wabi-border text-sm">取消</button>
           </div>
         </div>
-      `, { onCancel: () => cleanup(null) });
+      `;
+
+      const onKeydown = (event) => {
+        if (event.key === 'Escape') cleanup(null);
+      };
 
       const cleanup = (template) => {
-        destroy();
+        window.removeEventListener('keydown', onKeydown);
+        modal.remove();
         resolve(template || null);
       };
 
       modal.addEventListener('click', (event) => {
-        const cancelButton = event.target.closest('[data-cancel-template]');
-        if (cancelButton) {
-          cleanup(null);
-          return;
-        }
-
-        const pickButton = event.target.closest('[data-pick-template]');
-        if (!pickButton) return;
-        const index = Number(pickButton.dataset.pickTemplate);
-        cleanup(templates[index]);
+        if (event.target === modal) cleanup(null);
       });
+
+      modal.querySelector('[data-cancel-template]')?.addEventListener('click', () => cleanup(null));
+      modal.querySelectorAll('[data-pick-template]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const index = Number(btn.dataset.pickTemplate);
+          cleanup(templates[index]);
+        });
+      });
+
+      document.body.appendChild(modal);
+      window.addEventListener('keydown', onKeydown);
     });
   }
 
   pickRedeemUrlForBatch() {
     const presets = this.app.state.settings.redeemUrlPresets || [];
     return new Promise((resolve) => {
-      const { modal, destroy } = this.createBatchModal(`
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
+      modal.innerHTML = `
         <div class="w-full max-w-md rounded-2xl border border-wabi-border bg-white shadow-2xl p-4">
           <h3 class="text-lg font-semibold text-wabi-primary mb-1">批次設定兌換網址</h3>
           <p class="text-sm text-wabi-text-secondary mb-3">可直接選預設網址，或輸入自訂網址</p>
@@ -475,37 +585,32 @@ export class TicketsPage {
             <button type="button" data-confirm-url class="px-3 py-2 rounded-lg bg-wabi-primary text-white text-sm">套用</button>
           </div>
         </div>
-      `, { onCancel: () => cleanup('', true) });
+      `;
 
       const cleanup = (value, cancelled = false) => {
-        destroy();
+        modal.remove();
         resolve({ value, cancelled });
       };
 
-      const input = modal.querySelector('#batch-redeem-url-input');
       modal.addEventListener('click', (event) => {
-        const presetButton = event.target.closest('[data-pick-preset]');
-        if (presetButton) {
-          const index = Number(presetButton.dataset.pickPreset);
-          const picked = presets[index];
-          if (picked) input.value = picked.url || '';
-          return;
-        }
-
-        if (event.target.closest('[data-clear-url]')) {
-          cleanup('', false);
-          return;
-        }
-
-        if (event.target.closest('[data-cancel-url]')) {
-          cleanup('', true);
-          return;
-        }
-
-        if (event.target.closest('[data-confirm-url]')) {
-          cleanup((input.value || '').trim(), false);
-        }
+        if (event.target === modal) cleanup('', true);
       });
+
+      const input = modal.querySelector('#batch-redeem-url-input');
+      modal.querySelectorAll('[data-pick-preset]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const index = Number(btn.dataset.pickPreset);
+          const picked = presets[index];
+          if (!picked) return;
+          input.value = picked.url || '';
+        });
+      });
+
+      modal.querySelector('[data-clear-url]')?.addEventListener('click', () => cleanup('', false));
+      modal.querySelector('[data-cancel-url]')?.addEventListener('click', () => cleanup('', true));
+      modal.querySelector('[data-confirm-url]')?.addEventListener('click', () => cleanup((input.value || '').trim(), false));
+
+      document.body.appendChild(modal);
       input.focus();
     });
   }
@@ -517,7 +622,9 @@ export class TicketsPage {
 
     return new Promise((resolve) => {
       const selectedTags = new Set();
-      const { modal, destroy } = this.createBatchModal(`
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4';
+      modal.innerHTML = `
         <div class="w-full max-w-md rounded-2xl border border-wabi-border bg-white shadow-2xl p-4">
           <h3 class="text-lg font-semibold text-wabi-primary mb-1">${title}</h3>
           <p class="text-sm text-wabi-text-secondary mb-3">${hint}</p>
@@ -532,168 +639,41 @@ export class TicketsPage {
             <button type="button" data-confirm-tags class="px-3 py-2 rounded-lg bg-wabi-primary text-white text-sm">確認</button>
           </div>
         </div>
-      `, { onCancel: () => cleanup({ cancelled: true, tags: [] }) });
+      `;
 
       const cleanup = (payload) => {
-        destroy();
+        modal.remove();
         resolve(payload || { cancelled: true, tags: [] });
       };
 
-      const input = modal.querySelector('#batch-tags-input');
       modal.addEventListener('click', (event) => {
-        const chipButton = event.target.closest('[data-tag-chip]');
-        if (chipButton) {
-          const tag = chipButton.dataset.tagChip;
+        if (event.target === modal) cleanup({ cancelled: true, tags: [] });
+      });
+
+      modal.querySelectorAll('[data-tag-chip]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tag = btn.dataset.tagChip;
           if (!tag) return;
           if (selectedTags.has(tag)) {
             selectedTags.delete(tag);
-            chipButton.classList.remove('bg-wabi-primary', 'text-white', 'border-wabi-primary');
+            btn.classList.remove('bg-wabi-primary', 'text-white', 'border-wabi-primary');
           } else {
             selectedTags.add(tag);
-            chipButton.classList.add('bg-wabi-primary', 'text-white', 'border-wabi-primary');
+            btn.classList.add('bg-wabi-primary', 'text-white', 'border-wabi-primary');
           }
-          return;
-        }
-
-        if (event.target.closest('[data-cancel-tags]')) {
-          cleanup({ cancelled: true, tags: [] });
-          return;
-        }
-
-        if (event.target.closest('[data-confirm-tags]')) {
-          const inputTags = parseTags(input.value || '');
-          const tags = [...new Set([...selectedTags, ...inputTags])];
-          cleanup({ cancelled: false, tags });
-        }
+        });
       });
+
+      const input = modal.querySelector('#batch-tags-input');
+      modal.querySelector('[data-cancel-tags]')?.addEventListener('click', () => cleanup({ cancelled: true, tags: [] }));
+      modal.querySelector('[data-confirm-tags]')?.addEventListener('click', () => {
+        const inputTags = parseTags(input.value || '');
+        const tags = [...new Set([...selectedTags, ...inputTags])];
+        cleanup({ cancelled: false, tags });
+      });
+
+      document.body.appendChild(modal);
       input.focus();
-    });
-  }
-
-  buildRedeemModalMarkup(ticket, { hasOriginalImage, hasBarcodeSource, defaultMode }) {
-    return `
-      <div id="redeem-shell" class="w-full h-full rounded-none border-0 bg-white shadow-2xl p-3 md:p-4 flex flex-col">
-        <div id="redeem-header" data-redeem-keepopen="1" class="flex items-start justify-between gap-3 mb-2 md:mb-3">
-          <div class="min-w-0">
-            <h3 class="text-xl md:text-2xl font-semibold text-wabi-primary">核銷模式</h3>
-            <p class="text-base md:text-xl text-wabi-text-primary mt-1 break-words">${escapeHtml(ticket.productName || '未命名票券')}</p>
-          </div>
-        </div>
-
-        <div id="redeem-mode-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3">
-          <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>原圖模式</button>
-          <button type="button" data-redeem-mode="barcode" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasBarcodeSource ? '' : 'opacity-45 cursor-not-allowed'}" ${hasBarcodeSource ? '' : 'disabled aria-disabled="true"'}>條碼模式</button>
-          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">原圖模式優先，無原圖時自動切換條碼</span>
-        </div>
-
-        <div id="barcode-variant-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3 ${defaultMode === 'barcode' ? '' : 'hidden'}">
-          <button type="button" data-barcode-variant="standard" data-redeem-keepopen="1" class="px-3 py-1.5 rounded-lg text-xs md:text-sm border border-wabi-border">標準</button>
-          <button type="button" data-barcode-variant="momo" data-redeem-keepopen="1" class="px-3 py-1.5 rounded-lg text-xs md:text-sm border border-wabi-border">專屬</button>
-        </div>
-
-        <div id="redeem-preview-wrap" class="flex-1 min-h-0 rounded-lg border border-wabi-border bg-slate-100 p-0 flex items-center justify-center overflow-hidden"></div>
-
-        <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
-          <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
-        </div>
-      </div>
-    `;
-  }
-
-  updateRedeemModeButtonState(modal, { mode, barcodeVariant, hasOriginalImage, shell, header, modeSwitch, previewWrap, barcodeVariantSwitch, footer }) {
-    modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
-      const btnMode = btn.dataset.redeemMode;
-      const isActive = btnMode === mode;
-      btn.classList.toggle('bg-wabi-primary', isActive);
-      btn.classList.toggle('text-white', isActive);
-      btn.classList.toggle('border-wabi-primary', isActive);
-    });
-
-    const immersiveOriginal = mode === 'original' && hasOriginalImage;
-    header?.classList.toggle('hidden', immersiveOriginal);
-    modeSwitch?.classList.toggle('hidden', immersiveOriginal);
-    footer?.classList.toggle('hidden', immersiveOriginal);
-
-    if (shell) {
-      shell.classList.toggle('p-0', immersiveOriginal);
-      shell.classList.toggle('bg-black', immersiveOriginal);
-      shell.classList.toggle('p-3', !immersiveOriginal);
-      shell.classList.toggle('md:p-4', !immersiveOriginal);
-      shell.classList.toggle('bg-white', !immersiveOriginal);
-    }
-
-    if (previewWrap) {
-      previewWrap.classList.toggle('border-0', immersiveOriginal);
-      previewWrap.classList.toggle('rounded-none', immersiveOriginal);
-      previewWrap.classList.toggle('bg-black', immersiveOriginal);
-      previewWrap.classList.toggle('border', !immersiveOriginal);
-      previewWrap.classList.toggle('border-wabi-border', !immersiveOriginal);
-      previewWrap.classList.toggle('rounded-lg', !immersiveOriginal);
-      previewWrap.classList.toggle('bg-slate-100', !immersiveOriginal);
-    }
-
-    if (barcodeVariantSwitch) {
-      barcodeVariantSwitch.classList.toggle('hidden', immersiveOriginal || mode !== 'barcode');
-    }
-
-    modal.querySelectorAll('[data-barcode-variant]').forEach((btn) => {
-      const isActive = btn.dataset.barcodeVariant === barcodeVariant;
-      btn.classList.toggle('bg-wabi-primary', isActive);
-      btn.classList.toggle('text-white', isActive);
-      btn.classList.toggle('border-wabi-primary', isActive);
-    });
-  }
-
-  async drawRedeemBarcodeSvg(ticket, container, targetBcid, scale = 3, height = 10) {
-    const { toSVG } = await getBarcodeSvgRenderer();
-    try {
-      const markup = toSVG({
-        bcid: targetBcid,
-        text: ticket.serial,
-        scale,
-        height,
-        includetext: true,
-        textxalign: 'center',
-        backgroundcolor: 'FFFFFF',
-      });
-      container.innerHTML = markup;
-    } catch (_error) {
-      const fallbackMarkup = toSVG({
-        bcid: 'code128',
-        text: ticket.serial,
-        scale,
-        height,
-        includetext: true,
-        textxalign: 'center',
-        backgroundcolor: 'FFFFFF',
-      });
-      container.innerHTML = fallbackMarkup;
-    }
-
-    const svg = container.querySelector('svg');
-    if (!svg) return;
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', 'auto');
-    svg.classList.add('w-full', 'h-auto', 'block');
-  }
-
-  async mountDeferredRedeemBarcode(ticket, container, targetBcid, scale = 3, height = 10) {
-    if (!container) return;
-    container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-500 text-sm">正在載入條碼預覽...</div>';
-    try {
-      await this.drawRedeemBarcodeSvg(ticket, container, targetBcid, scale, height);
-    } catch (_error) {
-      container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-rose-500 text-sm">條碼載入失敗</div>';
-    }
-  }
-
-  async drawRedeemQrCanvas(ticket, canvas, size = 180) {
-    const QRious = await getQrRenderer();
-    new QRious({
-      element: canvas,
-      value: ticket.serial || '',
-      size,
-      level: 'H',
     });
   }
 
@@ -720,7 +700,33 @@ export class TicketsPage {
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 z-[95] bg-black/72 backdrop-blur-sm flex items-center justify-center p-0';
-    modal.innerHTML = this.buildRedeemModalMarkup(ticket, { hasOriginalImage, hasBarcodeSource, defaultMode });
+    modal.innerHTML = `
+      <div id="redeem-shell" class="w-full h-full rounded-none border-0 bg-white shadow-2xl p-3 md:p-4 flex flex-col">
+        <div id="redeem-header" data-redeem-keepopen="1" class="flex items-start justify-between gap-3 mb-2 md:mb-3">
+          <div class="min-w-0">
+            <h3 class="text-xl md:text-2xl font-semibold text-wabi-primary">核銷模式</h3>
+            <p class="text-base md:text-xl text-wabi-text-primary mt-1 break-words">${escapeHtml(ticket.productName || '未命名票券')}</p>
+          </div>
+        </div>
+
+        <div id="redeem-mode-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3">
+          <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>原圖模式</button>
+          <button type="button" data-redeem-mode="barcode" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasBarcodeSource ? '' : 'opacity-45 cursor-not-allowed'}" ${hasBarcodeSource ? '' : 'disabled aria-disabled="true"'}>條碼模式</button>
+          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">原圖模式優先，無原圖時自動切換條碼</span>
+        </div>
+
+        <div id="barcode-variant-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3 ${defaultMode === 'barcode' ? '' : 'hidden'}">
+          <button type="button" data-barcode-variant="standard" data-redeem-keepopen="1" class="px-3 py-1.5 rounded-lg text-xs md:text-sm border border-wabi-border">標準</button>
+          <button type="button" data-barcode-variant="momo" data-redeem-keepopen="1" class="px-3 py-1.5 rounded-lg text-xs md:text-sm border border-wabi-border">專屬</button>
+        </div>
+
+        <div id="redeem-preview-wrap" class="flex-1 min-h-0 rounded-lg border border-wabi-border bg-slate-100 p-0 flex items-center justify-center overflow-hidden"></div>
+
+        <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
+          <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
+        </div>
+      </div>
+    `;
 
     let mode = defaultMode;
     let barcodeVariant = isSpecificView ? 'momo' : 'standard';
@@ -731,7 +737,84 @@ export class TicketsPage {
     const barcodeVariantSwitch = modal.querySelector('#barcode-variant-switch');
     const footer = modal.querySelector('#redeem-footer');
 
-    const renderStandardBarcodePreview = async () => {
+    const updateModeButtonState = () => {
+      modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
+        const btnMode = btn.dataset.redeemMode;
+        const isActive = btnMode === mode;
+        btn.classList.toggle('bg-wabi-primary', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('border-wabi-primary', isActive);
+      });
+
+      const immersiveOriginal = mode === 'original' && hasOriginalImage;
+      header?.classList.toggle('hidden', immersiveOriginal);
+      modeSwitch?.classList.toggle('hidden', immersiveOriginal);
+      footer?.classList.toggle('hidden', immersiveOriginal);
+
+      if (shell) {
+        shell.classList.toggle('p-0', immersiveOriginal);
+        shell.classList.toggle('bg-black', immersiveOriginal);
+        shell.classList.toggle('p-3', !immersiveOriginal);
+        shell.classList.toggle('md:p-4', !immersiveOriginal);
+        shell.classList.toggle('bg-white', !immersiveOriginal);
+      }
+
+      if (previewWrap) {
+        previewWrap.classList.toggle('border-0', immersiveOriginal);
+        previewWrap.classList.toggle('rounded-none', immersiveOriginal);
+        previewWrap.classList.toggle('bg-black', immersiveOriginal);
+        previewWrap.classList.toggle('border', !immersiveOriginal);
+        previewWrap.classList.toggle('border-wabi-border', !immersiveOriginal);
+        previewWrap.classList.toggle('rounded-lg', !immersiveOriginal);
+        previewWrap.classList.toggle('bg-slate-100', !immersiveOriginal);
+      }
+
+      if (barcodeVariantSwitch) {
+        barcodeVariantSwitch.classList.toggle('hidden', immersiveOriginal || mode !== 'barcode');
+      }
+
+      modal.querySelectorAll('[data-barcode-variant]').forEach((btn) => {
+        const isActive = btn.dataset.barcodeVariant === barcodeVariant;
+        btn.classList.toggle('bg-wabi-primary', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('border-wabi-primary', isActive);
+      });
+    };
+
+    const drawBarcodeCanvas = (canvas, targetBcid = safeBcid, scale = 3, height = 10) => {
+      try {
+        bwipjs.toCanvas(canvas, {
+          bcid: targetBcid,
+          text: ticket.serial,
+          scale,
+          height,
+          includetext: true,
+          textxalign: 'center',
+          backgroundcolor: 'FFFFFF',
+        });
+      } catch (_error) {
+        bwipjs.toCanvas(canvas, {
+          bcid: 'code128',
+          text: ticket.serial,
+          scale,
+          height,
+          includetext: true,
+          textxalign: 'center',
+          backgroundcolor: 'FFFFFF',
+        });
+      }
+    };
+
+    const drawQrCanvas = (canvas, size = 180) => {
+      new QRious({
+        element: canvas,
+        value: ticket.serial || '',
+        size,
+        level: 'H',
+      });
+    };
+
+    const renderStandardBarcodePreview = () => {
       if (!ticket.serial) {
         previewWrap.innerHTML = '<div class="w-48 h-48 flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-300 rounded-2xl font-semibold">無序號</div>';
         return;
@@ -739,7 +822,7 @@ export class TicketsPage {
       previewWrap.innerHTML = `
         <div class="w-full h-full flex flex-col items-center justify-center gap-4 p-3 md:p-5 cursor-pointer" data-redeem-tap-trigger="1">
           <div class="w-full max-w-4xl bg-white border border-wabi-border rounded-xl p-2 shadow-sm">
-            <div id="redeem-barcode-svg" class="w-full overflow-hidden"></div>
+            <canvas id="redeem-barcode-canvas" class="w-full"></canvas>
           </div>
           <div class="p-3 bg-white border border-wabi-border rounded-[28px] shadow-sm">
             <canvas id="redeem-qr-canvas" class="rounded-2xl"></canvas>
@@ -750,15 +833,15 @@ export class TicketsPage {
           </div>
         </div>
       `;
-      const barcodeSvg = previewWrap.querySelector('#redeem-barcode-svg');
+      const barcodeCanvas = previewWrap.querySelector('#redeem-barcode-canvas');
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas');
-      if (!barcodeSvg || !qrCanvas) return;
+      if (!barcodeCanvas || !qrCanvas) return;
 
-      this.mountDeferredRedeemBarcode(ticket, barcodeSvg, safeBcid, 3, 10);
-      await this.drawRedeemQrCanvas(ticket, qrCanvas, 180);
+      drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10);
+      drawQrCanvas(qrCanvas, 180);
     };
 
-    const renderMomoBarcodePreview = async () => {
+    const renderMomoBarcodePreview = () => {
       if (!ticket.serial) {
         previewWrap.innerHTML = '<div class="w-48 h-48 flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-300 rounded-2xl font-semibold">無序號</div>';
         return;
@@ -783,7 +866,7 @@ export class TicketsPage {
                 <div class="border-t border-dashed border-slate-300"></div>
                 <div class="bg-slate-100 rounded-xl p-3 flex flex-col items-center gap-3">
                   <div class="w-full px-2">
-                    <div id="redeem-barcode-svg-momo" class="w-full bg-white rounded-lg border border-wabi-border overflow-hidden"></div>
+                    <canvas id="redeem-barcode-canvas-momo" class="w-full bg-white rounded-lg border border-wabi-border"></canvas>
                   </div>
                   <div class="p-1.5 bg-white border border-wabi-border rounded-lg shadow-sm">
                     <canvas id="redeem-qr-canvas-momo" class="rounded-xl"></canvas>
@@ -805,44 +888,43 @@ export class TicketsPage {
           </div>
         </div>
       `;
-      const barcodeSvg = previewWrap.querySelector('#redeem-barcode-svg-momo');
+      const barcodeCanvas = previewWrap.querySelector('#redeem-barcode-canvas-momo');
       const qrCanvas = previewWrap.querySelector('#redeem-qr-canvas-momo');
-      if (!barcodeSvg || !qrCanvas) return;
-      this.mountDeferredRedeemBarcode(ticket, barcodeSvg, safeBcid, 3, 10);
-      await this.drawRedeemQrCanvas(ticket, qrCanvas, 110);
+      if (!barcodeCanvas || !qrCanvas) return;
+      drawBarcodeCanvas(barcodeCanvas, safeBcid, 3, 10);
+      drawQrCanvas(qrCanvas, 110);
     };
 
-    const renderBarcodePreview = async () => {
+    const renderBarcodePreview = () => {
       if (barcodeVariant === 'momo') {
-        await renderMomoBarcodePreview();
+        renderMomoBarcodePreview();
         return;
       }
-      await renderStandardBarcodePreview();
+      renderStandardBarcodePreview();
     };
 
-    const renderPreview = async () => {
+    const renderPreview = () => {
       if (mode === 'original') {
         if (!hasOriginalImage) {
           mode = 'barcode';
-          await renderPreview();
+          renderPreview();
           return;
         }
         previewWrap.innerHTML = `
           <img src="${originalImage}" alt="原圖預覽" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-cover bg-black cursor-pointer" />
         `;
-        this.updateRedeemModeButtonState(modal, { mode, barcodeVariant, hasOriginalImage, shell, header, modeSwitch, previewWrap, barcodeVariantSwitch, footer });
+        updateModeButtonState();
         return;
       }
 
       if (!hasBarcodeSource) {
         mode = 'original';
-        await renderPreview();
+        renderPreview();
         return;
       }
 
-      previewWrap.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-500 text-sm">正在載入條碼預覽...</div>';
-      await renderBarcodePreview();
-      this.updateRedeemModeButtonState(modal, { mode, barcodeVariant, hasOriginalImage, shell, header, modeSwitch, previewWrap, barcodeVariantSwitch, footer });
+      renderBarcodePreview();
+      updateModeButtonState();
     };
 
     const onKeydown = (event) => {
@@ -912,7 +994,7 @@ export class TicketsPage {
         const nextMode = btn.dataset.redeemMode;
         if (!nextMode) return;
         mode = nextMode;
-        void renderPreview();
+        renderPreview();
       });
     });
 
@@ -921,7 +1003,8 @@ export class TicketsPage {
         const nextVariant = btn.dataset.barcodeVariant;
         if (!nextVariant) return;
         barcodeVariant = nextVariant;
-        void renderPreview();
+        renderBarcodePreview();
+        updateModeButtonState();
       });
     });
 
@@ -1014,7 +1097,7 @@ export class TicketsPage {
 
     document.body.appendChild(modal);
     window.addEventListener('keydown', onKeydown);
-    void renderPreview();
+    renderPreview();
   }
 
   buildCards(tickets, options = {}) {
@@ -1028,16 +1111,6 @@ export class TicketsPage {
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
-    const selectedIds = this.app.state.ui.selectedIds;
-    const selectionMode = this.app.state.ui.selectionMode;
-    const derivedMap = options.derivedMap || this.buildTicketDerivedMap(this.app.state.settings.notifyDays);
-    const serialCounts = options.serialCounts || this.buildTicketSerialCounts();
-    const swipeMap = {
-      active: { left: '核銷', right: '回收' },
-      completed: { left: '還原', right: '回收' },
-      deleted: { left: '清除', right: '還原' },
-    };
-    const swipeConfig = swipeMap[this.view];
     if (!tickets.length) {
       const meta = VIEW_META[this.view];
       return `
@@ -1049,16 +1122,18 @@ export class TicketsPage {
     }
 
     return tickets.map((ticket) => {
-      const derived = derivedMap.get(ticket.id);
-      const isActiveTicket = !ticket.completed && !ticket.isDeleted;
-      const isExpiring = isActiveTicket && !!derived?.isExpiring;
-      const expiryState = isActiveTicket ? (derived?.expiryState || 'normal') : 'normal';
-      const expiryCountdown = isActiveTicket ? (derived?.expiryCountdown || '') : '';
-      const isDuplicateSerial = !!ticket.serial && (serialCounts.get(ticket.serial) || 0) > 1;
+      const isExpiring = !ticket.completed && !ticket.isDeleted && checkIsExpiringSoon(ticket.expiry, this.app.state.settings.notifyDays);
+      const expiryState = !ticket.completed && !ticket.isDeleted
+        ? getExpiryState(ticket.expiry, this.app.state.settings.notifyDays)
+        : 'normal';
+      const expiryCountdown = !ticket.completed && !ticket.isDeleted
+        ? getExpiryCountdownLabel(ticket.expiry)
+        : '';
+      const isDuplicateSerial = !!ticket.serial && this.app.state.tasks.filter((t) => !t.isDeleted && t.serial === ticket.serial).length > 1;
       const hasOriginalImage = !!ticket.originalImage;
-      const selected = selectedIds.has(ticket.id);
-      const selectedVisual = selectionMode && selected;
-      const selectionA11yAttrs = selectionMode
+      const selected = this.app.state.ui.selectedIds.has(ticket.id);
+      const selectedVisual = this.app.state.ui.selectionMode && selected;
+      const selectionA11yAttrs = this.app.state.ui.selectionMode
         ? `tabindex="0" role="checkbox" aria-checked="${selected ? 'true' : 'false'}" aria-label="切換票券選取"`
         : '';
       const tagChipClass = this.view === 'active'
@@ -1080,7 +1155,23 @@ export class TicketsPage {
       const originalImageBadge = hasOriginalImage
         ? '<span class="text-xs rounded-full px-2 py-1 bg-sky-100 text-sky-700"><i class="fa-regular fa-image mr-1"></i>原圖</span>'
         : '';
-      const activeExpiryBadge = '';
+      const activeExpiryClass = expiryState === 'expired'
+        ? 'ticket-expiry-chip ticket-expiry-chip--expired'
+        : expiryState === 'today'
+          ? 'ticket-expiry-chip ticket-expiry-chip--today'
+          : expiryState === 'soon'
+            ? 'ticket-expiry-chip ticket-expiry-chip--soon'
+            : 'ticket-expiry-chip ticket-expiry-chip--normal';
+      const activeExpiryPrefix = expiryState === 'expired'
+        ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+        : expiryState === 'today'
+          ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+          : expiryState === 'soon'
+            ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+            : '<i class="fa-regular fa-calendar mr-1"></i>';
+      const activeExpiryBadge = this.view === 'active' && !ticket.completed && !ticket.isDeleted
+        ? `<span class="${activeExpiryClass}">${activeExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}</span>`
+        : '';
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
@@ -1099,6 +1190,19 @@ export class TicketsPage {
             : expiryState === 'soon'
               ? 'ticket-card-expiry--soon ticket-card-expiry--soon-pill'
               : 'ticket-card-expiry--normal ticket-card-expiry--normal-pill';
+        const compactExpiryPrefix = expiryState === 'expired'
+          ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+          : expiryState === 'today'
+            ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+            : expiryState === 'soon'
+              ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+              : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
+        const swipeMap = {
+          active: { left: '核銷', right: '回收' },
+          completed: { left: '還原', right: '回收' },
+          deleted: { left: '清除', right: '還原' },
+        };
+        const swipeConfig = swipeMap[this.view];
         const swipeAttrs = swipeConfig
           ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
           : '';
@@ -1106,10 +1210,10 @@ export class TicketsPage {
           <article class="ticket-card ticket-card--ultra ${originalFrameClass} ${compactExpiryCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${compactPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
             <div class="flex items-start justify-between gap-1.5">
               <div class="flex items-start gap-2 min-w-0">
-                ${selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
+                ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
                 <div class="min-w-0">
                   <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
-                  <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1"><span class="ticket-card-expiry-date">${escapeHtml(ticket.expiry || '無期限')}</span>${expiryCountdown ? `<span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                  <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1">${compactExpiryPrefix}到：${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
                 </div>
               </div>
               <div class="flex items-center gap-1">
@@ -1171,41 +1275,19 @@ export class TicketsPage {
           : expiryState === 'soon'
             ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--soon'
             : 'ticket-card-expiry-highlight ticket-card-expiry-highlight--normal';
-      if (this.view === 'active' && compactGrid) {
-        return `
-          <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border p-2.5 shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}">
-            <div class="flex items-start justify-between gap-2 mb-2">
-              <div class="flex items-start gap-2 min-w-0 flex-1">
-                ${selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
-                <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight line-clamp-2 min-w-0 flex-1">${escapeHtml(ticket.productName || '未命名票券')}</h3>
-              </div>
-              <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
-                <i class="fa-solid fa-thumbtack"></i>
-              </button>
-            </div>
-
-            ${showThumbnail ? (
-              ticket.image
-                ? `<img src="${ticket.image}" alt="ticket thumbnail" class="w-full h-24 object-cover rounded-lg border border-wabi-border mb-2" />`
-                : `<div class="w-full h-24 rounded-lg border border-dashed border-wabi-border bg-white/70 mb-2 flex items-center justify-center text-wabi-text-secondary text-xs">無縮圖</div>`
-            ) : ''}
-
-            <p class="${standardExpiryClass} mb-2"><span class="ticket-card-expiry-date">${escapeHtml(ticket.expiry || '無期限')}</span>${expiryCountdown ? `<span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
-
-            <div class="ticket-card-actions flex gap-2" data-no-swipe="1">
-              ${editButton}
-            </div>
-          </article>
-        `;
-      }
+      const standardExpiryPrefix = expiryState === 'expired'
+        ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+        : expiryState === 'today'
+          ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+          : expiryState === 'soon'
+            ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+            : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
       const cardPaddingClass = this.view === 'active'
         ? (compactGrid ? 'p-2.5' : 'p-3')
         : (compactGrid ? 'p-3' : 'p-4');
       const headerMarginClass = this.view === 'active' ? 'mb-2' : 'mb-3';
       const imageClass = this.view === 'active'
-        ? (compactGrid
-          ? 'w-full h-24 object-cover rounded-lg border border-wabi-border mb-2'
-          : 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--active-floating')
+        ? 'ticket-card-thumbnail ticket-card-thumbnail--active ticket-card-thumbnail--active-floating'
         : (compactGrid
           ? 'w-full h-28 object-cover rounded-lg border border-wabi-border mb-2'
           : 'w-full h-40 object-cover rounded-xl border border-wabi-border mb-3');
@@ -1218,11 +1300,17 @@ export class TicketsPage {
         ? ` style="width: ${Math.round(Math.max(52, thumbnailScale))}%;"`
         : '';
       const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
+      const swipeMap = {
+        active: { left: '核銷', right: '回收' },
+        completed: { left: '還原', right: '回收' },
+        deleted: { left: '清除', right: '還原' },
+      };
+      const swipeConfig = swipeMap[this.view];
       const swipeAttrs = swipeConfig
         ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
         : '';
-      const hasFloatingThumbnail = showThumbnail && ticket.image && this.view === 'active' && !compactGrid;
-      const contentPaddingClass = hasFloatingThumbnail ? 'pr-[6.75rem]' : '';
+      const hasFloatingThumbnail = showThumbnail && ticket.image && this.view === 'active';
+      const contentPaddingClass = hasFloatingThumbnail ? 'pr-[5.75rem]' : '';
 
       return `
         <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
@@ -1231,13 +1319,13 @@ export class TicketsPage {
             : ''}
           <div class="flex items-start gap-3 ${headerMarginClass} ${contentPaddingClass}">
             <div class="flex items-start gap-3 min-w-0 flex-1">
-              ${selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
+              ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
                     <h3 class="font-semibold text-wabi-primary text-base truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
                     ${hideTagAndSerial ? '' : `<p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>`}
-                    <p class="${standardExpiryClass}"><span class="ticket-card-expiry-date">${escapeHtml(ticket.expiry || '無期限')}</span>${expiryCountdown ? `<span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                    <p class="${standardExpiryClass}">${standardExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
                   </div>
                   <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
                     <i class="fa-solid fa-thumbtack"></i>
@@ -1247,7 +1335,7 @@ export class TicketsPage {
             </div>
           </div>
 
-          ${showThumbnail && ticket.image && (this.view !== 'active' || compactGrid) ? (
+          ${showThumbnail && ticket.image && this.view !== 'active' ? (
             compactGrid
               ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
               : `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
@@ -1268,16 +1356,13 @@ export class TicketsPage {
     }).join('');
   }
 
-  filterTickets(derivedMap = null) {
+  filterTickets() {
     const search = this.app.state.ui.search.trim().toLowerCase();
     const sortType = this.app.state.ui.sort;
     const activeTags = this.app.state.ui.activeTags;
     const notifyDays = this.app.state.settings.notifyDays;
-    const ticketDerivedMap = derivedMap || this.buildTicketDerivedMap(notifyDays);
-    const sortComparator = getSortComparator(sortType);
 
     let list = this.app.state.tasks.filter((ticket) => {
-      const derived = ticketDerivedMap.get(ticket.id);
       if (this.view === 'active' && (ticket.completed || ticket.isDeleted)) return false;
       if (this.view === 'completed' && (!ticket.completed || ticket.isDeleted)) return false;
       if (this.view === 'deleted' && !ticket.isDeleted) return false;
@@ -1286,7 +1371,7 @@ export class TicketsPage {
         if (tag === ORIGINAL_IMAGE_FILTER_TAG) return !!ticket.originalImage;
         if (tag === EXPIRY_URGENT_FILTER_TAG) {
           if (this.view !== 'active') return false;
-          const state = derived?.expiryState || 'normal';
+          const state = getExpiryState(ticket.expiry, notifyDays);
           return ['expired', 'today', 'soon'].includes(state);
         }
         return (ticket.tags || []).includes(tag);
@@ -1295,7 +1380,16 @@ export class TicketsPage {
       }
 
       if (!search) return true;
-      return (derived?.searchText || '').includes(search);
+
+      const haystack = [
+        ticket.productName,
+        ticket.serial,
+        ticket.note,
+        ticket.redeemUrl,
+        ...(ticket.tags || []),
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      return haystack.includes(search);
     });
 
     list.sort((a, b) => {
@@ -1313,97 +1407,16 @@ export class TicketsPage {
           soon: 2,
           normal: 3,
         };
-        const stateA = ticketDerivedMap.get(a.id)?.expiryState || 'normal';
-        const stateB = ticketDerivedMap.get(b.id)?.expiryState || 'normal';
+        const stateA = getExpiryState(a.expiry, this.app.state.settings.notifyDays);
+        const stateB = getExpiryState(b.expiry, this.app.state.settings.notifyDays);
         const rankA = urgencyRank[stateA] ?? urgencyRank.normal;
         const rankB = urgencyRank[stateB] ?? urgencyRank.normal;
         if (rankA !== rankB) return rankA - rankB;
       }
-      return sortComparator(a, b);
+      return getSortComparator(sortType)(a, b);
     });
 
     return list;
-  }
-
-  buildTicketDerivedMap(notifyDays = this.app.state.settings.notifyDays) {
-    return this.buildTicketAnalysis(notifyDays).derivedMap;
-  }
-
-  buildTicketSerialCounts() {
-    return this.buildTicketAnalysis(this.app.state.settings.notifyDays).serialCounts;
-  }
-
-  collectTicketSummary() {
-    const {
-      allTags,
-      urgentActiveCount,
-      completedTotalCount,
-      deletedTotalCount,
-    } = this.buildTicketAnalysis(this.app.state.settings.notifyDays);
-    return {
-      allTags,
-      urgentActiveCount,
-      completedTotalCount,
-      deletedTotalCount,
-    };
-  }
-
-  buildTicketAnalysis(notifyDays = this.app.state.settings.notifyDays) {
-    const derivedMap = new Map();
-    const serialCounts = new Map();
-    const allTags = new Set();
-    let urgentActiveCount = 0;
-    let completedTotalCount = 0;
-    let deletedTotalCount = 0;
-
-    for (const ticket of this.app.state.tasks) {
-      const expiryState = getExpiryState(ticket.expiry, notifyDays);
-      const isExpiring = ['expired', 'today', 'soon'].includes(expiryState);
-
-      derivedMap.set(ticket.id, {
-        searchText: [
-          ticket.productName,
-          ticket.serial,
-          ticket.note,
-          ticket.redeemUrl,
-          ...(ticket.tags || []),
-        ].filter(Boolean).join(' ').toLowerCase(),
-        expiryState,
-        expiryCountdown: getExpiryCountdownLabel(ticket.expiry),
-        isExpiring,
-      });
-
-      for (const tag of ticket.tags || []) {
-        allTags.add(tag);
-      }
-
-      if (!ticket.isDeleted && ticket.serial) {
-        serialCounts.set(ticket.serial, (serialCounts.get(ticket.serial) || 0) + 1);
-      }
-
-      if (ticket.isDeleted) {
-        deletedTotalCount += 1;
-        continue;
-      }
-
-      if (ticket.completed) {
-        completedTotalCount += 1;
-        continue;
-      }
-
-      if (isExpiring) {
-        urgentActiveCount += 1;
-      }
-    }
-
-    return {
-      derivedMap,
-      serialCounts,
-      allTags: [...allTags].sort(),
-      urgentActiveCount,
-      completedTotalCount,
-      deletedTotalCount,
-    };
   }
 
   async render() {
@@ -1411,16 +1424,7 @@ export class TicketsPage {
     this.clearBackgroundInsetHandler();
     this.showSwipeHintIfNeeded();
     const meta = VIEW_META[this.view];
-    const ticketAnalysis = this.buildTicketAnalysis(this.app.state.settings.notifyDays);
-    const {
-      derivedMap,
-      serialCounts,
-      allTags,
-      urgentActiveCount,
-      completedTotalCount,
-      deletedTotalCount,
-    } = ticketAnalysis;
-    const tickets = this.filterTickets(derivedMap);
+    const tickets = this.filterTickets();
     const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
     const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
     const showThumbnail = viewConfig.showThumbnail !== false;
@@ -1466,6 +1470,14 @@ export class TicketsPage {
     const backgroundLayerHtml = initialBackgroundImage && showBackground
       ? `<div class="ticket-view-bg-layer" style="background-image: url('${escapeHtml(initialBackgroundImage)}'); opacity: ${bgOpacity};"></div>`
       : '';
+    const allTags = [...new Set(this.app.state.tasks.flatMap((t) => t.tags || []))].sort();
+    const urgentActiveCount = this.app.state.tasks.filter((ticket) => {
+      if (ticket.completed || ticket.isDeleted) return false;
+      const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
+      return state === 'expired' || state === 'today' || state === 'soon';
+    }).length;
+    const completedTotalCount = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted).length;
+    const deletedTotalCount = this.app.state.tasks.filter((ticket) => ticket.isDeleted).length;
     const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
       tag === ORIGINAL_IMAGE_FILTER_TAG
         ? '原圖'
@@ -1594,7 +1606,7 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor, derivedMap, serialCounts })}</div>
+        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor })}</div>
       </section>
     `);
 
@@ -1609,11 +1621,6 @@ export class TicketsPage {
 
   bindEvents() {
     const root = this.app.getRoot();
-    if (this.searchRenderTimer) {
-      clearTimeout(this.searchRenderTimer);
-      this.searchRenderTimer = null;
-    }
-    this.clearCardGestureHandlers();
     if (this.toolbarScrollHandler) {
       window.removeEventListener('scroll', this.toolbarScrollHandler);
       this.toolbarScrollHandler = null;
@@ -1661,31 +1668,9 @@ export class TicketsPage {
       await rerenderWithSearchFocus(event.target.selectionStart, event.target.selectionEnd);
     };
 
-    const scheduleSearchRender = (event, delay = 120) => {
-      const cursorStart = event.target.selectionStart;
-      const cursorEnd = event.target.selectionEnd;
-      const nextValue = event.target.value;
-
-      if (this.searchRenderTimer) {
-        clearTimeout(this.searchRenderTimer);
-      }
-
-      this.searchRenderTimer = setTimeout(async () => {
-        this.searchRenderTimer = null;
-        this.app.state.ui.search = nextValue;
-        const pruned = pruneSelectionToVisible();
-        if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-        await rerenderWithSearchFocus(cursorStart, cursorEnd);
-      }, delay);
-    };
-
     const searchInput = root.querySelector('#ticket-search');
     searchInput?.addEventListener('compositionstart', () => {
       this.searchIsComposing = true;
-      if (this.searchRenderTimer) {
-        clearTimeout(this.searchRenderTimer);
-        this.searchRenderTimer = null;
-      }
     });
     searchInput?.addEventListener('compositionend', async (event) => {
       this.searchIsComposing = false;
@@ -1693,7 +1678,7 @@ export class TicketsPage {
     });
     searchInput?.addEventListener('input', async (event) => {
       if (this.searchIsComposing || event.isComposing) return;
-      scheduleSearchRender(event);
+      await handleSearchValueChange(event);
     });
 
     root.querySelector('#ticket-sort')?.addEventListener('change', (event) => {
@@ -1816,6 +1801,22 @@ export class TicketsPage {
       this.render();
     });
 
+    root.querySelectorAll('[data-filter-tag]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tag = btn.dataset.filterTag;
+        if (!tag) return;
+        const idx = this.app.state.ui.activeTags.indexOf(tag);
+        if (idx >= 0) {
+          this.app.state.ui.activeTags.splice(idx, 1);
+        } else {
+          this.app.state.ui.activeTags.push(tag);
+        }
+        const pruned = pruneSelectionToVisible();
+        if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+        this.render();
+      });
+    });
+
     root.querySelector('[data-tag-clear]')?.addEventListener('click', () => {
       this.app.state.ui.activeTags = [];
       const pruned = pruneSelectionToVisible();
@@ -1835,6 +1836,34 @@ export class TicketsPage {
       }
     });
 
+    root.querySelector('#continue-batch-hint-btn')?.addEventListener('click', () => {
+      const firstEnabledBatchBtn = root.querySelector('.batch-actions [data-batch]:not([disabled])');
+      if (!firstEnabledBatchBtn) return;
+      firstEnabledBatchBtn.focus();
+      showToast('已定位到批次操作', 'success');
+      this.hideContinueBatchHint();
+      const hintBtn = root.querySelector('#continue-batch-hint-btn');
+      hintBtn?.classList.add('hidden');
+      hintBtn?.setAttribute('aria-hidden', 'true');
+    });
+
+    root.querySelector('#continue-batch-hint-btn')?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.currentTarget.click();
+    });
+
+    root.querySelectorAll('[data-select]').forEach((box) => {
+      box.addEventListener('change', () => {
+        const id = box.dataset.select;
+        if (!id) return;
+        if (box.checked) this.app.state.ui.selectedIds.add(id);
+        else this.app.state.ui.selectedIds.delete(id);
+        this.hideContinueBatchHint();
+        this.render();
+      });
+    });
+
     const toggleCardSelection = (ticketId) => {
       if (!ticketId || !this.app.state.ui.selectionMode) return;
       if (this.app.state.ui.selectedIds.has(ticketId)) {
@@ -1846,190 +1875,57 @@ export class TicketsPage {
       this.render();
     };
 
-    if (this.isTouchGestureAvailable() && this.isSwipeGestureEnabled()) {
-      const interactiveSelector = 'button, a, input, textarea, select, label, [data-no-swipe], .ticket-card-actions';
-      const SWIPE_LOCK_DISTANCE = 10;
-      const SWIPE_TRIGGER_DISTANCE = this.getSwipeTriggerDistance();
-      const SWIPE_HINT_DISTANCE = Math.max(24, Math.floor(SWIPE_TRIGGER_DISTANCE * 0.55));
-      const SWIPE_CLAMP_DISTANCE = 92;
-      const SWIPE_PREVENT_CLICK_DISTANCE = 16;
-      const LONG_PRESS_MS = 430;
-      const LONG_PRESS_MOVE_TOLERANCE = 10;
-      const gestureState = {
-        card: null,
-        tracking: false,
-        horizontalSwipe: false,
-        startX: 0,
-        startY: 0,
-        currentOffset: 0,
-        swipeHintNotified: false,
-        longPressTriggered: false,
-        longPressTimer: null,
-      };
-
-      const clearLongPressTimer = () => {
-        if (!gestureState.longPressTimer) return;
-        clearTimeout(gestureState.longPressTimer);
-        gestureState.longPressTimer = null;
-      };
-
-      const resetSwipeVisual = (animated = true) => {
-        const { card } = gestureState;
-        if (!card) return;
-        card.classList.remove('ticket-card--swiping', 'ticket-card--swipe-left', 'ticket-card--swipe-right', 'ticket-card--swipe-ready');
-        if (animated) {
-          card.classList.add('ticket-card--swipe-release');
-        } else {
-          card.classList.remove('ticket-card--swipe-release');
-        }
-        card.style.removeProperty('--ticket-swipe-offset');
-        gestureState.swipeHintNotified = false;
-      };
-
-      const setSwipeOffset = (offset) => {
-        const { card } = gestureState;
-        if (!card) return;
-        const limited = Math.max(-SWIPE_CLAMP_DISTANCE, Math.min(SWIPE_CLAMP_DISTANCE, offset));
-        gestureState.currentOffset = limited;
-        const absOffset = Math.abs(limited);
-        card.style.setProperty('--ticket-swipe-offset', `${limited}px`);
-        card.classList.add('ticket-card--swiping');
-        card.classList.toggle('ticket-card--swipe-left', limited < -18);
-        card.classList.toggle('ticket-card--swipe-right', limited > 18);
-        const ready = absOffset >= SWIPE_HINT_DISTANCE;
-        card.classList.toggle('ticket-card--swipe-ready', ready);
-        if (ready && !gestureState.swipeHintNotified) {
-          gestureState.swipeHintNotified = true;
-          this.triggerHapticFeedback(8);
-        }
-      };
-
-      const touchstart = (event) => {
-        if (event.touches.length !== 1) return;
-        const card = event.target.closest('.ticket-card[data-swipe-enabled="1"]');
-        if (!card) return;
-        if (event.target.closest(interactiveSelector)) return;
-        const inSelectionMode = this.app.state.ui.selectionMode;
-        gestureState.card = card;
-        gestureState.tracking = true;
-        gestureState.horizontalSwipe = false;
-        gestureState.longPressTriggered = false;
-        gestureState.startX = event.touches[0].clientX;
-        gestureState.startY = event.touches[0].clientY;
-        gestureState.currentOffset = 0;
-        gestureState.swipeHintNotified = false;
-        card.dataset.swipeSuppressClick = '0';
-        card.classList.remove('ticket-card--swipe-release');
-
-        clearLongPressTimer();
-        if (!inSelectionMode) {
-          gestureState.longPressTimer = setTimeout(() => {
-            gestureState.longPressTimer = null;
-            if (!gestureState.tracking || gestureState.card !== card) return;
-            const ticketId = card.dataset.ticketId;
-            if (!ticketId) return;
-            gestureState.longPressTriggered = true;
-            gestureState.tracking = false;
-            gestureState.horizontalSwipe = false;
-            gestureState.currentOffset = 0;
-            card.dataset.swipeSuppressClick = '1';
-            resetSwipeVisual(false);
-            this.app.state.ui.selectionMode = true;
-            this.app.state.ui.selectedIds.add(ticketId);
-            this.hideContinueBatchHint();
-            this.triggerHapticFeedback([12, 30, 12]);
-            showToast('已進入多選模式', 'success', 900);
-            this.render();
-          }, LONG_PRESS_MS);
-        }
-      };
-
-      const touchmove = (event) => {
-        const { card } = gestureState;
-        if (!card || !gestureState.tracking || event.touches.length !== 1) return;
-        const dx = event.touches[0].clientX - gestureState.startX;
-        const dy = event.touches[0].clientY - gestureState.startY;
-        if (Math.abs(dx) > LONG_PRESS_MOVE_TOLERANCE || Math.abs(dy) > LONG_PRESS_MOVE_TOLERANCE) {
-          clearLongPressTimer();
-        }
-
-        if (!gestureState.horizontalSwipe) {
-          if (Math.abs(dx) < SWIPE_LOCK_DISTANCE && Math.abs(dy) < SWIPE_LOCK_DISTANCE) return;
-          gestureState.horizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.15;
-          if (!gestureState.horizontalSwipe) {
-            gestureState.tracking = false;
-            resetSwipeVisual(false);
-            gestureState.card = null;
-            return;
-          }
-        }
-
-        event.preventDefault();
-        setSwipeOffset(dx);
-        if (Math.abs(dx) >= SWIPE_PREVENT_CLICK_DISTANCE) {
-          card.dataset.swipeSuppressClick = '1';
-        }
-      };
-
-      const finishGesture = async () => {
-        const { card } = gestureState;
-        clearLongPressTimer();
-        if (!card) return;
-        if (gestureState.longPressTriggered) {
-          gestureState.longPressTriggered = false;
-          gestureState.card = null;
+    root.querySelectorAll('.ticket-card').forEach((card) => {
+      card.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target.closest('button, a, input, textarea, select, label')) return;
+        if (card.dataset.swipeSuppressClick === '1') {
+          card.dataset.swipeSuppressClick = '0';
           return;
         }
-        if (!gestureState.tracking) {
-          gestureState.card = null;
-          return;
-        }
-        gestureState.tracking = false;
-        const finalOffset = gestureState.currentOffset;
         const ticketId = card.dataset.ticketId;
-        const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
-        const shouldTrigger = gestureState.horizontalSwipe && Math.abs(finalOffset) >= SWIPE_TRIGGER_DISTANCE;
-        gestureState.horizontalSwipe = false;
-        gestureState.currentOffset = 0;
-        if (!shouldTrigger || !ticket) {
-          resetSwipeVisual(true);
-          gestureState.card = null;
+        if (!ticketId) return;
+
+        if (this.app.state.ui.selectionMode) {
+          toggleCardSelection(ticketId);
           return;
         }
 
-        const direction = finalOffset < 0 ? 'left' : 'right';
-        try {
-          await this.handleSwipeAction(ticket, direction);
-        } finally {
-          resetSwipeVisual(true);
-          gestureState.card = null;
+        const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
+        if (!ticket || ticket.isDeleted) return;
+        if (ticket.completed) {
+          showToast('此票券已核銷，請至已使用視圖管理', 'success');
+          return;
         }
-      };
 
-      const touchcancel = () => {
-        clearLongPressTimer();
-        if (gestureState.card) {
-          gestureState.tracking = false;
-          gestureState.horizontalSwipe = false;
-          gestureState.longPressTriggered = false;
-          gestureState.currentOffset = 0;
-          resetSwipeVisual(true);
+        this.openRedeemModeModal(ticket);
+      });
+
+      card.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const target = event.target;
+        if (target.closest('button, a, input, textarea, select, label')) return;
+        event.preventDefault();
+        toggleCardSelection(card.dataset.ticketId);
+      });
+
+      this.bindCardSwipeGesture(card);
+    });
+
+    root.querySelectorAll('[data-tag]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tag = btn.dataset.tag;
+        if (!tag) return;
+        if (!this.app.state.ui.activeTags.includes(tag)) {
+          this.app.state.ui.activeTags.push(tag);
         }
-        gestureState.card = null;
-      };
+        this.render();
+      });
+    });
 
-      const touchend = () => {
-        void finishGesture();
-      };
-
-      this.cardGestureHandlers = { touchstart, touchmove, touchcancel, touchend };
-      root.addEventListener('touchstart', touchstart, { passive: true });
-      root.addEventListener('touchmove', touchmove, { passive: false });
-      root.addEventListener('touchcancel', touchcancel, { passive: true });
-      root.addEventListener('touchend', touchend, { passive: true });
-    }
-
-    const handleBatchAction = async (action) => {
+    root.querySelectorAll('[data-batch]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.batch;
         const ids = [...this.app.state.ui.selectedIds];
         const finishBatch = () => {
           if (this.app.state.ui.keepSelectionMode) {
@@ -2241,12 +2137,19 @@ export class TicketsPage {
         };
         showToast(actionMessages[action] || '批次操作完成', 'success');
         this.render();
-    };
+      });
+    });
 
-    const handleTicketAction = async (action, ticketId) => {
+    root.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const article = btn.closest('[data-ticket-id]');
+        const ticketId = article?.dataset.ticketId;
         if (!ticketId) return;
+
         const ticket = this.app.state.tasks.find((t) => t.id === ticketId);
         if (!ticket) return;
+
+        const action = btn.dataset.action;
         if (action === 'edit') {
           this.app.state.ui.selectionMode = false;
           this.app.state.ui.selectedIds.clear();
@@ -2311,109 +2214,7 @@ export class TicketsPage {
           await this.app.persistTasks();
           this.render();
         }
-    };
-
-    root.addEventListener('change', (event) => {
-      const box = event.target.closest('[data-select]');
-      if (!box) return;
-      const id = box.dataset.select;
-      if (!id) return;
-      if (box.checked) this.app.state.ui.selectedIds.add(id);
-      else this.app.state.ui.selectedIds.delete(id);
-      this.hideContinueBatchHint();
-      this.render();
-    });
-
-    root.addEventListener('keydown', (event) => {
-      const continueHint = event.target.closest('#continue-batch-hint-btn');
-      if (continueHint) {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        continueHint.click();
-        return;
-      }
-
-      const card = event.target.closest('.ticket-card');
-      if (!card) return;
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      if (event.target.closest('button, a, input, textarea, select, label')) return;
-      event.preventDefault();
-      toggleCardSelection(card.dataset.ticketId);
-    });
-
-    root.addEventListener('click', async (event) => {
-      const continueHint = event.target.closest('#continue-batch-hint-btn');
-      if (continueHint) {
-        const firstEnabledBatchBtn = root.querySelector('.batch-actions [data-batch]:not([disabled])');
-        if (!firstEnabledBatchBtn) return;
-        firstEnabledBatchBtn.focus();
-        showToast('已定位到批次操作', 'success');
-        this.hideContinueBatchHint();
-        continueHint.classList.add('hidden');
-        continueHint.setAttribute('aria-hidden', 'true');
-        return;
-      }
-
-      const filterTagButton = event.target.closest('[data-filter-tag]');
-      if (filterTagButton) {
-        const tag = filterTagButton.dataset.filterTag;
-        if (!tag) return;
-        const idx = this.app.state.ui.activeTags.indexOf(tag);
-        if (idx >= 0) this.app.state.ui.activeTags.splice(idx, 1);
-        else this.app.state.ui.activeTags.push(tag);
-        const pruned = pruneSelectionToVisible();
-        if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-        this.render();
-        return;
-      }
-
-      const tagButton = event.target.closest('[data-tag]');
-      if (tagButton) {
-        const tag = tagButton.dataset.tag;
-        if (!tag) return;
-        if (!this.app.state.ui.activeTags.includes(tag)) {
-          this.app.state.ui.activeTags.push(tag);
-        }
-        this.render();
-        return;
-      }
-
-      const batchButton = event.target.closest('[data-batch]');
-      if (batchButton) {
-        await handleBatchAction(batchButton.dataset.batch);
-        return;
-      }
-
-      const actionButton = event.target.closest('[data-action]');
-      if (actionButton) {
-        const article = actionButton.closest('[data-ticket-id]');
-        await handleTicketAction(actionButton.dataset.action, article?.dataset.ticketId);
-        return;
-      }
-
-      const card = event.target.closest('.ticket-card');
-      if (!card) return;
-      if (event.target.closest('button, a, input, textarea, select, label')) return;
-      if (card.dataset.swipeSuppressClick === '1') {
-        card.dataset.swipeSuppressClick = '0';
-        return;
-      }
-      const ticketId = card.dataset.ticketId;
-      if (!ticketId) return;
-
-      if (this.app.state.ui.selectionMode) {
-        toggleCardSelection(ticketId);
-        return;
-      }
-
-      const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
-      if (!ticket || ticket.isDeleted) return;
-      if (ticket.completed) {
-        showToast('此票券已核銷，請至已使用視圖管理', 'success');
-        return;
-      }
-
-      this.openRedeemModeModal(ticket);
+      });
     });
   }
 }
