@@ -1545,31 +1545,31 @@ export class TicketsPage {
     this.app.mount(`
       ${backgroundLayerHtml}
       <section class="page active relative z-10 px-4 pt-0 pb-24 md:pb-8 max-w-5xl mx-auto">
-        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pb-2 mb-2 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.4rem);">
-          <header class="flex items-center justify-between mb-3 gap-2">
+        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pb-2 mb-2 bg-wabi-bg/95 backdrop-blur-sm border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.35rem);">
+          <header class="flex items-start justify-between mb-2 gap-2">
             <div>
-              <h1 class="text-2xl font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
-              <p class="text-sm text-wabi-text-secondary">${meta.title}</p>
+              <h1 class="text-[1.35rem] md:text-2xl leading-tight font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
+              <p class="text-xs md:text-sm text-wabi-text-secondary">${meta.title}</p>
               ${!this.app.state.ui.selectionMode && this.app.state.ui.keepSelectionMode && selectedCount > 0
                 ? `<p class="text-xs text-amber-700 mt-1">已保留 ${selectedCount} 張選取（重新開啟多選可繼續操作）</p>`
                 : ''}
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 shrink-0">
             ${this.view === 'active'
-              ? `<button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="${gridIconClass}"></i></button>`
+              ? `<button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="${gridIconClass}"></i></button>`
               : ''}
-            <button id="toggle-ultra-compact-btn" title="${ultraCompactCard ? '切換標準卡片' : '切換超精簡卡片'}" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid ${ultraCompactCard ? 'fa-expand' : 'fa-compress'}"></i></button>
+            <button id="toggle-ultra-compact-btn" title="${ultraCompactCard ? '切換標準卡片' : '切換超精簡卡片'}" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid ${ultraCompactCard ? 'fa-expand' : 'fa-compress'}"></i></button>
             ${this.view === 'completed'
-              ? `<button id="quick-clear-completed-to-trash" title="全部移到回收桶（${completedTotalCount}）" class="h-10 w-10 rounded-lg bg-red-100 border border-red-200 text-red-700 text-sm flex items-center justify-center ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive"></i></button>`
+              ? `<button id="quick-clear-completed-to-trash" title="全部移到回收桶（${completedTotalCount}）" class="h-9 w-9 rounded-lg bg-red-100 border border-red-200 text-red-700 text-[13px] flex items-center justify-center ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive"></i></button>`
               : ''}
             ${this.view === 'deleted'
-              ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="h-10 w-10 rounded-lg bg-red-100 border border-red-200 text-red-700 text-sm flex items-center justify-center ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can"></i></button>`
+              ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="h-9 w-9 rounded-lg bg-red-100 border border-red-200 text-red-700 text-[13px] flex items-center justify-center ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can"></i></button>`
               : ''}
             ${backgroundImages.length > 0
-              ? `<button id="toggle-view-background" title="${showBackground ? '隱藏背景' : '顯示背景'}" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid ${showBackground ? 'fa-eye-slash' : 'fa-image'}"></i></button>`
+              ? `<button id="toggle-view-background" title="${showBackground ? '隱藏背景' : '顯示背景'}" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid ${showBackground ? 'fa-eye-slash' : 'fa-image'}"></i></button>`
               : ''}
-              <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" title="${this.app.state.ui.selectionMode ? '取消多選' : '開啟多選'}" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid ${this.app.state.ui.selectionMode ? 'fa-check-double' : 'fa-rectangle-list'}"></i></button>
-              <a href="#settings" title="設定" class="h-10 w-10 rounded-lg bg-white border border-wabi-border text-sm flex items-center justify-center"><i class="fa-solid fa-gear"></i></a>
+              <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" title="${this.app.state.ui.selectionMode ? '取消多選' : '開啟多選'}" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid ${this.app.state.ui.selectionMode ? 'fa-check-double' : 'fa-rectangle-list'}"></i></button>
+              <a href="#settings" title="設定" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid fa-gear"></i></a>
             </div>
           </header>
 
