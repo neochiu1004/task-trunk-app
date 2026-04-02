@@ -1231,6 +1231,7 @@ export class TicketsPage {
             : expiryState === 'soon'
               ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
               : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
+        const compactExpiryDisplay = expiryCountdown || escapeHtml(ticket.expiry || '無期限');
         const swipeMap = {
           active: { left: '核銷', right: '回收' },
           completed: { left: '還原', right: '回收' },
@@ -1247,7 +1248,7 @@ export class TicketsPage {
                 ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
                 <div class="min-w-0">
                   <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
-                  <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1">${compactExpiryPrefix}到：${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                  <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1">${compactExpiryPrefix}${compactExpiryDisplay}</p>
                 </div>
               </div>
               <div class="flex items-center gap-1">
