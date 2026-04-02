@@ -11,6 +11,9 @@ import {
   todayISO,
 } from './utils.js';
 
+const APP_VERSION = __APP_VERSION__;
+const APP_UPDATED_AT = __APP_UPDATED_AT__;
+
 const pageLoaders = {
   active: async (app) => {
     const { TicketsPage } = await import('./pages/ticketsPage.js');
@@ -120,6 +123,10 @@ class TicketTrunkJijunApp {
     document.querySelectorAll('.nav-item').forEach((item) => {
       item.classList.toggle('active', item.dataset.page === route);
     });
+    const versionInfo = document.getElementById('sidebar-version-info');
+    if (versionInfo) {
+      versionInfo.textContent = `輕鬆票券 PWA v${APP_VERSION} · ${APP_UPDATED_AT}`;
+    }
   }
 
   bindGlobalNavEvents() {

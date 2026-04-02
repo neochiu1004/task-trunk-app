@@ -17,6 +17,8 @@ const VIEW_META = {
 const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
 const EXPIRY_URGENT_FILTER_TAG = '__expiry_urgent__';
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
+const APP_VERSION = __APP_VERSION__;
+const APP_UPDATED_AT = __APP_UPDATED_AT__;
 let swipeHintShownInSession = false;
 
 function parseExpiryToTime(expiry) {
@@ -1317,6 +1319,9 @@ export class TicketsPage {
           : expiryState === 'soon'
             ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
             : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
+      const standardExpiryDisplay = this.view === 'active'
+        ? (expiryCountdown || escapeHtml(ticket.expiry || '無期限'))
+        : `${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}`;
       const cardPaddingClass = this.view === 'active'
         ? (compactGrid ? 'p-2.5' : 'p-3')
         : (compactGrid ? 'p-3' : 'p-4');
@@ -1360,7 +1365,7 @@ export class TicketsPage {
                   <div class="min-w-0 flex-1">
                     <h3 class="font-semibold text-wabi-primary text-base truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
                     ${hideTagAndSerial ? '' : `<p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>`}
-                    <p class="${standardExpiryClass}">${standardExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}</p>
+                    <p class="${standardExpiryClass}">${standardExpiryPrefix}${standardExpiryDisplay}</p>
                   </div>
                   <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
                     <i class="fa-solid fa-thumbtack"></i>
@@ -1551,6 +1556,7 @@ export class TicketsPage {
             <div>
               <h1 class="text-[1.35rem] md:text-2xl leading-tight font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
               <p class="text-xs md:text-sm text-wabi-text-secondary">${meta.title}</p>
+              <p class="text-[10px] md:text-xs text-wabi-text-secondary mt-1">版本 v${escapeHtml(APP_VERSION)} · 更新 ${escapeHtml(APP_UPDATED_AT)}</p>
               ${!this.app.state.ui.selectionMode && this.app.state.ui.keepSelectionMode && selectedCount > 0
                 ? `<p class="text-xs text-amber-700 mt-1">已保留 ${selectedCount} 張選取（重新開啟多選可繼續操作）</p>`
                 : ''}
