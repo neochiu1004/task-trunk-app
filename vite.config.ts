@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 const appVersion = process.env.npm_package_version || "0.0.0";
+const appUpdatedAt = "2026-04-02 14:35";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -121,5 +122,6 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
+    __APP_UPDATED_AT__: JSON.stringify(appUpdatedAt),
   },
 }));

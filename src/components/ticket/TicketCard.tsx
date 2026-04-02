@@ -39,10 +39,28 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   hasHealthIssue = false,
   onTogglePin,
 }) => {
+  const getExpiryCountdown = (expiry?: string) => {
+    if (!expiry) return '無期限';
+    const expiryTime = new Date(expiry.replace(/\//g, '-')).getTime();
+    if (Number.isNaN(expiryTime)) return expiry;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const expiryDate = new Date(expiryTime);
+    expiryDate.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'D-day';
+    if (diffDays > 0) return `D-${diffDays}`;
+    return `逾期 ${Math.abs(diffDays)} 天`;
+  };
+
   const isExpiring = !ticket.completed && ticket.expiry && checkIsExpiringSoon(ticket.expiry, notifyDays);
   const isDuplicateWarning = isDuplicate && !ticket.completed && !ticket.isDeleted;
   const isExpiringWarning = isExpiring && !ticket.completed && !ticket.isDeleted;
   const isHealthIssueWarning = hasHealthIssue && !ticket.completed && !ticket.isDeleted;
+  const compactExpiryText = ticket.completed ? `已用 ${formatTime(ticket.completedAt)}` : getExpiryCountdown(ticket.expiry);
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.97 },
@@ -176,7 +194,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               ) : (
                 <span className={`text-xs font-medium flex items-center gap-1 ${ticket.completed ? 'text-muted-foreground' : 'text-ticket-success'}`}>
                   <Clock size={12} />
-                  <span>{ticket.completed ? `已用 ${formatTime(ticket.completedAt)}` : ticket.expiry || '無期限'}</span>
+                  <span>{compactExpiryText}</span>
                 </span>
               )}
             </div>

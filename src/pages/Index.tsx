@@ -37,6 +37,7 @@ const DataHealthCheck = lazy(() =>
 );
 
 const APP_VERSION = __APP_VERSION__;
+const APP_UPDATED_AT = __APP_UPDATED_AT__;
 
 const Index = () => {
   const { isDark, toggleTheme } = useTheme();
@@ -462,6 +463,9 @@ const Index = () => {
                   </div>
                   <div className="mt-1 text-[11px] font-medium text-primary">
                     版本 v{APP_VERSION}
+                  </div>
+                  <div className="mt-1 text-[10px] font-medium text-muted-foreground">
+                    更新時間 {APP_UPDATED_AT}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {searchQuery.trim() && (
