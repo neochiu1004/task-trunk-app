@@ -487,6 +487,15 @@ export class TicketsPage {
     }, 8000);
   }
 
+  cycleBackground(backgroundImages) {
+    if (!Array.isArray(backgroundImages) || backgroundImages.length <= 1) return false;
+    const layer = this.app.getRoot()?.querySelector('.ticket-view-bg-layer');
+    if (!layer) return false;
+    this.backgroundRotationIndex = (this.backgroundRotationIndex + 1) % backgroundImages.length;
+    layer.style.backgroundImage = `url('${backgroundImages[this.backgroundRotationIndex]}')`;
+    return true;
+  }
+
   clearContinueBatchHintTimer() {
     if (this.continueBatchHintTimer) {
       clearTimeout(this.continueBatchHintTimer);
@@ -1574,6 +1583,9 @@ export class TicketsPage {
                 ${backgroundImages.length > 0
                   ? `<button id="toggle-view-background" title="${showBackground ? '隱藏背景' : '顯示背景'}" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent"><i class="fa-solid ${showBackground ? 'fa-eye-slash' : 'fa-image'} mr-2 text-xs"></i>${showBackground ? '隱藏背景' : '顯示背景'}</button>`
                   : ''}
+                ${backgroundImages.length > 1
+                  ? `<button id="cycle-view-background" title="切換下一張背景" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent"><i class="fa-solid fa-images mr-2 text-xs"></i>下一張背景</button>`
+                  : ''}
                 ${this.view === 'completed'
                   ? `<button id="quick-clear-completed-to-trash" title="全部移到回收桶（${completedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive mr-2 text-xs"></i>全部移到回收桶</button>`
                   : ''}
@@ -1893,6 +1905,14 @@ export class TicketsPage {
       await this.app.persistSettings();
       showToast(nextShowBackground ? '已顯示背景圖片' : '已隱藏背景圖片', 'success');
       this.render();
+    });
+
+    root.querySelector('#cycle-view-background')?.addEventListener('click', () => {
+      if (this.cycleBackground(backgroundImages)) {
+        this.clearBackgroundRotationTimer();
+        this.startBackgroundRotation(backgroundImages, showBackground);
+        showToast('已切換到下一張背景', 'success', 900);
+      }
     });
 
     root.querySelector('#toggle-selection-btn')?.addEventListener('click', () => {

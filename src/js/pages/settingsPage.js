@@ -227,10 +227,24 @@ export class SettingsPage {
     const activeBgOpacity = Number.isFinite(Number(activeViewConfig.bgOpacity))
       ? Math.max(0, Math.min(1, Number(activeViewConfig.bgOpacity)))
       : 1;
+    const completedBgOpacity = Number.isFinite(Number(completedViewConfig.bgOpacity))
+      ? Math.max(0, Math.min(1, Number(completedViewConfig.bgOpacity)))
+      : 1;
+    const deletedBgOpacity = Number.isFinite(Number(deletedViewConfig.bgOpacity))
+      ? Math.max(0, Math.min(1, Number(deletedViewConfig.bgOpacity)))
+      : 1;
     const activeCardOpacity = Number.isFinite(Number(activeViewConfig.cardOpacity))
       ? Math.max(0, Math.min(1, Number(activeViewConfig.cardOpacity)))
       : 0.95;
+    const completedCardOpacity = Number.isFinite(Number(completedViewConfig.cardOpacity))
+      ? Math.max(0, Math.min(1, Number(completedViewConfig.cardOpacity)))
+      : 0.95;
+    const deletedCardOpacity = Number.isFinite(Number(deletedViewConfig.cardOpacity))
+      ? Math.max(0, Math.min(1, Number(deletedViewConfig.cardOpacity)))
+      : 0.95;
     const activeCardTransparencyPercent = Math.round((1 - activeCardOpacity) * 100);
+    const completedCardTransparencyPercent = Math.round((1 - completedCardOpacity) * 100);
+    const deletedCardTransparencyPercent = Math.round((1 - deletedCardOpacity) * 100);
     const activeCardHeight = Number.isFinite(Number(activeViewConfig.cardHeight))
       ? Math.max(0, Math.min(360, Number(activeViewConfig.cardHeight)))
       : 0;
@@ -391,6 +405,22 @@ export class SettingsPage {
           </div>
           <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
             <h3 class="text-sm font-semibold text-wabi-primary">已使用視圖背景</h3>
+            <div class="grid md:grid-cols-2 gap-3">
+              <div>
+                <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                  <label for="completed-bg-opacity">背景顯示強度</label>
+                  <span id="completed-bg-opacity-value">${Math.round(completedBgOpacity * 100)}%</span>
+                </div>
+                <input id="completed-bg-opacity" type="range" min="0" max="100" step="5" value="${Math.round(completedBgOpacity * 100)}" class="w-full accent-wabi-primary" ${completedShowBackground ? '' : 'disabled'} />
+              </div>
+              <div>
+                <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                  <label for="completed-card-transparency">卡片透明度</label>
+                  <span id="completed-card-transparency-value">${completedCardTransparencyPercent}%</span>
+                </div>
+                <input id="completed-card-transparency" type="range" min="0" max="100" step="5" value="${completedCardTransparencyPercent}" class="w-full accent-wabi-primary" />
+              </div>
+            </div>
             <div class="flex items-center justify-between gap-2">
               <label class="inline-flex items-center gap-2 text-sm">
                 <input id="completed-show-background" type="checkbox" ${completedShowBackground ? 'checked' : ''} />
@@ -414,6 +444,22 @@ export class SettingsPage {
           </div>
           <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
             <h3 class="text-sm font-semibold text-wabi-primary">回收桶視圖背景</h3>
+            <div class="grid md:grid-cols-2 gap-3">
+              <div>
+                <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                  <label for="deleted-bg-opacity">背景顯示強度</label>
+                  <span id="deleted-bg-opacity-value">${Math.round(deletedBgOpacity * 100)}%</span>
+                </div>
+                <input id="deleted-bg-opacity" type="range" min="0" max="100" step="5" value="${Math.round(deletedBgOpacity * 100)}" class="w-full accent-wabi-primary" ${deletedShowBackground ? '' : 'disabled'} />
+              </div>
+              <div>
+                <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                  <label for="deleted-card-transparency">卡片透明度</label>
+                  <span id="deleted-card-transparency-value">${deletedCardTransparencyPercent}%</span>
+                </div>
+                <input id="deleted-card-transparency" type="range" min="0" max="100" step="5" value="${deletedCardTransparencyPercent}" class="w-full accent-wabi-primary" />
+              </div>
+            </div>
             <div class="flex items-center justify-between gap-2">
               <label class="inline-flex items-center gap-2 text-sm">
                 <input id="deleted-show-background" type="checkbox" ${deletedShowBackground ? 'checked' : ''} />
@@ -669,6 +715,14 @@ export class SettingsPage {
     const activeBgOpacityValue = root.querySelector('#active-bg-opacity-value');
     const activeCardTransparencyInput = root.querySelector('#active-card-transparency');
     const activeCardTransparencyValue = root.querySelector('#active-card-transparency-value');
+    const completedBgOpacityInput = root.querySelector('#completed-bg-opacity');
+    const completedBgOpacityValue = root.querySelector('#completed-bg-opacity-value');
+    const completedCardTransparencyInput = root.querySelector('#completed-card-transparency');
+    const completedCardTransparencyValue = root.querySelector('#completed-card-transparency-value');
+    const deletedBgOpacityInput = root.querySelector('#deleted-bg-opacity');
+    const deletedBgOpacityValue = root.querySelector('#deleted-bg-opacity-value');
+    const deletedCardTransparencyInput = root.querySelector('#deleted-card-transparency');
+    const deletedCardTransparencyValue = root.querySelector('#deleted-card-transparency-value');
     const activeCardHeightInput = root.querySelector('#active-card-height');
     const activeCardHeightValue = root.querySelector('#active-card-height-value');
     const activeThumbnailScaleInput = root.querySelector('#active-thumbnail-scale');
@@ -748,12 +802,14 @@ export class SettingsPage {
     };
     const syncCompletedBackgroundControls = () => {
       const showBackground = completedShowBackgroundInput?.checked !== false;
+      if (completedBgOpacityInput) completedBgOpacityInput.disabled = !showBackground;
       if (completedToggleBackgroundButton) {
         completedToggleBackgroundButton.textContent = showBackground ? '一鍵關閉背景' : '一鍵顯示背景';
       }
     };
     const syncDeletedBackgroundControls = () => {
       const showBackground = deletedShowBackgroundInput?.checked !== false;
+      if (deletedBgOpacityInput) deletedBgOpacityInput.disabled = !showBackground;
       if (deletedToggleBackgroundButton) {
         deletedToggleBackgroundButton.textContent = showBackground ? '一鍵關閉背景' : '一鍵顯示背景';
       }
@@ -764,6 +820,18 @@ export class SettingsPage {
       }
       if (activeCardTransparencyValue && activeCardTransparencyInput) {
         activeCardTransparencyValue.textContent = `${Math.max(0, Math.min(100, Number(activeCardTransparencyInput.value) || 0))}%`;
+      }
+      if (completedBgOpacityValue && completedBgOpacityInput) {
+        completedBgOpacityValue.textContent = `${Math.max(0, Math.min(100, Number(completedBgOpacityInput.value) || 0))}%`;
+      }
+      if (completedCardTransparencyValue && completedCardTransparencyInput) {
+        completedCardTransparencyValue.textContent = `${Math.max(0, Math.min(100, Number(completedCardTransparencyInput.value) || 0))}%`;
+      }
+      if (deletedBgOpacityValue && deletedBgOpacityInput) {
+        deletedBgOpacityValue.textContent = `${Math.max(0, Math.min(100, Number(deletedBgOpacityInput.value) || 0))}%`;
+      }
+      if (deletedCardTransparencyValue && deletedCardTransparencyInput) {
+        deletedCardTransparencyValue.textContent = `${Math.max(0, Math.min(100, Number(deletedCardTransparencyInput.value) || 0))}%`;
       }
       if (activeCardHeightValue && activeCardHeightInput) {
         const cardHeight = Math.max(0, Math.min(360, Number(activeCardHeightInput.value) || 0));
@@ -821,11 +889,19 @@ export class SettingsPage {
       const prevDeletedViewConfig = prevViewConfigs.deleted || {};
       const bgOpacityRaw = Number(activeBgOpacityInput?.value);
       const cardTransparencyRaw = Number(activeCardTransparencyInput?.value);
+      const completedBgOpacityRaw = Number(completedBgOpacityInput?.value);
+      const completedCardTransparencyRaw = Number(completedCardTransparencyInput?.value);
+      const deletedBgOpacityRaw = Number(deletedBgOpacityInput?.value);
+      const deletedCardTransparencyRaw = Number(deletedCardTransparencyInput?.value);
       const cardHeightRaw = Number(activeCardHeightInput?.value);
       const thumbnailScaleRaw = Number(activeThumbnailScaleInput?.value);
       const swipeTriggerDistanceRaw = Number(swipeTriggerDistanceInput?.value);
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
+      const completedBgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(completedBgOpacityRaw) ? completedBgOpacityRaw : 100));
+      const completedCardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(completedCardTransparencyRaw) ? completedCardTransparencyRaw : 5));
+      const deletedBgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(deletedBgOpacityRaw) ? deletedBgOpacityRaw : 100));
+      const deletedCardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(deletedCardTransparencyRaw) ? deletedCardTransparencyRaw : 5));
       const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
       const thumbnailScale = Math.max(10, Math.min(100, Number.isFinite(thumbnailScaleRaw) ? thumbnailScaleRaw : 100));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
@@ -847,12 +923,16 @@ export class SettingsPage {
         backgroundImage: '',
         backgroundImages: [...completedBackgroundImages],
         showBackground: completedShowBackgroundInput?.checked !== false,
+        bgOpacity: completedBgOpacityPercent / 100,
+        cardOpacity: 1 - (completedCardTransparencyPercent / 100),
       };
       const nextDeletedViewConfig = {
         ...prevDeletedViewConfig,
         backgroundImage: '',
         backgroundImages: [...deletedBackgroundImages],
         showBackground: deletedShowBackgroundInput?.checked !== false,
+        bgOpacity: deletedBgOpacityPercent / 100,
+        cardOpacity: 1 - (deletedCardTransparencyPercent / 100),
       };
       const settings = {
         ...this.app.state.settings,
@@ -897,6 +977,10 @@ export class SettingsPage {
     });
     activeBgOpacityInput?.addEventListener('input', syncOpacityLabels);
     activeCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
+    completedBgOpacityInput?.addEventListener('input', syncOpacityLabels);
+    completedCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
+    deletedBgOpacityInput?.addEventListener('input', syncOpacityLabels);
+    deletedCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
     activeCardHeightInput?.addEventListener('input', syncOpacityLabels);
     activeThumbnailScaleInput?.addEventListener('input', syncOpacityLabels);
     swipeGesturesEnabledInput?.addEventListener('change', syncSwipeControls);
