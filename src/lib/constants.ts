@@ -32,6 +32,7 @@ export const defaultSettings: Settings = {
     deleted: { ...defaultViewConfig },
   },
   redeemUrlPresets: defaultRedeemUrlPresets,
+  defaultTemplateId: '',
 };
 
 export const DB_KEYS = {

@@ -1158,10 +1158,25 @@ export class TicketsPage {
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
     if (!tickets.length) {
       const meta = VIEW_META[this.view];
+      const hasScope = !!this.app.state.ui.search.trim() || (this.app.state.ui.activeTags || []).length > 0;
+      const actionHtml = hasScope
+        ? '<button type="button" data-clear-scope="1" class="mt-4 rounded-lg bg-wabi-primary px-4 py-2 text-sm font-semibold text-white">清除篩選</button>'
+        : this.view === 'active'
+          ? '<a href="#add" class="mt-4 inline-flex rounded-lg bg-wabi-primary px-4 py-2 text-sm font-semibold text-white">新增第一張票券</a>'
+          : '<a href="#active" class="mt-4 inline-flex rounded-lg border border-wabi-border bg-white px-4 py-2 text-sm font-semibold text-wabi-primary">回待使用票券</a>';
+      const helperText = hasScope
+        ? '目前搜尋或標籤篩選沒有符合的票券。'
+        : this.view === 'active'
+          ? '新增票券後會出現在這裡，可用標籤、原圖與到期提醒快速整理。'
+          : this.view === 'completed'
+            ? '核銷完成的票券會集中在這裡，方便日後查找。'
+            : '刪除的票券會先放在回收桶，確認後再永久刪除。';
       return `
-        <div class="rounded-xl border border-dashed border-wabi-border bg-white/80 p-10 text-center text-wabi-text-secondary">
+        <div class="col-span-full rounded-xl border border-dashed border-wabi-border bg-white/85 p-10 text-center text-wabi-text-secondary">
           <i class="fa-solid ${meta.icon} text-2xl mb-3"></i>
-          <p>${meta.empty}</p>
+          <p class="font-semibold text-wabi-primary">${meta.empty}</p>
+          <p class="mt-2 text-sm">${helperText}</p>
+          ${actionHtml}
         </div>
       `;
     }

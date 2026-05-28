@@ -75,9 +75,19 @@ body.keyboard-open #bottom-nav {
   animation: fade-in 0.22s ease-out;
 }
 
+.ticket-form-actions {
+  position: sticky;
+  bottom: 16px;
+  z-index: 20;
+}
+
 @media (max-width: 767px) {
   .page {
     padding-bottom: calc(96px + var(--safe-bottom) + var(--keyboard-inset-height));
+  }
+
+  .ticket-form-actions {
+    bottom: calc(88px + var(--safe-bottom) + var(--keyboard-inset-height));
   }
 }
 

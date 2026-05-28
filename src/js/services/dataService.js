@@ -90,6 +90,9 @@ export class DataService {
       redeemUrlPresets: Array.isArray(source.redeemUrlPresets)
         ? source.redeemUrlPresets
         : [],
+      defaultTemplateId: typeof source.defaultTemplateId === 'string'
+        ? source.defaultTemplateId
+        : '',
       quickTags: Array.isArray(source.quickTags)
         ? source.quickTags.filter(Boolean).map((item) => String(item))
         : [],

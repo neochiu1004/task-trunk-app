@@ -57,6 +57,7 @@ export class SettingsPage {
     if (!this.app.state.templates.length) {
       return '<p class="text-sm text-wabi-text-secondary">尚未建立範本</p>';
     }
+    const defaultTemplateId = this.app.state.settings.defaultTemplateId || '';
     return this.app.state.templates.map((tpl) => `
       <div class="flex items-center justify-between gap-2 py-2 border-b border-wabi-border/60" data-template-id="${tpl.id}">
         <div class="min-w-0 flex items-start gap-2">
@@ -65,12 +66,19 @@ export class SettingsPage {
             : '<div class="w-12 h-12 rounded-lg border border-dashed border-wabi-border text-[10px] text-wabi-text-secondary flex items-center justify-center shrink-0">無縮圖</div>'
           }
           <div class="min-w-0">
-            <p class="font-medium text-sm truncate">${escapeHtml(tpl.label || tpl.productName || '未命名範本')}</p>
+            <div class="flex items-center gap-1.5 min-w-0">
+              <p class="font-medium text-sm truncate">${escapeHtml(tpl.label || tpl.productName || '未命名範本')}</p>
+              ${tpl.id === defaultTemplateId ? '<span class="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-100">預設</span>' : ''}
+            </div>
             <p class="text-xs text-wabi-text-secondary truncate">${escapeHtml(tpl.productName || '')}</p>
             <p class="text-[11px] text-wabi-text-secondary mt-0.5">${tpl.image ? '已設定縮圖範本' : '未設定縮圖範本'}</p>
           </div>
         </div>
         <div class="flex gap-1 flex-wrap justify-end">
+          ${tpl.id === defaultTemplateId
+            ? `<button data-clear-default-template="${tpl.id}" class="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs border border-emerald-100">取消預設</button>`
+            : `<button data-set-default-template="${tpl.id}" class="px-2 py-1 rounded bg-wabi-accent/40 text-wabi-primary text-xs">設預設</button>`
+          }
           <button data-edit-template-thumb="${tpl.id}" class="px-2 py-1 rounded bg-wabi-primary/10 text-wabi-primary text-xs">${tpl.image ? '換縮圖' : '設縮圖'}</button>
           ${tpl.image ? `<button data-clear-template-thumb="${tpl.id}" class="px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs">清縮圖</button>` : ''}
           <button data-move-template-up="${tpl.id}" class="px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs">↑</button>
@@ -488,6 +496,7 @@ export class SettingsPage {
 
         <section class="bg-white border border-wabi-border rounded-2xl p-4 space-y-3">
           <h2 class="font-semibold text-wabi-primary">範本管理</h2>
+          <p class="text-xs text-wabi-text-secondary">可把常用範本設為新增票券的預設值；只記住設定，不會修改既有票券。</p>
           <form id="template-form" class="grid md:grid-cols-5 gap-2 items-end">
             <input id="tpl-label" placeholder="範本名稱" class="md:col-span-1 rounded-lg border border-wabi-border px-3 py-2" />
             <input id="tpl-product" placeholder="票券名稱" class="md:col-span-2 rounded-lg border border-wabi-border px-3 py-2" />
@@ -1205,6 +1214,34 @@ export class SettingsPage {
       });
     });
 
+    root.querySelectorAll('[data-set-default-template]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.setDefaultTemplate;
+        const target = this.app.state.templates.find((tpl) => tpl.id === id);
+        if (!target) return;
+        this.app.state.settings = {
+          ...this.app.state.settings,
+          defaultTemplateId: id,
+        };
+        await this.app.persistSettings();
+        showToast(`已設為預設範本：${target.label || target.productName || '未命名範本'}`, 'success');
+        this.render();
+      });
+    });
+
+    root.querySelectorAll('[data-clear-default-template]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if ((this.app.state.settings.defaultTemplateId || '') !== btn.dataset.clearDefaultTemplate) return;
+        this.app.state.settings = {
+          ...this.app.state.settings,
+          defaultTemplateId: '',
+        };
+        await this.app.persistSettings();
+        showToast('已取消預設範本', 'success');
+        this.render();
+      });
+    });
+
     root.querySelectorAll('[data-move-template-up]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.moveTemplateUp;
@@ -1238,8 +1275,16 @@ export class SettingsPage {
         const label = target?.label || target?.productName || '未命名範本';
         if (!window.confirm(`確定刪除範本「${label}」？`)) return;
         this.app.state.templates = this.app.state.templates.filter((tpl) => tpl.id !== id);
+        const shouldClearDefaultTemplate = (this.app.state.settings.defaultTemplateId || '') === id;
+        if (shouldClearDefaultTemplate) {
+          this.app.state.settings = {
+            ...this.app.state.settings,
+            defaultTemplateId: '',
+          };
+        }
         await this.app.persistTemplates();
-        showToast('範本已刪除', 'success');
+        if (shouldClearDefaultTemplate) await this.app.persistSettings();
+        showToast(shouldClearDefaultTemplate ? '範本已刪除，並取消預設範本' : '範本已刪除', 'success');
         this.render();
       });
     });
