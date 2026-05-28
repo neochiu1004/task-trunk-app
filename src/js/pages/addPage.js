@@ -52,9 +52,13 @@ export class AddPage {
     return this.app.state.tasks.find((t) => t.id === id) || null;
   }
 
-  buildTemplateOptions() {
+  buildTemplateOptions(selectedTemplateId = '') {
     const options = this.app.state.templates || [];
-    return [`<option value="">不套用範本</option>`, ...options.map((tpl) => `<option value="${tpl.id}">${escapeHtml(tpl.label || tpl.productName || '未命名範本')}</option>`)]
+    const hasSelectedTemplate = options.some((tpl) => tpl.id === selectedTemplateId);
+    return [
+      `<option value="" ${!hasSelectedTemplate ? 'selected' : ''}>不套用範本</option>`,
+      ...options.map((tpl) => `<option value="${tpl.id}" ${tpl.id === selectedTemplateId ? 'selected' : ''}>${escapeHtml(tpl.label || tpl.productName || '未命名範本')}</option>`),
+    ]
       .join('');
   }
 
@@ -120,6 +124,11 @@ export class AddPage {
     }
     const backRoute = editing ? (this.app.state.ui.editingFromRoute || 'active') : 'active';
     const routeLabel = backRoute === 'completed' ? '已使用' : backRoute === 'deleted' ? '回收桶' : '待使用';
+    const defaultTemplateId = editing ? '' : this.app.state.settings.defaultTemplateId || '';
+    const defaultTemplate = defaultTemplateId
+      ? this.app.state.templates.find((tpl) => tpl.id === defaultTemplateId)
+      : null;
+    const defaultTemplateLabel = defaultTemplate?.label || defaultTemplate?.productName || '';
 
     this.app.mount(`
       <section class="page active p-4 pb-24 md:pb-8 max-w-3xl mx-auto">
@@ -134,12 +143,40 @@ export class AddPage {
         <form id="ticket-form" class="space-y-4 bg-white border border-wabi-border rounded-2xl p-4">
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">範本快速套用</label>
-            <select id="template-id" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white">${this.buildTemplateOptions()}</select>
+            <select id="template-id" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white">${this.buildTemplateOptions(defaultTemplateId)}</select>
+            <p class="mt-1 text-[11px] text-wabi-text-secondary">
+              ${editing
+                ? '編輯票券時不會自動套用預設範本。'
+                : defaultTemplateLabel
+                  ? `目前預設：${escapeHtml(defaultTemplateLabel)}。手動改選後會記住新的預設。`
+                  : '手動選擇範本後會記住為下次新增的預設。'
+              }
+            </p>
           </div>
 
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">票券名稱 *</label>
             <input id="product-name" required class="w-full rounded-lg border border-wabi-border px-3 py-2" value="${escapeHtml(editing?.productName || '')}" />
+          </div>
+
+          <div class="space-y-3 rounded-2xl border border-wabi-border/70 bg-wabi-bg/40 p-3">
+            <div>
+              <label class="block text-sm text-wabi-text-secondary mb-1">縮圖模式（主頁卡片）</label>
+              <input id="thumb-image-file" type="file" accept="image/*" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
+              <div id="thumb-image-preview-wrap" class="mt-2 ${editing?.image ? '' : 'hidden'}">
+                <img id="thumb-image-preview" src="${escapeHtml(editing?.image || '')}" class="w-full max-h-40 object-cover rounded-xl border border-wabi-border" />
+                <button id="thumb-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除縮圖</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm text-wabi-text-secondary mb-1">原圖模式（核銷畫面）</label>
+              <input id="original-image-file" type="file" accept="image/*" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
+              <div id="original-image-preview-wrap" class="mt-2 ${editing?.originalImage ? '' : 'hidden'}">
+                <img id="original-image-preview" src="${escapeHtml(editing?.originalImage || '')}" class="w-full max-h-56 object-contain rounded-xl border border-wabi-border bg-slate-50" />
+                <button id="original-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除原圖</button>
+              </div>
+            </div>
           </div>
 
           <div class="grid md:grid-cols-2 gap-3">
@@ -191,34 +228,15 @@ export class AddPage {
             <p id="selected-tags-preview" class="mt-2 text-xs text-wabi-text-secondary"></p>
           </div>
 
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm text-wabi-text-secondary mb-1">縮圖模式（主頁卡片）</label>
-              <input id="thumb-image-file" type="file" accept="image/*" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
-              <div id="thumb-image-preview-wrap" class="mt-2 ${editing?.image ? '' : 'hidden'}">
-                <img id="thumb-image-preview" src="${escapeHtml(editing?.image || '')}" class="w-full max-h-40 object-cover rounded-xl border border-wabi-border" />
-                <button id="thumb-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除縮圖</button>
-              </div>
+          <div class="ticket-form-actions -mx-2 mt-2 rounded-2xl border border-wabi-border bg-white/95 p-2 shadow-lg backdrop-blur">
+            <div class="grid grid-cols-2 gap-2">
+              <button id="scan-barcode-btn" type="button" class="min-h-11 rounded-xl bg-wabi-primary/10 px-3 py-2 text-sm font-semibold text-wabi-primary">從原圖讀取條碼</button>
+              <button id="save-template-btn" type="button" class="min-h-11 rounded-xl bg-wabi-accent/40 px-3 py-2 text-sm font-semibold text-wabi-primary">儲存為範本</button>
             </div>
-
-            <div>
-              <label class="block text-sm text-wabi-text-secondary mb-1">原圖模式（核銷畫面）</label>
-              <input id="original-image-file" type="file" accept="image/*" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
-              <div id="original-image-preview-wrap" class="mt-2 ${editing?.originalImage ? '' : 'hidden'}">
-                <img id="original-image-preview" src="${escapeHtml(editing?.originalImage || '')}" class="w-full max-h-56 object-contain rounded-xl border border-wabi-border bg-slate-50" />
-                <button id="original-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除原圖</button>
-              </div>
+            <div class="mt-2 grid grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] gap-2">
+              <a id="add-cancel-link" href="#${backRoute}" class="flex min-h-12 items-center justify-center rounded-xl border border-wabi-border px-3 py-2 text-sm font-semibold text-wabi-primary">${editing ? '放棄變更' : '取消'}</a>
+              <button class="min-h-12 rounded-xl bg-wabi-primary px-3 py-2 text-sm font-semibold text-white">${editing ? '儲存變更' : '新增票券'}</button>
             </div>
-
-            <div class="flex gap-2 mt-2 flex-wrap">
-              <button id="scan-barcode-btn" type="button" class="px-3 py-2 rounded-lg bg-wabi-primary/10 text-wabi-primary text-sm">從原圖讀取條碼</button>
-              <button id="save-template-btn" type="button" class="px-3 py-2 rounded-lg bg-wabi-accent/40 text-wabi-primary text-sm">儲存為範本</button>
-            </div>
-          </div>
-
-          <div class="flex justify-end gap-2 pt-2">
-            <a id="add-cancel-link" href="#${backRoute}" class="px-4 py-2 rounded-lg border border-wabi-border">${editing ? '放棄變更' : '取消'}</a>
-            <button class="px-4 py-2 rounded-lg bg-wabi-primary text-white">${editing ? '儲存變更' : '新增票券'}</button>
           </div>
         </form>
       </section>
@@ -280,33 +298,98 @@ export class AddPage {
       }
     };
 
-    root.querySelector('#template-id')?.addEventListener('change', (event) => {
-      const id = event.target.value;
-      if (!id) return;
-      const tpl = this.app.state.templates.find((t) => t.id === id);
-      if (!tpl) return;
+    const applyBarcodeResult = (selected) => {
+      if (!selected || !serialInput) return;
+      serialInput.value = selected.content;
+      const barcodeFormatSelect = root.querySelector('#barcode-format');
+      if (barcodeFormatSelect) barcodeFormatSelect.value = selected.format || '';
+      updateDuplicateSerialHint();
+      showToast('已帶入條碼序號', 'success');
+    };
 
-      root.querySelector('#product-name').value = tpl.productName || '';
-      root.querySelector('#serial').value = tpl.serial || '';
-      root.querySelector('#expiry').value = this.toDateInputValue(tpl.expiry || defaultExpiry);
-      root.querySelector('#tags').value = tagsToText(tpl.tags || []);
-      root.querySelector('#barcode-format').value = tpl.barcodeFormat || '';
+    const scanAndApplyBarcode = async (scanSource, { allowPick = false } = {}) => {
+      if (!scanSource) return false;
+      showToast('正在辨識條碼...');
+      const { scanMultipleBarcodesFromImage } = await getBarcodeScanner();
+      const preferredFormat = root.querySelector('#barcode-format')?.value || '';
+      const results = await scanMultipleBarcodesFromImage(scanSource, { preferredFormat });
+      if (!results.length) {
+        showToast('未找到條碼', 'error');
+        return false;
+      }
+
+      let selected = results[0];
+      if (allowPick && results.length > 1) {
+        const picked = await this.pickBarcodeResult(results);
+        if (!picked) return false;
+        selected = picked;
+      }
+
+      applyBarcodeResult(selected);
+      return true;
+    };
+
+    const applyTemplate = (template, { showAppliedToast = true } = {}) => {
+      if (!template) return;
+
+      root.querySelector('#product-name').value = template.productName || '';
+      root.querySelector('#serial').value = template.serial || '';
+      root.querySelector('#expiry').value = this.toDateInputValue(template.expiry || defaultExpiry);
+      root.querySelector('#tags').value = tagsToText(template.tags || []);
+      root.querySelector('#barcode-format').value = template.barcodeFormat || '';
       updateDuplicateSerialHint();
       syncQuickTagState();
-      if (tpl.image) {
-        imageData = tpl.image;
-        if (thumbImagePreview) thumbImagePreview.src = tpl.image;
+      if (template.image) {
+        imageData = template.image;
+        if (thumbImagePreview) thumbImagePreview.src = template.image;
         thumbImageWrap?.classList.remove('hidden');
       }
-      if (tpl.redeemUrlPresetId) {
-        root.querySelector('#redeem-url-preset').value = tpl.redeemUrlPresetId;
-        const preset = (this.app.state.settings.redeemUrlPresets || []).find((p) => p.id === tpl.redeemUrlPresetId);
+      if (template.redeemUrlPresetId) {
+        root.querySelector('#redeem-url-preset').value = template.redeemUrlPresetId;
+        const preset = (this.app.state.settings.redeemUrlPresets || []).find((p) => p.id === template.redeemUrlPresetId);
         if (preset) root.querySelector('#redeem-url').value = preset.url || '';
       } else {
         root.querySelector('#redeem-url-preset').value = '';
       }
-      showToast('已套用範本', 'success');
+      if (showAppliedToast) showToast('已套用範本', 'success');
+    };
+
+    root.querySelector('#template-id')?.addEventListener('change', async (event) => {
+      const id = event.target.value;
+      this.app.state.settings = {
+        ...this.app.state.settings,
+        defaultTemplateId: id,
+      };
+      await this.app.persistSettings();
+
+      if (!id) {
+        showToast('已改為不套用預設範本', 'success');
+        return;
+      }
+
+      const tpl = this.app.state.templates.find((t) => t.id === id);
+      if (!tpl) {
+        showToast('找不到此範本，已取消預設', 'error');
+        return;
+      }
+
+      applyTemplate(tpl);
     });
+
+    const savedDefaultTemplateId = editing ? '' : this.app.state.settings.defaultTemplateId || '';
+    const savedDefaultTemplate = savedDefaultTemplateId
+      ? this.app.state.templates.find((tpl) => tpl.id === savedDefaultTemplateId)
+      : null;
+    if (savedDefaultTemplate) {
+      root.querySelector('#template-id').value = savedDefaultTemplate.id;
+      applyTemplate(savedDefaultTemplate, { showAppliedToast: false });
+    } else if (savedDefaultTemplateId) {
+      this.app.state.settings = {
+        ...this.app.state.settings,
+        defaultTemplateId: '',
+      };
+      this.app.persistSettings();
+    }
 
     root.querySelector('#redeem-url-preset')?.addEventListener('change', (event) => {
       const presetId = event.target.value;
@@ -350,6 +433,7 @@ export class AddPage {
         originalImage = await compressImage(file, 'original');
         if (originalImagePreview) originalImagePreview.src = originalImage;
         originalImageWrap?.classList.remove('hidden');
+        await scanAndApplyBarcode(originalImage);
       } catch (error) {
         showToast(`原圖處理失敗：${error.message}`, 'error');
       }
@@ -378,26 +462,7 @@ export class AddPage {
       }
 
       const scanSource = originalImage || imageData;
-      showToast('正在辨識條碼...');
-      const { scanMultipleBarcodesFromImage } = await getBarcodeScanner();
-      const preferredFormat = root.querySelector('#barcode-format')?.value || '';
-      const results = await scanMultipleBarcodesFromImage(scanSource, { preferredFormat });
-      if (!results.length) {
-        showToast('未找到條碼', 'error');
-        return;
-      }
-
-      let selected = results[0];
-      if (results.length > 1) {
-        const picked = await this.pickBarcodeResult(results);
-        if (!picked) return;
-        selected = picked;
-      }
-
-      serialInput.value = selected.content;
-      root.querySelector('#barcode-format').value = selected.format || '';
-      updateDuplicateSerialHint();
-      showToast('已帶入條碼序號', 'success');
+      await scanAndApplyBarcode(scanSource, { allowPick: true });
     });
 
     root.querySelector('#save-template-btn')?.addEventListener('click', async () => {

@@ -28,6 +28,7 @@ export class Router {
       return;
     }
 
+    const previousHash = this.currentHash;
     if (this.currentHash === 'add' && route !== 'add' && this.app?.state?.ui) {
       this.app.state.ui.editingTicketId = null;
       this.app.state.ui.editingFromRoute = null;
@@ -38,6 +39,10 @@ export class Router {
 
     const page = await this.resolveRoute(route);
     await page.render();
+    if (previousHash !== route) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.getElementById('app-container')?.scrollTo?.({ top: 0, left: 0, behavior: 'auto' });
+    }
   }
 
   async resolveRoute(route) {

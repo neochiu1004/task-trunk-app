@@ -67,6 +67,7 @@ export interface Settings {
   localBackupFileName?: string;
   autoCopySerialOnRedeem?: boolean;
   redeemUrlPresets?: RedeemUrlPreset[];
+  defaultTemplateId?: string;
   headerButtonSize?: number;
 }
 

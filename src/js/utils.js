@@ -37,6 +37,7 @@ export const defaultSettings = {
     deleted: { ...defaultViewConfig },
   },
   redeemUrlPresets: [],
+  defaultTemplateId: '',
   quickTags: [],
   localBackupFileName: 'ticket_backup',
 };
