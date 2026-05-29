@@ -60,7 +60,7 @@ export const compressImage = (
 
 export const checkIsExpiringSoon = (expiryStr: string | undefined, thresholdDays: number = 7): boolean => {
   if (!expiryStr) return false;
-  const normalizedDate = expiryStr.replace(/[.\-]/g, '/');
+  const normalizedDate = expiryStr.replace(/[.-]/g, '/');
   const expiryDate = new Date(normalizedDate);
   if (isNaN(expiryDate.getTime())) return false;
   const today = new Date();

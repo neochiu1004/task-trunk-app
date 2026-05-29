@@ -1,4 +1,5 @@
 import { DB_KEYS } from './constants';
+import type { Settings, Ticket } from '@/types/ticket';
 
 export interface DataHealthStatus {
   isHealthy: boolean;
@@ -169,7 +170,7 @@ class DBHelper {
       }
 
       // Check tasks data integrity
-      const tasks = await this.getItem<any[]>(DB_KEYS.TASKS);
+      const tasks = await this.getItem<Ticket[]>(DB_KEYS.TASKS);
       if (tasks) {
         if (!Array.isArray(tasks)) {
           issues.push('票券資料格式異常');
@@ -183,7 +184,7 @@ class DBHelper {
       }
 
       // Check settings data integrity
-      const settings = await this.getItem<any>(DB_KEYS.SETTINGS);
+      const settings = await this.getItem<Settings>(DB_KEYS.SETTINGS);
       if (settings && typeof settings !== 'object') {
         issues.push('設定資料格式異常');
         isHealthy = false;
@@ -246,8 +247,8 @@ class DBHelper {
     await this.setItem('lastBackupTime', Date.now());
   }
 
-  async exportAllData(): Promise<object> {
-    const data: Record<string, any> = {};
+  async exportAllData(): Promise<Record<string, unknown>> {
+    const data: Record<string, unknown> = {};
     const keys = await this.getAllKeys();
     
     for (const key of keys) {
@@ -257,7 +258,7 @@ class DBHelper {
     return data;
   }
 
-  async importAllData(data: Record<string, any>): Promise<void> {
+  async importAllData(data: Record<string, unknown>): Promise<void> {
     for (const [key, value] of Object.entries(data)) {
       await this.setItem(key, value);
     }

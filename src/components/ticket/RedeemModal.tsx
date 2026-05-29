@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -96,13 +96,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     return keywords.some((kw) => searchTarget.includes(kw.toUpperCase()));
   }, [ticket, specificViewKeywords]);
 
-  const getInitialViewMode = (): ViewModeType => {
+  const getInitialViewMode = useCallback((): ViewModeType => {
     if (!ticket) return 'standard';
     if (ticket.originalImage) return 'image';
     if (isSpecificView) return 'momo';
     if (ticket.image && !ticket.serial) return 'image';
     return 'standard';
-  };
+  }, [isSpecificView, ticket]);
 
   useEffect(() => {
     if (ticket) {
@@ -124,7 +124,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     } else {
       setShowFullScreen(false);
     }
-  }, [ticket]);
+  }, [getInitialViewMode, ticket]);
 
   if (!ticket) return null;
 

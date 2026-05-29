@@ -41,7 +41,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const currentViewConfig: ViewConfig = localSettings.viewConfigs?.[currentTab] || { ...defaultViewConfig };
 
-  const handleGlobalChange = (key: keyof Settings, value: any) => {
+  const handleGlobalChange = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -62,11 +62,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     );
   };
 
-  const handleViewConfigChange = (key: keyof ViewConfig, value: any) => {
+  const handleViewConfigChange = <K extends keyof ViewConfig>(key: K, value: ViewConfig[K]) => {
     setLocalSettings((prev) => {
       const next = { ...prev };
       const currentView = { ...next.viewConfigs[currentTab] };
-      (currentView as any)[key] = value;
+      currentView[key] = value;
 
       const imageUrl = currentView.backgroundImage;
       if (!next.bgConfigMap) next.bgConfigMap = {};
@@ -90,7 +90,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleStep = (key: keyof ViewConfig | keyof Settings, delta: number, min: number, max: number, isViewConfig = true, stepVal = 1) => {
-    const currentVal = isViewConfig ? (currentViewConfig as any)[key] : (localSettings as any)[key];
+    const currentVal = isViewConfig
+      ? currentViewConfig[key as keyof ViewConfig]
+      : localSettings[key as keyof Settings];
     let nextVal = parseFloat(currentVal || 0) + delta * stepVal;
     // Wrap around: if exceeds max, go to min; if below min, go to max
     if (nextVal > max) {
