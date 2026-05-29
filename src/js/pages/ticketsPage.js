@@ -1373,15 +1373,14 @@ export class TicketsPage {
       const swipeAttrs = swipeConfig
         ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
         : '';
-      const hasFloatingThumbnail = showThumbnail && ticket.image && this.view === 'active';
-      const contentPaddingClass = hasFloatingThumbnail ? 'pr-[5.75rem]' : '';
+      const hasActiveThumbnail = showThumbnail && ticket.image && this.view === 'active';
 
       return `
         <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
-          ${hasFloatingThumbnail
-            ? `<div class="${imageWrapperClass}"><img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} /></div>`
-            : ''}
-          <div class="flex items-start gap-3 ${headerMarginClass} ${contentPaddingClass}">
+          <div class="flex items-start gap-3 ${headerMarginClass}">
+            ${hasActiveThumbnail
+              ? `<div class="app-card-thumb"><img src="${ticket.image}" alt="ticket thumbnail" /></div>`
+              : ''}
             <div class="flex items-start gap-3 min-w-0 flex-1">
               ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
               <div class="min-w-0 flex-1">
@@ -1540,6 +1539,7 @@ export class TicketsPage {
       const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
       return state === 'expired' || state === 'today' || state === 'soon';
     }).length;
+    const activeTotalCount = this.app.state.tasks.filter((ticket) => !ticket.completed && !ticket.isDeleted).length;
     const completedTotalCount = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted).length;
     const deletedTotalCount = this.app.state.tasks.filter((ticket) => ticket.isDeleted).length;
     const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
@@ -1571,26 +1571,36 @@ export class TicketsPage {
       : gridColumns === 2
         ? 'fa-solid fa-table-columns'
         : 'fa-solid fa-grip';
+    const currentViewTotal = this.view === 'active'
+      ? activeTotalCount
+      : this.view === 'completed'
+        ? completedTotalCount
+        : deletedTotalCount;
+    const pinnedVisibleCount = tickets.filter((ticket) => ticket.pinned && !ticket.completed && !ticket.isDeleted).length;
+    const viewStatusCaption = this.view === 'active'
+      ? `快到期 ${urgentActiveCount} 張${pinnedVisibleCount ? ` · 優先 ${pinnedVisibleCount} 張` : ''}`
+      : this.view === 'completed'
+        ? `已核銷 ${completedTotalCount} 張`
+        : `待整理 ${deletedTotalCount} 張`;
 
     this.app.mount(`
       ${backgroundLayerHtml}
       <section class="page active relative z-10 px-4 pt-0 pb-24 md:pb-8 max-w-5xl mx-auto">
-        <div id="tickets-top-bar" class="sticky z-30 -mx-4 px-4 pb-2 mb-2 bg-wabi-bg/95 backdrop-blur-sm border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.35rem);">
-          <header class="flex items-start justify-between mb-2 gap-2">
-            <div>
-              <h1 class="text-[1.35rem] md:text-2xl leading-tight font-bold text-wabi-primary">${escapeHtml(this.app.state.settings.appTitle)}</h1>
-              <p class="text-xs md:text-sm text-wabi-text-secondary">${meta.title}</p>
-              <p class="text-[10px] md:text-xs text-wabi-text-secondary mt-1">版本 v${escapeHtml(APP_VERSION)} · 更新 ${escapeHtml(APP_UPDATED_AT)}</p>
+        <div id="tickets-top-bar" class="app-top-bar sticky z-30 -mx-4 px-4 pb-3 mb-3" style="top: 0; padding-top: calc(var(--safe-top) + 0.65rem);">
+          <header class="flex items-center justify-between mb-3 gap-3">
+            <div class="min-w-0">
+              <h1 class="text-[1.55rem] md:text-2xl leading-tight font-black text-wabi-primary truncate tracking-normal">${escapeHtml(this.app.state.settings.appTitle)}</h1>
+              <p class="text-xs md:text-sm text-wabi-text-secondary font-semibold">${meta.title}</p>
               ${!this.app.state.ui.selectionMode && this.app.state.ui.keepSelectionMode && selectedCount > 0
                 ? `<p class="text-xs text-amber-700 mt-1">已保留 ${selectedCount} 張選取（重新開啟多選可繼續操作）</p>`
                 : ''}
             </div>
             <div class="flex items-center gap-1.5 shrink-0 relative">
             ${this.view === 'active'
-              ? `<button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="${gridIconClass}"></i></button>`
+              ? `<button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="app-icon-button"><i class="${gridIconClass}"></i></button>`
               : ''}
-              <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" title="${this.app.state.ui.selectionMode ? '取消多選' : '開啟多選'}" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid ${this.app.state.ui.selectionMode ? 'fa-check-double' : 'fa-rectangle-list'}"></i></button>
-              <button id="toggle-toolbar-menu" aria-expanded="false" title="更多功能" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid fa-ellipsis"></i></button>
+              <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" title="${this.app.state.ui.selectionMode ? '取消多選' : '開啟多選'}" class="app-icon-button"><i class="fa-solid ${this.app.state.ui.selectionMode ? 'fa-check-double' : 'fa-rectangle-list'}"></i></button>
+              <button id="toggle-toolbar-menu" aria-expanded="false" title="更多功能" class="app-icon-button"><i class="fa-solid fa-ellipsis"></i></button>
               <div id="toolbar-more-menu" class="hidden absolute right-11 top-0 w-44 rounded-xl border border-wabi-border bg-white shadow-xl p-2 space-y-1">
                 <button id="toggle-ultra-compact-btn" title="${ultraCompactCard ? '切換標準卡片' : '切換超精簡卡片'}" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent">
                   <i class="fa-solid ${ultraCompactCard ? 'fa-expand' : 'fa-compress'} mr-2 text-xs"></i>${ultraCompactCard ? '標準卡片' : '超精簡卡片'}
@@ -1608,19 +1618,19 @@ export class TicketsPage {
                   ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can mr-2 text-xs"></i>全部永久刪除</button>`
                   : ''}
               </div>
-              <a href="#settings" title="設定" class="h-9 w-9 rounded-lg bg-white border border-wabi-border text-[13px] flex items-center justify-center"><i class="fa-solid fa-gear"></i></a>
+              <a href="#settings" title="設定" class="app-icon-button"><i class="fa-solid fa-gear"></i></a>
             </div>
           </header>
 
           <div class="flex items-center gap-2 mb-2">
             <label class="relative flex-1 min-w-0">
               <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-wabi-text-secondary"></i>
-              <input id="ticket-search" value="${escapeHtml(this.app.state.ui.search)}" placeholder="搜尋票券、標籤或序號" class="w-full pl-9 ${searchKeyword ? 'pr-9' : 'pr-3'} py-2 rounded-lg border border-wabi-border bg-white text-sm" />
+              <input id="ticket-search" value="${escapeHtml(this.app.state.ui.search)}" placeholder="搜尋票券、標籤或序號" class="app-search-input w-full pl-9 ${searchKeyword ? 'pr-9' : 'pr-3'}" />
               ${searchKeyword
                 ? `<button type="button" data-clear-search="1" class="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-slate-400 hover:text-slate-700" aria-label="清除搜尋"><i class="fa-solid fa-xmark text-xs"></i></button>`
                 : ''}
             </label>
-            <select id="ticket-sort" class="w-[8.8rem] shrink-0 px-3 py-2 rounded-lg border border-wabi-border bg-white text-sm">
+            <select id="ticket-sort" class="app-sort-select w-[8.8rem] shrink-0">
               ${this.view === 'completed'
                 ? `
                   <option value="redeemed-newest" ${this.app.state.ui.sort === 'redeemed-newest' || this.app.state.ui.sort === 'expiring' ? 'selected' : ''}>核銷新到舊</option>
@@ -1637,21 +1647,41 @@ export class TicketsPage {
             </select>
           </div>
 
+          <div class="app-summary-card mb-2">
+            <div class="min-w-0">
+              <div class="text-[10px] uppercase tracking-[0.18em] text-white/65 font-black">${meta.title}</div>
+              <div class="mt-1 flex items-end gap-2">
+                <span class="text-4xl leading-none font-black text-white tabular-nums">${tickets.length}</span>
+                <span class="pb-1 text-xs font-bold text-white/70">/ ${currentViewTotal} 張</span>
+              </div>
+              <div class="mt-2 text-xs font-semibold text-white/78">${viewStatusCaption}</div>
+            </div>
+            <div class="flex flex-col items-end gap-2 shrink-0">
+              <div class="rounded-2xl bg-white/12 px-3 py-2 text-right">
+                <div class="text-[10px] font-bold text-white/62">v${escapeHtml(APP_VERSION)}</div>
+                <div class="mt-0.5 text-[10px] font-semibold text-white/78">${escapeHtml(APP_UPDATED_AT)}</div>
+              </div>
+              ${(searchKeyword || this.app.state.ui.activeTags.length > 0)
+                ? `<button type="button" data-clear-scope="1" class="shrink-0 text-[11px] px-3 py-1.5 rounded-full bg-white/14 text-white font-bold">清除</button>`
+                : ''}
+            </div>
+          </div>
+
           <div class="flex items-center justify-between gap-2 mb-2">
-            <p class="text-[11px] text-wabi-text-secondary truncate">${compactScopeText}</p>
+            <p class="text-[11px] text-wabi-text-secondary font-semibold truncate">${compactScopeText}</p>
             ${(searchKeyword || this.app.state.ui.activeTags.length > 0)
-              ? `<button type="button" data-clear-scope="1" class="shrink-0 text-[11px] px-2.5 py-1 rounded-full border border-wabi-border bg-white text-wabi-text-secondary">清除</button>`
+              ? ''
               : ''}
           </div>
 
           <div class="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${this.app.state.ui.activeTags.length === 0 ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">全部</button>
+            <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="app-filter-chip ${this.app.state.ui.activeTags.length === 0 ? 'app-filter-chip--active' : ''}">全部</button>
             ${this.view === 'active'
-              ? `<button data-filter-tag="${EXPIRY_URGENT_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>到期警示<span class="ml-1 ${urgentActiveCount > 0 ? '' : 'opacity-60'}">(${urgentActiveCount})</span></button>`
+              ? `<button data-filter-tag="${EXPIRY_URGENT_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'app-filter-chip--active' : 'app-filter-chip--warning'}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>到期警示<span class="ml-1 ${urgentActiveCount > 0 ? '' : 'opacity-60'}">(${urgentActiveCount})</span></button>`
               : ''}
-            <button data-filter-tag="${ORIGINAL_IMAGE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}"><i class="fa-regular fa-image mr-1"></i>原圖</button>
+            <button data-filter-tag="${ORIGINAL_IMAGE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'app-filter-chip--active' : ''}"><i class="fa-regular fa-image mr-1"></i>原圖</button>
             ${allTags.map((tag) => `
-              <button data-filter-tag="${escapeHtml(tag)}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(tag) ? 'true' : 'false'}" class="shrink-0 px-2.5 py-1 rounded-full text-xs border ${(this.app.state.ui.activeTags || []).includes(tag) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border'}">#${escapeHtml(tag)}</button>
+              <button data-filter-tag="${escapeHtml(tag)}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(tag) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(tag) ? 'app-filter-chip--active' : ''}">#${escapeHtml(tag)}</button>
             `).join('')}
           </div>
         </div>

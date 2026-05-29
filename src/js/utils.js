@@ -27,7 +27,7 @@ export const defaultSettings = {
   tgToken: '',
   tgChatId: '',
   notifyDays: 7,
-  appTitle: '輕鬆票券',
+  appTitle: '票夾',
   swipeGesturesEnabled: true,
   swipeTriggerDistance: 72,
   specificViewKeywords: ['MOMO', '85度C'],

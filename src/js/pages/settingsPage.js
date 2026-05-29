@@ -945,7 +945,7 @@ export class SettingsPage {
       };
       const settings = {
         ...this.app.state.settings,
-        appTitle: root.querySelector('#app-title').value.trim() || '輕鬆票券',
+        appTitle: root.querySelector('#app-title').value.trim() || '票夾',
         notifyDays: Math.max(1, Number(root.querySelector('#notify-days').value || 7)),
         tgToken: root.querySelector('#tg-token').value.trim(),
         tgChatId: root.querySelector('#tg-chat-id').value.trim(),
@@ -1124,7 +1124,7 @@ export class SettingsPage {
 
     root.querySelector('#send-test-telegram')?.addEventListener('click', async () => {
       const { tgToken, tgChatId } = this.app.state.settings;
-      const result = await sendTelegramMessage(tgToken, tgChatId, '🔔 這是一則來自「輕鬆票券」的測試訊息。');
+      const result = await sendTelegramMessage(tgToken, tgChatId, '🔔 這是一則來自「票夾」的測試訊息。');
       if (result.success) {
         showToast('Telegram 測試成功', 'success');
       } else {

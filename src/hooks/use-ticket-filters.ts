@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { checkIsExpiringSoon } from '@/lib/helpers';
 import type { Ticket, SortType, ViewType } from '@/types/ticket';
 
@@ -67,7 +67,7 @@ export const useTicketFilters = ({
     [tasks, healthIssueSerials, notifyDays]
   );
 
-  const matchesTag = (ticket: Ticket, tag: string): boolean => {
+  const matchesTag = useCallback((ticket: Ticket, tag: string): boolean => {
     if (tag === 'special_expiring') {
       return checkIsExpiringSoon(ticket.expiry, notifyDays) && !ticket.completed && !ticket.isDeleted;
     }
@@ -81,7 +81,7 @@ export const useTicketFilters = ({
       return !!ticket.pinned && !ticket.completed && !ticket.isDeleted;
     }
     return !!(ticket.tags && ticket.tags.includes(tag));
-  };
+  }, [duplicateSerials, notifyDays]);
 
   const filteredTasks = useMemo(() => {
     const result = normalizedTasks.filter(({ ticket, searchText }) => {
@@ -114,7 +114,7 @@ export const useTicketFilters = ({
     });
 
     return result.map(({ ticket }) => ticket);
-  }, [activeTags, normalizedSearchQuery, normalizedTasks, sortType, view]);
+  }, [activeTags, matchesTag, normalizedSearchQuery, normalizedTasks, sortType, view]);
 
   const filteredTaskIds = useMemo(() => new Set(filteredTasks.map((ticket) => ticket.id)), [filteredTasks]);
 

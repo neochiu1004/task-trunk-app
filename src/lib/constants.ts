@@ -23,7 +23,7 @@ export const defaultSettings: Settings = {
   tgToken: '',
   tgChatId: '',
   notifyDays: 7,
-  appTitle: 'Vouchy',
+  appTitle: '票夾',
   specificViewKeywords: ['MOMO', '85度C'],
   bgConfigMap: {},
   viewConfigs: {

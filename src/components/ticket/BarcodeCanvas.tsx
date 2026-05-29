@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-// @ts-ignore
+// @ts-expect-error bwip-js does not ship a compatible TypeScript declaration for this import shape.
 import bwipjs from 'bwip-js';
 import { getBcidFromFormat } from '@/lib/barcodeScanner';
 

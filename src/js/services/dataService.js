@@ -74,12 +74,13 @@ export class DataService {
       ? source.viewConfigs
       : {};
     const baseViewConfigs = base.viewConfigs || {};
+    const shouldUseNewDefaultTitle = !source.appTitle || source.appTitle === '輕鬆票券' || source.appTitle === 'Vouchy';
 
     return {
       tgToken: source.tgToken || '',
       tgChatId: source.tgChatId || '',
       notifyDays: Math.max(1, Number(source.notifyDays || base.notifyDays || 7)),
-      appTitle: source.appTitle || base.appTitle || '輕鬆票券',
+      appTitle: shouldUseNewDefaultTitle ? (base.appTitle || '票夾') : source.appTitle,
       swipeGesturesEnabled: source.swipeGesturesEnabled !== false,
       swipeTriggerDistance: Number.isFinite(Number(source.swipeTriggerDistance))
         ? Math.max(40, Math.min(120, Number(source.swipeTriggerDistance)))

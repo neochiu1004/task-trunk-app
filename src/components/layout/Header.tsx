@@ -182,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed top-0 left-0 right-0 z-40 px-4 pt-8 pb-3 glass-header rounded-b-[22px] overflow-hidden"
+      className="fixed top-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 px-4 pt-[calc(env(safe-area-inset-top)+16px)] pb-3 app-header overflow-hidden"
     >
       {headerBackgroundImage && (
         <div
@@ -198,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       <div className="relative z-10">
-        <div className="flex items-center justify-between gap-3 mb-2.5">
+        <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <TooltipProvider>
               <Tooltip>
@@ -212,7 +212,7 @@ export const Header: React.FC<HeaderProps> = ({
                       if (longPressTimer.current) clearTimeout(longPressTimer.current);
                     }}
                     style={{ width: buttonSize, height: buttonSize }}
-                    className="rounded-2xl bg-gradient-to-br from-background/95 to-background/75 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-md border border-border/70"
+                    className="rounded-[18px] bg-background/90 backdrop-blur-sm flex items-center justify-center overflow-hidden cursor-pointer shrink-0 shadow-sm border border-border/60"
                   >
                     <img src={displayLogo} alt="Brand" className="w-full h-full object-cover" />
                   </motion.div>
@@ -246,10 +246,10 @@ export const Header: React.FC<HeaderProps> = ({
                   <TooltipTrigger asChild>
                     <motion.h1
                       whileTap={{ scale: 0.98 }}
-                      className="text-lg font-bold cursor-pointer truncate"
+                      className="text-xl font-black cursor-pointer truncate tracking-normal"
                       onClick={() => setIsEditingTitle(true)}
                     >
-                      <span className="truncate bg-gradient-to-r from-[#334A52] to-[#5e7f72] bg-clip-text text-transparent">
+                      <span className="truncate text-foreground">
                         {appTitle}
                       </span>
                     </motion.h1>
@@ -272,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
                       whileHover={{ scale: 1.08 }}
                       onClick={config.onClick}
                       style={{ width: buttonSize, height: buttonSize }}
-                      className={`flex items-center justify-center rounded-2xl text-white shadow-md ${config.bgClass} ${config.hoverClass} active:scale-95 transition-all duration-200`}
+                      className={`flex items-center justify-center rounded-full text-white shadow-sm ${config.bgClass} ${config.hoverClass} active:scale-95 transition-all duration-200`}
                     >
                       <config.icon size={iconSize} />
                     </motion.button>
@@ -294,7 +294,7 @@ export const Header: React.FC<HeaderProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜尋票券、標籤或序號"
-              className="w-full h-11 pl-10 pr-10 glass-card rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200 placeholder:text-muted-foreground/70"
+              className="w-full h-11 pl-10 pr-10 app-search rounded-[17px] text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground/70"
             />
             <AnimatePresence>
               {searchQuery && (
@@ -317,7 +317,7 @@ export const Header: React.FC<HeaderProps> = ({
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.02 }}
               onClick={onForceUpdate}
-              className="h-11 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-white bg-gradient-to-br from-[#d98c3f] to-[#b96c2d] shadow-sm shrink-0"
+              className="h-11 px-3 rounded-[17px] flex items-center justify-center gap-1.5 text-white bg-gradient-to-br from-[#d98c3f] to-[#b96c2d] shadow-sm shrink-0"
             >
               <RefreshCcw size={13} />
               <span className="text-xs font-semibold">更新</span>
@@ -325,7 +325,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {currentView === 'completed' ? (
-            <div className="h-11 px-3 glass-card rounded-2xl flex items-center justify-center text-foreground gap-1.5 shadow-sm opacity-70 shrink-0">
+            <div className="h-11 px-3 app-control rounded-[17px] flex items-center justify-center text-foreground gap-1.5 shadow-sm opacity-70 shrink-0">
               <Clock size={13} className="text-primary" />
               <span className="text-xs font-semibold">核銷</span>
             </div>
@@ -334,7 +334,7 @@ export const Header: React.FC<HeaderProps> = ({
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.02 }}
               onClick={cycleSortType}
-              className="h-11 px-3 glass-card rounded-2xl flex items-center justify-center text-foreground transition-all duration-200 gap-1.5 shadow-sm shrink-0"
+              className="h-11 px-3 app-control rounded-[17px] flex items-center justify-center text-foreground transition-all duration-200 gap-1.5 shadow-sm shrink-0"
             >
               <ArrowUpDown size={13} className="text-primary" />
               <span className="text-xs font-semibold">
@@ -350,7 +350,7 @@ export const Header: React.FC<HeaderProps> = ({
             className={`w-11 h-11 flex items-center justify-center rounded-2xl transition-all duration-200 shrink-0 ${
               isCompact
                 ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
-                : 'glass-card text-muted-foreground hover:text-foreground shadow-sm'
+                : 'app-control text-muted-foreground hover:text-foreground shadow-sm'
             }`}
           >
             {isCompact ? <Rows size={15} /> : <LayoutGrid size={15} />}
@@ -366,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`h-9 px-3 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 shrink-0 ${
                 isTagPanelOpen || activeTags.length > 0
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                  : 'glass-card text-muted-foreground hover:text-foreground shadow-sm'
+                  : 'app-control text-muted-foreground hover:text-foreground shadow-sm'
               }`}
             >
               <SlidersHorizontal size={13} />
