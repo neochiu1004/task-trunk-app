@@ -100,12 +100,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     return '';
   };
 
-  // Build custom card styles based on settings - opacity only affects card background, not content
-  const cardStyle: React.CSSProperties = {
-    ...(cardBgColor && { backgroundColor: cardBgColor }),
-    ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
-  };
-  
   // Calculate background opacity for card (content stays at full opacity)
   const cardBgOpacity = opacity !== undefined && opacity < 1 ? opacity : 1;
 
@@ -249,15 +243,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         if (isSelectionMode) onSelect(ticket.id);
         else onClick(ticket);
       }}
-      className={`mx-4 mt-3 app-ticket-card flex cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
+      className={`mx-4 mt-3 flex cursor-pointer relative overflow-hidden rounded-[24px] ${getStatusStyles()}`}
     >
       {/* Background layer with opacity */}
       <div 
-        className="absolute inset-0 rounded-[24px]"
+        className="absolute inset-0 rounded-[24px] border border-border/70 shadow-[0_14px_30px_-22px_hsl(200_30%_20%_/_0.36),0_2px_8px_hsl(200_20%_20%_/_0.07)] backdrop-blur-[10px]"
         style={{ 
           opacity: cardBgOpacity,
-          backgroundColor: cardBgColor || undefined,
-          ...(cardBgColor && { backgroundColor: cardBgColor }),
+          backgroundColor: cardBgColor || 'hsl(var(--wabi-surface))',
           ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
         }} 
       />

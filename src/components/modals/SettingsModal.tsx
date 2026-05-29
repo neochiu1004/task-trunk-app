@@ -676,7 +676,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         backgroundSize: `${currentViewConfig.bgSize || 100}% auto`,
                         backgroundPosition: `center ${currentViewConfig.bgPosY || 50}%`,
                         backgroundRepeat: 'no-repeat',
-                        opacity: currentViewConfig.bgOpacity || 1,
+                        opacity: currentViewConfig.bgOpacity ?? 1,
                       }}
                     />
                     <div className="absolute top-1 right-1 bg-black/40 backdrop-blur-sm text-white text-[9px] px-1.5 py-0.5 rounded-lg font-bold flex items-center gap-1 shadow-sm">
@@ -754,7 +754,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
                       <Droplets size={12} /> 背景透明度
                     </label>
-                    <span className="text-xs font-bold text-primary">{Math.round((currentViewConfig.bgOpacity || 1) * 100)}%</span>
+                    <span className="text-xs font-bold text-primary">{Math.round((currentViewConfig.bgOpacity ?? 1) * 100)}%</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -768,7 +768,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       min="0"
                       max="100"
                       step="5"
-                      value={Math.round((currentViewConfig.bgOpacity || 1) * 100)}
+                      value={Math.round((currentViewConfig.bgOpacity ?? 1) * 100)}
                       onChange={(e) => handleViewConfigChange('bgOpacity', parseInt(e.target.value) / 100)}
                       className="flex-1 h-2 bg-muted/50 rounded-lg appearance-none cursor-pointer accent-primary"
                     />

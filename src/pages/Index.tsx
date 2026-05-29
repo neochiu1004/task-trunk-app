@@ -113,7 +113,6 @@ const Index = () => {
   } = useTicketSelection({
     filteredTaskIds,
     filteredTaskLength: filteredTasks.length,
-    view,
   });
 
   const toggleTag = (tag: string) => {
@@ -411,7 +410,7 @@ const Index = () => {
       {currentConfig.backgroundImage && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: currentConfig.bgOpacity || 1 }}
+          animate={{ opacity: currentConfig.bgOpacity ?? 1 }}
           transition={{ duration: 0.5 }}
           className="fixed inset-0 z-0 mx-auto max-w-md"
           style={{
@@ -455,7 +454,6 @@ const Index = () => {
           headerButtonSize={settings.headerButtonSize}
           isDark={isDark}
           onToggleTheme={toggleTheme}
-          currentView={view}
           onForceUpdate={handleForceUpdate}
           onHeightChange={setHeaderHeight}
         />

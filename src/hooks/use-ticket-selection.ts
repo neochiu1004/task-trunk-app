@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { ViewType } from '@/types/ticket';
-
 type UseTicketSelectionArgs = {
   filteredTaskIds: Set<string>;
   filteredTaskLength: number;
-  view: ViewType;
 };
 
 export const useTicketSelection = ({
   filteredTaskIds,
   filteredTaskLength,
-  view,
 }: UseTicketSelectionArgs) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -27,13 +23,6 @@ export const useTicketSelection = ({
       setIsSelectionMode(false);
     }
   }, [filteredTaskLength, isSelectionMode]);
-
-  useEffect(() => {
-    if (view !== 'active' && isSelectionMode) {
-      setIsSelectionMode(false);
-      setSelectedIds(new Set());
-    }
-  }, [view, isSelectionMode]);
 
   const clearSelection = () => {
     setIsSelectionMode(false);

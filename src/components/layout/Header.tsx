@@ -7,7 +7,6 @@ import {
   Check,
   CheckSquare,
   ChevronDown,
-  Clock,
   Copy,
   ImageIcon,
   LayoutGrid,
@@ -59,7 +58,6 @@ interface HeaderProps {
   headerButtonSize?: number;
   isDark?: boolean;
   onToggleTheme?: () => void;
-  currentView?: string;
   onForceUpdate?: () => void;
   onHeightChange?: (height: number) => void;
 }
@@ -101,7 +99,6 @@ export const Header: React.FC<HeaderProps> = ({
   headerButtonSize = 44,
   isDark = false,
   onToggleTheme,
-  currentView,
   onForceUpdate,
   onHeightChange,
 }) => {
@@ -115,7 +112,6 @@ export const Header: React.FC<HeaderProps> = ({
   const iconSize = Math.max(14, Math.round(headerButtonSize * 0.34));
   const buttonSize = Math.max(36, headerButtonSize - 8);
   const displayLogo = brandLogo || vouchyLogo;
-  const canUseSelection = currentView === 'active';
 
   useEffect(() => {
     const node = headerRef.current;
@@ -324,24 +320,17 @@ export const Header: React.FC<HeaderProps> = ({
             </motion.button>
           )}
 
-          {currentView === 'completed' ? (
-            <div className="h-11 px-3 app-control rounded-[17px] flex items-center justify-center text-foreground gap-1.5 shadow-sm opacity-70 shrink-0">
-              <Clock size={13} className="text-primary" />
-              <span className="text-xs font-semibold">核銷</span>
-            </div>
-          ) : (
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={cycleSortType}
-              className="h-11 px-3 app-control rounded-[17px] flex items-center justify-center text-foreground transition-all duration-200 gap-1.5 shadow-sm shrink-0"
-            >
-              <ArrowUpDown size={13} className="text-primary" />
-              <span className="text-xs font-semibold">
-                {sortType === 'expiring' ? '期限' : sortType === 'newest' ? '新' : '舊'}
-              </span>
-            </motion.button>
-          )}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            onClick={cycleSortType}
+            className="h-11 px-3 app-control rounded-[17px] flex items-center justify-center text-foreground transition-all duration-200 gap-1.5 shadow-sm shrink-0"
+          >
+            <ArrowUpDown size={13} className="text-primary" />
+            <span className="text-xs font-semibold">
+              {sortType === 'expiring' ? '期限' : sortType === 'newest' ? '新' : '舊'}
+            </span>
+          </motion.button>
 
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -489,39 +478,37 @@ export const Header: React.FC<HeaderProps> = ({
           </AnimatePresence>
         </div>
 
-        {canUseSelection && (
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mt-2">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setIsSelectionMode(!isSelectionMode)}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 shrink-0 ${
-                isSelectionMode
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
-                  : 'glass-button text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <BoxSelect size={12} />
-              {isSelectionMode ? `已選 ${selectedCount}` : '批次'}
-            </motion.button>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mt-2">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            onClick={() => setIsSelectionMode(!isSelectionMode)}
+            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 shrink-0 ${
+              isSelectionMode
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+                : 'glass-button text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BoxSelect size={12} />
+            {isSelectionMode ? `已選 ${selectedCount}` : '批次'}
+          </motion.button>
 
-            <AnimatePresence initial={false}>
-              {isSelectionMode && (
-                <motion.button
-                  initial={{ scale: 0.92, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.92, opacity: 0 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={onSelectAll}
-                  className="px-3 py-2 glass-button rounded-xl text-xs font-semibold flex items-center gap-1.5 text-muted-foreground hover:text-foreground shrink-0"
-                >
-                  <CheckSquare size={12} />
-                  全選
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+          <AnimatePresence initial={false}>
+            {isSelectionMode && (
+              <motion.button
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onSelectAll}
+                className="px-3 py-2 glass-button rounded-xl text-xs font-semibold flex items-center gap-1.5 text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <CheckSquare size={12} />
+                全選
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );

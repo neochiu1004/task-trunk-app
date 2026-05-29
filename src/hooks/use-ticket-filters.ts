@@ -101,14 +101,15 @@ export const useTicketFilters = ({
     });
 
     result.sort((a, b) => {
-      if (view === 'completed') {
-        return (b.ticket.completedAt || 0) - (a.ticket.completedAt || 0);
-      }
       if (a.isHealthIssue !== b.isHealthIssue) return a.isHealthIssue ? -1 : 1;
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       if (a.isExpiring !== b.isExpiring) return a.isExpiring ? -1 : 1;
-      if (sortType === 'newest') return b.ticket.createdAt - a.ticket.createdAt;
-      if (sortType === 'oldest') return a.ticket.createdAt - b.ticket.createdAt;
+
+      const getTimelineTimestamp = (ticket: Ticket) =>
+        view === 'completed' ? (ticket.completedAt || ticket.createdAt) : ticket.createdAt;
+
+      if (sortType === 'newest') return getTimelineTimestamp(b.ticket) - getTimelineTimestamp(a.ticket);
+      if (sortType === 'oldest') return getTimelineTimestamp(a.ticket) - getTimelineTimestamp(b.ticket);
       if (sortType === 'expiring') return a.expiryTimestamp - b.expiryTimestamp;
       return 0;
     });
