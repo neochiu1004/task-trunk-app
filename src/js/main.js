@@ -108,7 +108,7 @@ class TicketTrunkJijunApp {
       if (this.startupCleanupReport.removedOrphanExpiryNotified > 0) hints.push(`殘留提醒 ${this.startupCleanupReport.removedOrphanExpiryNotified} 筆`);
       showToast(`已清理：${hints.join('、')}`, 'success', 2600);
     }
-    showToast('輕鬆票券已就緒', 'success');
+    showToast('票夾已就緒', 'success');
   }
 
   getRoot() {
@@ -125,7 +125,7 @@ class TicketTrunkJijunApp {
     });
     const versionInfo = document.getElementById('sidebar-version-info');
     if (versionInfo) {
-      versionInfo.textContent = `輕鬆票券 PWA v${APP_VERSION} · ${APP_UPDATED_AT}`;
+      versionInfo.textContent = `票夾 PWA v${APP_VERSION} · ${APP_UPDATED_AT}`;
     }
   }
 

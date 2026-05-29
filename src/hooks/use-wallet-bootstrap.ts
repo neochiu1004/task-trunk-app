@@ -39,9 +39,11 @@ export function useWalletBootstrap(migrateConfig: MigrateConfig): UseWalletBoots
 
         if (dbTasks) setTasks(dbTasks);
         if (dbSettings) {
+          const shouldUseNewDefaultTitle = !dbSettings.appTitle || dbSettings.appTitle === 'Vouchy';
           const mergedSettings: Settings = {
             ...defaultSettings,
             ...dbSettings,
+            appTitle: shouldUseNewDefaultTitle ? defaultSettings.appTitle : dbSettings.appTitle,
             bgConfigMap: dbSettings.bgConfigMap || {},
             specificViewKeywords: dbSettings.specificViewKeywords || ['MOMO', '85度C'],
             brandLogo: dbSettings.brandLogo || '',

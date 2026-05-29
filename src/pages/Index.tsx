@@ -6,7 +6,7 @@ import { Ticket, Template, Settings, ViewType, SortType } from '@/types/ticket';
 import type { BatchEditPayload, ImportPayload } from '@/types/app';
 import { dbHelper } from '@/lib/db';
 import { defaultSettings, defaultViewConfig, DB_KEYS } from '@/lib/constants';
-import { formatDateTime, sendTelegramMessage } from '@/lib/helpers';
+import { checkIsExpiringSoon, formatDateTime, sendTelegramMessage } from '@/lib/helpers';
 import { forceRefreshToLatest } from '@/lib/pwa';
 import { validateImportData } from '@/lib/validation';
 import { useDebouncedDbValue } from '@/hooks/use-debounced-db-value';
@@ -251,8 +251,8 @@ const Index = () => {
   const handleBatchEdit = (payload: BatchEditPayload) => {
     setTasks((prev) => prev.map((t) => {
       if (!selectedIds.has(t.id)) return t;
-      let newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
-      let newRedeemUrl = payload.clearRedeemUrl ? undefined : (payload.redeemUrl || t.redeemUrl);
+      const newTags = payload.clearTags ? [...payload.tagsToAdd] : Array.from(new Set([...(t.tags || []), ...payload.tagsToAdd]));
+      const newRedeemUrl = payload.clearRedeemUrl ? undefined : (payload.redeemUrl || t.redeemUrl);
       return { 
         ...t, 
         tags: newTags, 
@@ -375,6 +375,19 @@ const Index = () => {
   );
 
   const currentConfig = settings.viewConfigs[view] || defaultViewConfig;
+  const visibleExpiringCount = filteredTasks.filter(
+    (ticket) =>
+      !ticket.completed &&
+      !ticket.isDeleted &&
+      ticket.expiry &&
+      checkIsExpiringSoon(ticket.expiry, settings.notifyDays)
+  ).length;
+  const visiblePinnedCount = filteredTasks.filter((ticket) => ticket.pinned && !ticket.completed && !ticket.isDeleted).length;
+  const statusCaption = view === 'active'
+    ? `快到期 ${visibleExpiringCount} 張`
+    : view === 'completed'
+      ? `已核銷 ${viewCounts.completed} 張`
+      : `待整理 ${viewCounts.deleted} 張`;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -452,45 +465,22 @@ const Index = () => {
           style={{ paddingTop: `${headerHeight + 12}px` }}
         >
           <div className="px-4 mb-4 space-y-3">
-            <div className="glass-card rounded-2xl px-4 py-3 border border-border/50">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-semibold">
-                    目前清單
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-foreground">
-                    {viewLabelMap[view]} {filteredTasks.length} / {currentViewCount} 張
-                  </div>
-                  <div className="mt-1 text-[11px] font-medium text-primary">
-                    版本 v{APP_VERSION}
-                  </div>
-                  <div className="mt-1 text-[10px] font-medium text-muted-foreground">
-                    更新時間 {APP_UPDATED_AT}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {searchQuery.trim() && (
-                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
-                        搜尋: {searchQuery.trim()}
-                      </span>
-                    )}
-                    {activeTags.map((tag) => (
-                      <span key={tag} className="px-2 py-1 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
-                        {tag}
-                      </span>
-                    ))}
-                    {isSelectionMode && (
-                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-ticket-warning/15 text-ticket-warning">
-                        已選 {selectedIds.size} 張
-                      </span>
-                    )}
-                    {!searchQuery.trim() && activeTags.length === 0 && !isSelectionMode && (
-                      <span className="text-[11px] text-muted-foreground">
-                        目前沒有額外篩選
-                      </span>
-                    )}
-                  </div>
+            <div className="app-summary-card">
+              <div className="min-w-0">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-primary-foreground/65 font-bold">
+                  {viewLabelMap[view]}
                 </div>
+                <div className="mt-1 flex items-end gap-2">
+                  <span className="text-4xl leading-none font-black text-primary-foreground tabular-nums">{filteredTasks.length}</span>
+                  <span className="pb-1 text-xs font-bold text-primary-foreground/70">/ {currentViewCount} 張</span>
+                </div>
+                <div className="mt-2 text-xs font-semibold text-primary-foreground/78">
+                  {statusCaption}
+                  {visiblePinnedCount > 0 && view === 'active' ? ` · 優先 ${visiblePinnedCount} 張` : ''}
+                </div>
+              </div>
 
+              <div className="flex flex-col items-end gap-2 shrink-0">
                 {(hasActiveFilters || isSelectionMode) && (
                   <button
                     type="button"
@@ -500,12 +490,41 @@ const Index = () => {
                       setIsSelectionMode(false);
                       setSelectedIds(new Set());
                     }}
-                    className="px-3 py-2 rounded-xl glass-button text-xs font-semibold text-muted-foreground hover:text-foreground shrink-0"
+                    className="px-3 py-2 rounded-2xl bg-white/14 text-xs font-bold text-primary-foreground hover:bg-white/20"
                   >
                     清除
                   </button>
                 )}
+                <div className="rounded-2xl bg-white/12 px-3 py-2 text-right">
+                  <div className="text-[10px] font-bold text-primary-foreground/62">v{APP_VERSION}</div>
+                  <div className="mt-0.5 text-[10px] font-semibold text-primary-foreground/78">{APP_UPDATED_AT}</div>
+                </div>
               </div>
+            </div>
+
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {searchQuery.trim() && (
+                <span className="app-filter-chip app-filter-chip-active">
+                  搜尋: {searchQuery.trim()}
+                </span>
+              )}
+              {activeTags.map((tag) => (
+                <span key={tag} className="app-filter-chip">
+                  {tag}
+                </span>
+              ))}
+              {isSelectionMode && (
+                <span className="app-filter-chip app-filter-chip-warning">
+                  已選 {selectedIds.size} 張
+                </span>
+              )}
+              {!searchQuery.trim() && activeTags.length === 0 && !isSelectionMode && (
+                <>
+                  <span className="app-filter-chip app-filter-chip-active">快到期 {visibleExpiringCount}</span>
+                  <span className="app-filter-chip">優先 {visiblePinnedCount}</span>
+                  <span className="app-filter-chip">全部 {currentViewCount}</span>
+                </>
+              )}
             </div>
 
             {isSelectionMode && (

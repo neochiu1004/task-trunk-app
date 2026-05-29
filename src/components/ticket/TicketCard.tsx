@@ -249,13 +249,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         if (isSelectionMode) onSelect(ticket.id);
         else onClick(ticket);
       }}
-      className={`mx-4 mt-4 rounded-2xl flex cursor-pointer relative overflow-visible ${getStatusStyles()}`}
+      className={`mx-4 mt-3 app-ticket-card flex cursor-pointer relative overflow-hidden ${getStatusStyles()}`}
     >
       {/* Background layer with opacity */}
       <div 
-        className="absolute inset-0 glass-card rounded-2xl"
+        className="absolute inset-0 rounded-[24px]"
         style={{ 
           opacity: cardBgOpacity,
+          backgroundColor: cardBgColor || undefined,
           ...(cardBgColor && { backgroundColor: cardBgColor }),
           ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
         }} 
@@ -274,32 +275,31 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       )}
       
       {isHealthIssueWarning && (
-        <div className="absolute -top-2 left-4 bg-ticket-danger text-primary-foreground text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
+        <div className="absolute top-2 left-3 bg-ticket-danger text-primary-foreground text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
           序號不符
         </div>
       )}
       
       {isDuplicateWarning && !isHealthIssueWarning && (
-        <div className="absolute -top-2 left-4 bg-ticket-warning text-primary-foreground text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
+        <div className="absolute top-2 left-3 bg-ticket-warning text-primary-foreground text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
           重複序號
         </div>
       )}
       
       {/* Content layer - always full opacity */}
-      <div className="relative z-10 flex w-full">
-        {/* Left stub - image section */}
-        <div className="ticket-stub w-24 flex-shrink-0 rounded-l-2xl flex items-center justify-center p-2.5 relative overflow-hidden">
+      <div className="relative z-10 flex w-full p-3 gap-3">
+        <div className="w-[72px] h-[72px] flex-shrink-0 rounded-[18px] flex items-center justify-center relative overflow-hidden bg-muted/60 shadow-inner">
           {ticket.image ? (
             <motion.img 
               src={ticket.image} 
-              className="w-full h-full object-cover rounded-xl shadow-sm"
+              className="w-full h-full object-cover"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
               alt=""
             />
           ) : (
-            <div className="w-full aspect-square bg-muted/50 rounded-xl flex items-center justify-center">
-              <span className="text-muted-foreground text-2xl">🎫</span>
+            <div className="w-full h-full bg-gradient-to-br from-[#6A9C89] to-[#334A52] flex items-center justify-center">
+              <TicketIcon size={24} className="text-primary-foreground" />
             </div>
           )}
           {ticket.originalImage && (
@@ -309,14 +309,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           )}
         </div>
         
-        {/* Ticket divider (dashed line) */}
-        <div className="ticket-divider self-stretch my-2" />
-        
-        {/* Main content section */}
-        <div className="flex-1 flex flex-col justify-between py-3 pr-4 pl-2.5 min-w-0">
+        <div className="flex-1 flex flex-col justify-between min-w-0 py-0.5">
           <div>
             <div className="flex justify-between items-start">
-              <h3 className="font-bold text-foreground line-clamp-1 text-sm tracking-tight">
+              <h3 className="font-black text-foreground line-clamp-1 text-[15px] tracking-normal">
                 {ticket.pinned && <Pin size={10} className="inline mr-1 text-amber-500" />}
                 {ticket.productName}
                 {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
@@ -338,7 +334,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             
             <div className="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar">
               {ticket.tags && ticket.tags.map((t) => (
-                <span key={t} className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-lg font-medium whitespace-nowrap shadow-sm">
+                <span key={t} className="text-[10px] bg-primary/8 text-primary px-2 py-1 rounded-full font-bold whitespace-nowrap">
                   {t}
                 </span>
               ))}
@@ -346,13 +342,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             </div>
           </div>
           
-          <div className="flex justify-between items-end mt-2.5">
+          <div className="flex justify-between items-end mt-2.5 gap-2">
             {ticket.completed && ticket.completedAt ? (
-              <div className="text-[10px] font-semibold text-ticket-success flex items-center gap-1.5 bg-ticket-success/10 px-2.5 py-1 rounded-xl shadow-sm">
+              <div className="text-[10px] font-bold text-ticket-success flex items-center gap-1.5 bg-ticket-success/10 px-2.5 py-1 rounded-full">
                 <CheckCircle2 size={12} /> <span>{formatDateTime(ticket.completedAt)}</span>
               </div>
             ) : (
-              <div className={`text-[11px] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-xl shadow-sm ${isExpiring ? 'text-ticket-warning bg-ticket-warning/10' : 'text-ticket-success bg-ticket-success/10'}`}>
+              <div className={`text-[11px] font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full ${isExpiring ? 'text-ticket-warning bg-ticket-warning/10' : 'text-ticket-success bg-ticket-success/10'}`}>
                 <Clock size={12} /> <span>{ticket.expiry || '無期限'}</span>
               </div>
             )}
@@ -363,7 +359,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                   <motion.button
                     whileTap={{ scale: 0.9 }}
                     onClick={(e) => { e.stopPropagation(); onTogglePin(ticket.id); }}
-                    className={`p-2 rounded-xl transition-colors shadow-sm ${ticket.pinned ? 'text-amber-500 bg-amber-500/10' : 'text-muted-foreground/40 hover:text-amber-500/60 bg-muted/50'}`}
+                    className={`p-2 rounded-full transition-colors ${ticket.pinned ? 'text-amber-500 bg-amber-500/10' : 'text-muted-foreground/40 hover:text-amber-500/60 bg-muted/50'}`}
                   >
                     <Pin size={16} className={ticket.pinned ? 'fill-amber-500' : ''} />
                   </motion.button>
@@ -371,7 +367,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  className={`text-xs font-bold px-5 py-2 rounded-xl transition-all duration-200 shadow-md ${
+                  className={`text-xs font-black px-5 py-2.5 rounded-[14px] transition-all duration-200 shadow-sm ${
                     ticket.completed
                       ? 'bg-muted text-muted-foreground'
                       : 'bg-ticket-success text-primary-foreground hover:shadow-lg hover:shadow-ticket-success/30'
