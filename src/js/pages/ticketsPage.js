@@ -1150,8 +1150,9 @@ export class TicketsPage {
     const compactGrid = !!options.compactGrid;
     const ultraCompactCard = !!options.ultraCompactCard;
     const gridColumns = [1, 2, 3].includes(Number(options.gridColumns)) ? Number(options.gridColumns) : 2;
-    const hideTagAndSerial = this.view === 'active' && gridColumns === 3;
+    const hideTagAndSerial = gridColumns === 3;
     const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
+    const isCardFullyTransparent = cardOpacity <= 0.01;
     const cardHeight = clamp(options.cardHeight, 0, 360, 0);
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
@@ -1235,7 +1236,7 @@ export class TicketsPage {
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
-        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
+        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${isCardFullyTransparent ? 'transparent' : escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
         const compactExpiryCardClass = expiryState === 'expired'
           ? 'ticket-card--expiry-expired'
           : expiryState === 'today'
@@ -1363,7 +1364,7 @@ export class TicketsPage {
       const imageStyle = this.view === 'active'
         ? ` style="width: ${Math.round(Math.max(52, thumbnailScale))}%;"`
         : '';
-      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
+      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${isCardFullyTransparent ? 'transparent' : escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
         active: { left: '核銷', right: '回收' },
         completed: { left: '還原', right: '回收' },
@@ -1596,9 +1597,7 @@ export class TicketsPage {
                 : ''}
             </div>
             <div class="flex items-center gap-1.5 shrink-0 relative">
-            ${this.view === 'active'
-              ? `<button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="app-icon-button"><i class="${gridIconClass}"></i></button>`
-              : ''}
+              <button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="app-icon-button"><i class="${gridIconClass}"></i></button>
               <button id="toggle-selection-btn" aria-pressed="${this.app.state.ui.selectionMode ? 'true' : 'false'}" title="${this.app.state.ui.selectionMode ? '取消多選' : '開啟多選'}" class="app-icon-button"><i class="fa-solid ${this.app.state.ui.selectionMode ? 'fa-check-double' : 'fa-rectangle-list'}"></i></button>
               <button id="toggle-toolbar-menu" aria-expanded="false" title="更多功能" class="app-icon-button"><i class="fa-solid fa-ellipsis"></i></button>
               <div id="toolbar-more-menu" class="hidden absolute right-11 top-0 w-44 rounded-xl border border-wabi-border bg-white shadow-xl p-2 space-y-1">
@@ -1852,17 +1851,16 @@ export class TicketsPage {
     });
 
     root.querySelector('#quick-grid-columns')?.addEventListener('click', async () => {
-      if (this.view !== 'active') return;
       const prevViewConfigs = this.app.state.settings.viewConfigs || {};
-      const prevActiveConfig = prevViewConfigs.active || {};
-      const current = [1, 2, 3].includes(Number(prevActiveConfig.gridColumns)) ? Number(prevActiveConfig.gridColumns) : 2;
+      const prevViewConfig = prevViewConfigs[this.view] || {};
+      const current = [1, 2, 3].includes(Number(prevViewConfig.gridColumns)) ? Number(prevViewConfig.gridColumns) : 2;
       const next = current === 1 ? 2 : current === 2 ? 3 : 1;
       this.app.state.settings = {
         ...this.app.state.settings,
         viewConfigs: {
           ...prevViewConfigs,
-          active: {
-            ...prevActiveConfig,
+          [this.view]: {
+            ...prevViewConfig,
             gridColumns: next,
           },
         },

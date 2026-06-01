@@ -191,8 +191,18 @@ export class SettingsPage {
     const activeGridColumns = [1, 2, 3].includes(Number(activeViewConfig.gridColumns))
       ? Number(activeViewConfig.gridColumns)
       : 2;
+    const completedGridColumns = [1, 2, 3].includes(Number(completedViewConfig.gridColumns))
+      ? Number(completedViewConfig.gridColumns)
+      : 2;
+    const deletedGridColumns = [1, 2, 3].includes(Number(deletedViewConfig.gridColumns))
+      ? Number(deletedViewConfig.gridColumns)
+      : 2;
     const activeHideThumbnail = activeViewConfig.showThumbnail === false;
+    const completedHideThumbnail = completedViewConfig.showThumbnail === false;
+    const deletedHideThumbnail = deletedViewConfig.showThumbnail === false;
     const activeUltraCompactCard = activeViewConfig.ultraCompactCard === true;
+    const completedUltraCompactCard = completedViewConfig.ultraCompactCard === true;
+    const deletedUltraCompactCard = deletedViewConfig.ultraCompactCard === true;
     const activeBackgroundImages = Array.isArray(activeViewConfig.backgroundImages)
       ? activeViewConfig.backgroundImages.filter(Boolean)
       : [];
@@ -255,6 +265,12 @@ export class SettingsPage {
     const deletedCardTransparencyPercent = Math.round((1 - deletedCardOpacity) * 100);
     const activeCardHeight = Number.isFinite(Number(activeViewConfig.cardHeight))
       ? Math.max(0, Math.min(360, Number(activeViewConfig.cardHeight)))
+      : 0;
+    const completedCardHeight = Number.isFinite(Number(completedViewConfig.cardHeight))
+      ? Math.max(0, Math.min(360, Number(completedViewConfig.cardHeight)))
+      : 0;
+    const deletedCardHeight = Number.isFinite(Number(deletedViewConfig.cardHeight))
+      ? Math.max(0, Math.min(360, Number(deletedViewConfig.cardHeight)))
       : 0;
     const activeThumbnailScale = Number.isFinite(Number(activeViewConfig.thumbnailScale))
       ? Math.max(10, Math.min(100, Number(activeViewConfig.thumbnailScale)))
@@ -412,7 +428,34 @@ export class SettingsPage {
             </div>
           </div>
           <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
-            <h3 class="text-sm font-semibold text-wabi-primary">已使用視圖背景</h3>
+            <h3 class="text-sm font-semibold text-wabi-primary">已使用視圖版面與背景</h3>
+            <div class="grid md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-wabi-text-secondary mb-1">票券排列欄數</label>
+                <select id="completed-grid-columns" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white">
+                  <option value="1" ${completedGridColumns === 1 ? 'selected' : ''}>1 欄</option>
+                  <option value="2" ${completedGridColumns === 2 ? 'selected' : ''}>2 欄（2x2）</option>
+                  <option value="3" ${completedGridColumns === 3 ? 'selected' : ''}>3 欄</option>
+                </select>
+              </div>
+              <div class="space-y-2">
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="completed-hide-thumbnail" type="checkbox" ${completedHideThumbnail ? 'checked' : ''} />
+                  不顯示縮圖
+                </label>
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="completed-ultra-compact" type="checkbox" ${completedUltraCompactCard ? 'checked' : ''} />
+                  超精簡卡片模式
+                </label>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                <label for="completed-card-height">已使用票券高度</label>
+                <span id="completed-card-height-value">${completedCardHeight > 0 ? `${completedCardHeight}px` : '自動'}</span>
+              </div>
+              <input id="completed-card-height" type="range" min="0" max="360" step="10" value="${completedCardHeight}" class="w-full accent-wabi-primary" />
+            </div>
             <div class="grid md:grid-cols-2 gap-3">
               <div>
                 <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
@@ -451,7 +494,34 @@ export class SettingsPage {
             </div>
           </div>
           <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
-            <h3 class="text-sm font-semibold text-wabi-primary">回收桶視圖背景</h3>
+            <h3 class="text-sm font-semibold text-wabi-primary">回收桶視圖版面與背景</h3>
+            <div class="grid md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-wabi-text-secondary mb-1">票券排列欄數</label>
+                <select id="deleted-grid-columns" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white">
+                  <option value="1" ${deletedGridColumns === 1 ? 'selected' : ''}>1 欄</option>
+                  <option value="2" ${deletedGridColumns === 2 ? 'selected' : ''}>2 欄（2x2）</option>
+                  <option value="3" ${deletedGridColumns === 3 ? 'selected' : ''}>3 欄</option>
+                </select>
+              </div>
+              <div class="space-y-2">
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="deleted-hide-thumbnail" type="checkbox" ${deletedHideThumbnail ? 'checked' : ''} />
+                  不顯示縮圖
+                </label>
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="deleted-ultra-compact" type="checkbox" ${deletedUltraCompactCard ? 'checked' : ''} />
+                  超精簡卡片模式
+                </label>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
+                <label for="deleted-card-height">回收桶票券高度</label>
+                <span id="deleted-card-height-value">${deletedCardHeight > 0 ? `${deletedCardHeight}px` : '自動'}</span>
+              </div>
+              <input id="deleted-card-height" type="range" min="0" max="360" step="10" value="${deletedCardHeight}" class="w-full accent-wabi-primary" />
+            </div>
             <div class="grid md:grid-cols-2 gap-3">
               <div>
                 <div class="flex items-center justify-between text-sm text-wabi-text-secondary mb-1">
@@ -734,6 +804,10 @@ export class SettingsPage {
     const deletedCardTransparencyValue = root.querySelector('#deleted-card-transparency-value');
     const activeCardHeightInput = root.querySelector('#active-card-height');
     const activeCardHeightValue = root.querySelector('#active-card-height-value');
+    const completedCardHeightInput = root.querySelector('#completed-card-height');
+    const completedCardHeightValue = root.querySelector('#completed-card-height-value');
+    const deletedCardHeightInput = root.querySelector('#deleted-card-height');
+    const deletedCardHeightValue = root.querySelector('#deleted-card-height-value');
     const activeThumbnailScaleInput = root.querySelector('#active-thumbnail-scale');
     const activeThumbnailScaleValue = root.querySelector('#active-thumbnail-scale-value');
     const swipeGesturesEnabledInput = root.querySelector('#swipe-gestures-enabled');
@@ -846,6 +920,14 @@ export class SettingsPage {
         const cardHeight = Math.max(0, Math.min(360, Number(activeCardHeightInput.value) || 0));
         activeCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
       }
+      if (completedCardHeightValue && completedCardHeightInput) {
+        const cardHeight = Math.max(0, Math.min(360, Number(completedCardHeightInput.value) || 0));
+        completedCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
+      }
+      if (deletedCardHeightValue && deletedCardHeightInput) {
+        const cardHeight = Math.max(0, Math.min(360, Number(deletedCardHeightInput.value) || 0));
+        deletedCardHeightValue.textContent = cardHeight > 0 ? `${cardHeight}px` : '自動';
+      }
       if (activeThumbnailScaleValue && activeThumbnailScaleInput) {
         const thumbScale = Math.max(10, Math.min(100, Number(activeThumbnailScaleInput.value) || 100));
         activeThumbnailScaleValue.textContent = `${thumbScale}%`;
@@ -903,6 +985,8 @@ export class SettingsPage {
       const deletedBgOpacityRaw = Number(deletedBgOpacityInput?.value);
       const deletedCardTransparencyRaw = Number(deletedCardTransparencyInput?.value);
       const cardHeightRaw = Number(activeCardHeightInput?.value);
+      const completedCardHeightRaw = Number(completedCardHeightInput?.value);
+      const deletedCardHeightRaw = Number(deletedCardHeightInput?.value);
       const thumbnailScaleRaw = Number(activeThumbnailScaleInput?.value);
       const swipeTriggerDistanceRaw = Number(swipeTriggerDistanceInput?.value);
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
@@ -912,6 +996,8 @@ export class SettingsPage {
       const deletedBgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(deletedBgOpacityRaw) ? deletedBgOpacityRaw : 100));
       const deletedCardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(deletedCardTransparencyRaw) ? deletedCardTransparencyRaw : 5));
       const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
+      const completedCardHeight = Math.max(0, Math.min(360, Number.isFinite(completedCardHeightRaw) ? completedCardHeightRaw : 0));
+      const deletedCardHeight = Math.max(0, Math.min(360, Number.isFinite(deletedCardHeightRaw) ? deletedCardHeightRaw : 0));
       const thumbnailScale = Math.max(10, Math.min(100, Number.isFinite(thumbnailScaleRaw) ? thumbnailScaleRaw : 100));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
@@ -929,19 +1015,27 @@ export class SettingsPage {
       };
       const nextCompletedViewConfig = {
         ...prevCompletedViewConfig,
+        gridColumns: Math.max(1, Math.min(3, Number(root.querySelector('#completed-grid-columns')?.value || 2))),
+        showThumbnail: !(root.querySelector('#completed-hide-thumbnail')?.checked),
+        ultraCompactCard: root.querySelector('#completed-ultra-compact')?.checked === true,
         backgroundImage: '',
         backgroundImages: [...completedBackgroundImages],
         showBackground: completedShowBackgroundInput?.checked !== false,
         bgOpacity: completedBgOpacityPercent / 100,
         cardOpacity: 1 - (completedCardTransparencyPercent / 100),
+        cardHeight: completedCardHeight,
       };
       const nextDeletedViewConfig = {
         ...prevDeletedViewConfig,
+        gridColumns: Math.max(1, Math.min(3, Number(root.querySelector('#deleted-grid-columns')?.value || 2))),
+        showThumbnail: !(root.querySelector('#deleted-hide-thumbnail')?.checked),
+        ultraCompactCard: root.querySelector('#deleted-ultra-compact')?.checked === true,
         backgroundImage: '',
         backgroundImages: [...deletedBackgroundImages],
         showBackground: deletedShowBackgroundInput?.checked !== false,
         bgOpacity: deletedBgOpacityPercent / 100,
         cardOpacity: 1 - (deletedCardTransparencyPercent / 100),
+        cardHeight: deletedCardHeight,
       };
       const settings = {
         ...this.app.state.settings,
@@ -991,6 +1085,8 @@ export class SettingsPage {
     deletedBgOpacityInput?.addEventListener('input', syncOpacityLabels);
     deletedCardTransparencyInput?.addEventListener('input', syncOpacityLabels);
     activeCardHeightInput?.addEventListener('input', syncOpacityLabels);
+    completedCardHeightInput?.addEventListener('input', syncOpacityLabels);
+    deletedCardHeightInput?.addEventListener('input', syncOpacityLabels);
     activeThumbnailScaleInput?.addEventListener('input', syncOpacityLabels);
     swipeGesturesEnabledInput?.addEventListener('change', syncSwipeControls);
     swipeTriggerDistanceInput?.addEventListener('input', syncSwipeControls);
