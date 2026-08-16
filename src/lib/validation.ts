@@ -1,4 +1,4 @@
-import type { ImportPayload } from '@/types/app';
+import type { BatchTicketInput, ImportPayload } from '@/types/app';
 import type { Ticket } from '@/types/ticket';
 
 type ImportValidationResult =
@@ -29,6 +29,33 @@ export const validateImportData = (data: unknown): ImportValidationResult => {
   }
 
   return { success: true, data: normalized };
+};
+
+export type BatchTicketValidation =
+  | { success: true; data: BatchTicketInput[] }
+  | { success: false; error: string };
+
+export const validateBatchTicketData = (data: unknown): BatchTicketValidation => {
+  if (!Array.isArray(data)) return { success: false, error: '批量票券資料必須是 JSON 陣列' };
+  const errors: string[] = [];
+  const normalized = data.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      errors.push(`第 ${index + 1} 筆不是物件`);
+      return null;
+    }
+    const row = item as Record<string, unknown>;
+    const ticketNumber = typeof row.ticketNumber === 'string' ? row.ticketNumber.trim() : '';
+    const productName = typeof row.productName === 'string' ? row.productName.trim() : '';
+    const expiryDate = row.expiryDate == null ? null : String(row.expiryDate).trim() || null;
+    const buyer = typeof row.buyer === 'string' ? row.buyer.trim() : '';
+    if (!ticketNumber) errors.push(`第 ${index + 1} 筆缺少 ticketNumber`);
+    if (!productName) errors.push(`第 ${index + 1} 筆缺少 productName`);
+    return { ticketNumber, productName, expiryDate, buyer: buyer || undefined };
+  }).filter((item): item is BatchTicketInput => item !== null);
+
+  return errors.length > 0
+    ? { success: false, error: errors.slice(0, 8).join('；') + (errors.length > 8 ? '；其餘錯誤略' : '') }
+    : { success: true, data: normalized };
 };
 
 export const isValidHttpUrl = (url: string): boolean => {

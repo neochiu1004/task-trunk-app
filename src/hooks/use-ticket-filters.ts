@@ -60,11 +60,12 @@ export const useTicketFilters = ({
         expiryTimestamp: getExpiryTimestamp(ticket.expiry),
         isHealthIssue:
           !ticket.completed && !ticket.isDeleted && healthIssueSerials.has(ticket.serial || ''),
+        isDuplicate: !ticket.completed && !ticket.isDeleted && duplicateSerials.has(ticket.serial),
         isPinned: !ticket.completed && !ticket.isDeleted && !!ticket.pinned,
         isExpiring:
           !ticket.completed && !ticket.isDeleted && checkIsExpiringSoon(ticket.expiry, notifyDays),
       })),
-    [tasks, healthIssueSerials, notifyDays]
+    [tasks, healthIssueSerials, notifyDays, duplicateSerials]
   );
 
   const matchesTag = useCallback((ticket: Ticket, tag: string): boolean => {
@@ -101,6 +102,7 @@ export const useTicketFilters = ({
     });
 
     result.sort((a, b) => {
+      if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? -1 : 1;
       if (a.isHealthIssue !== b.isHealthIssue) return a.isHealthIssue ? -1 : 1;
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       if (a.isExpiring !== b.isExpiring) return a.isExpiring ? -1 : 1;

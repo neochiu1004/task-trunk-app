@@ -88,14 +88,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     if (isSelected) {
       return 'ring-2 ring-primary ring-offset-2 ring-offset-background';
     }
+    if (isDuplicateWarning) {
+      return 'ring-2 ring-purple-500/70 shadow-lg shadow-purple-500/20';
+    }
     if (isHealthIssueWarning) {
       return 'ring-2 ring-ticket-danger/60 shadow-lg shadow-ticket-danger/15';
     }
     if (isExpiringWarning) {
       return 'ring-2 ring-ticket-warning/50 shadow-lg shadow-ticket-warning/10';
-    }
-    if (isDuplicateWarning) {
-      return 'ring-2 ring-ticket-warning/40';
     }
     return '';
   };
@@ -129,10 +129,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         {/* Background layer with opacity */}
         <div 
           className="absolute inset-0 glass-card rounded-2xl border border-border/50"
-          style={{ 
+          style={{
             opacity: cardBgOpacity,
-            ...(cardBgColor && { backgroundColor: cardBgColor }),
-            ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
+            ...(isDuplicateWarning ? { backgroundColor: 'rgba(168, 85, 247, 0.14)' } : cardBgColor && { backgroundColor: cardBgColor }),
+            borderColor: isDuplicateWarning ? 'rgba(147, 51, 234, 0.65)' : cardBorderColor,
+            ...(cardBorderColor && !isDuplicateWarning && { borderWidth: '1px', borderStyle: 'solid' }),
           }} 
         />
         
@@ -176,7 +177,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             {/* Expiry & duplicate info */}
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               {isDuplicateWarning && (
-                <span className="text-[10px] font-semibold text-orange-500 flex items-center gap-0.5 bg-orange-500/10 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] font-semibold text-purple-700 flex items-center gap-0.5 bg-purple-500/15 px-1.5 py-0.5 rounded-full">
                   <Copy size={10} /> 重複
                 </span>
               )}
@@ -250,8 +251,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         className="absolute inset-0 rounded-[24px] border border-border/70 shadow-[0_14px_30px_-22px_hsl(200_30%_20%_/_0.36),0_2px_8px_hsl(200_20%_20%_/_0.07)] backdrop-blur-[10px]"
         style={{ 
           opacity: cardBgOpacity,
-          backgroundColor: cardBgColor || 'hsl(var(--wabi-surface))',
-          ...(cardBorderColor && { borderColor: cardBorderColor, borderWidth: '1px', borderStyle: 'solid' }),
+          backgroundColor: isDuplicateWarning ? 'rgba(168, 85, 247, 0.14)' : (cardBgColor || 'hsl(var(--wabi-surface))'),
+          borderColor: isDuplicateWarning ? 'rgba(147, 51, 234, 0.65)' : cardBorderColor,
+          borderWidth: '1px',
+          borderStyle: 'solid',
         }} 
       />
       
@@ -274,7 +277,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       )}
       
       {isDuplicateWarning && !isHealthIssueWarning && (
-        <div className="absolute top-2 left-3 bg-ticket-warning text-primary-foreground text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
+        <div className="absolute top-2 left-3 bg-purple-600 text-white text-[10px] px-3 py-1 rounded-full z-20 font-semibold shadow-md">
           重複序號
         </div>
       )}
