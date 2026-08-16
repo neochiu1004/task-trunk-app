@@ -1,4 +1,5 @@
 import { DataService } from './services/dataService.js';
+import { refreshBatchTicketImages } from './services/batchImportService.js';
 import { Router } from './router.js';
 import {
   checkIsExpiringSoon,
@@ -83,6 +84,16 @@ class TicketTrunkJijunApp {
         tasks: this.state.tasks,
         expiryNotified: this.state.expiryNotified,
       });
+    }
+
+    const refreshedBatchImages = await refreshBatchTicketImages(this.state.tasks);
+    if (refreshedBatchImages.changed) {
+      this.state.tasks = refreshedBatchImages.tasks;
+      await this.dataService.saveState({
+        tasks: this.state.tasks,
+        expiryNotified: this.state.expiryNotified,
+      });
+      showToast('已更新批量票券圖片與期限', 'success', 2600);
     }
 
     await this.ensureRequiredKeys();

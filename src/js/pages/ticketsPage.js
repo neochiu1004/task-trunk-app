@@ -16,6 +16,7 @@ const VIEW_META = {
 };
 const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
 const EXPIRY_URGENT_FILTER_TAG = '__expiry_urgent__';
+const DUPLICATE_FILTER_TAG = '__duplicate_serial__';
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
 const APP_VERSION = __APP_VERSION__;
 const APP_UPDATED_AT = __APP_UPDATED_AT__;
@@ -65,6 +66,14 @@ function getExpiryCountdownLabel(expiry) {
   if (diffDays === 0) return 'D-day';
   if (diffDays > 0) return `D-${diffDays}`;
   return `逾期${Math.abs(diffDays)}天`;
+}
+
+function getDuplicateSerialSet(tasks) {
+  const counts = new Map();
+  tasks.forEach((ticket) => {
+    if (!ticket.isDeleted && ticket.serial) counts.set(ticket.serial, (counts.get(ticket.serial) || 0) + 1);
+  });
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([serial]) => serial));
 }
 
 function getSortComparator(sortType) {
@@ -690,7 +699,8 @@ export class TicketsPage {
 
   openRedeemModeModal(ticket) {
     const originalImage = ticket.originalImage || '';
-    const hasOriginalImage = !!originalImage;
+    const displayImage = ticket.image || originalImage;
+    const hasOriginalImage = !!displayImage;
     const hasBarcodeSource = !!ticket.serial;
     const defaultMode = hasOriginalImage ? 'original' : 'barcode';
     const keywords = (this.app.state.settings.specificViewKeywords || []).length
@@ -721,9 +731,9 @@ export class TicketsPage {
         </div>
 
         <div id="redeem-mode-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3">
-          <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>原圖模式</button>
+          <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>票券圖片</button>
           <button type="button" data-redeem-mode="barcode" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasBarcodeSource ? '' : 'opacity-45 cursor-not-allowed'}" ${hasBarcodeSource ? '' : 'disabled aria-disabled="true"'}>條碼模式</button>
-          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">原圖模式優先，無原圖時自動切換條碼</span>
+          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">票券圖片優先，無圖片時自動切換條碼</span>
         </div>
 
         <div id="barcode-variant-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3 ${defaultMode === 'barcode' ? '' : 'hidden'}">
@@ -734,11 +744,11 @@ export class TicketsPage {
         <div id="redeem-preview-wrap" class="flex-1 min-h-0 rounded-lg border border-wabi-border bg-slate-100 p-0 flex items-center justify-center overflow-hidden"></div>
 
         <div id="redeem-original-actions" data-redeem-keepopen="1" class="hidden fixed right-4 bottom-4 z-[96]">
-          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2 rounded-full bg-white/92 text-wabi-primary text-sm font-semibold border border-wabi-border shadow-lg backdrop-blur-sm">下載原圖</button>
+          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2 rounded-full bg-white/92 text-wabi-primary text-sm font-semibold border border-wabi-border shadow-lg backdrop-blur-sm">下載票券圖片</button>
         </div>
 
         <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
-          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border bg-white text-sm md:text-base">${hasOriginalImage ? '下載原圖' : '下載圖片'}</button>
+          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border bg-white text-sm md:text-base">${hasOriginalImage ? '下載票券圖片' : '下載圖片'}</button>
           <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
         </div>
       </div>
@@ -753,7 +763,7 @@ export class TicketsPage {
     const barcodeVariantSwitch = modal.querySelector('#barcode-variant-switch');
     const footer = modal.querySelector('#redeem-footer');
     const originalActions = modal.querySelector('#redeem-original-actions');
-    const downloadSource = ticket.originalImage || ticket.image || '';
+    const downloadSource = ticket.image || ticket.originalImage || '';
 
     const updateModeButtonState = () => {
       modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
@@ -930,7 +940,7 @@ export class TicketsPage {
           return;
         }
         previewWrap.innerHTML = `
-          <img src="${originalImage}" alt="原圖預覽" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-cover bg-black cursor-pointer" />
+          <img src="${displayImage}" alt="替換後票券圖片" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-contain bg-black cursor-pointer" />
         `;
         updateModeButtonState();
         return;
@@ -1157,6 +1167,7 @@ export class TicketsPage {
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
+    const duplicateSerials = getDuplicateSerialSet(this.app.state.tasks);
     if (!tickets.length) {
       const meta = VIEW_META[this.view];
       const hasScope = !!this.app.state.ui.search.trim() || (this.app.state.ui.activeTags || []).length > 0;
@@ -1190,7 +1201,7 @@ export class TicketsPage {
       const expiryCountdown = !ticket.completed && !ticket.isDeleted
         ? getExpiryCountdownLabel(ticket.expiry)
         : '';
-      const isDuplicateSerial = !!ticket.serial && this.app.state.tasks.filter((t) => !t.isDeleted && t.serial === ticket.serial).length > 1;
+      const isDuplicateSerial = duplicateSerials.has(ticket.serial);
       const hasOriginalImage = !!ticket.originalImage;
       const selected = this.app.state.ui.selectedIds.has(ticket.id);
       const selectedVisual = this.app.state.ui.selectionMode && selected;
@@ -1233,7 +1244,9 @@ export class TicketsPage {
       const activeExpiryBadge = this.view === 'active' && !ticket.completed && !ticket.isDeleted
         ? `<span class="${activeExpiryClass}">${activeExpiryPrefix}${escapeHtml(ticket.expiry || '無期限')}</span>`
         : '';
+      const isActiveDuplicate = this.view === 'active' && isDuplicateSerial;
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
+      const duplicateCardClass = isActiveDuplicate ? 'ticket-card--duplicate' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
         const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${isCardFullyTransparent ? 'transparent' : escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
@@ -1269,7 +1282,7 @@ export class TicketsPage {
           ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
           : '';
         return `
-          <article class="ticket-card ticket-card--ultra ${originalFrameClass} ${compactExpiryCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${compactPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+          <article class="ticket-card ticket-card--ultra ${originalFrameClass} ${duplicateCardClass} ${compactExpiryCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${compactPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
             <div class="flex items-start justify-between gap-1.5">
               <div class="flex items-start gap-2 min-w-0">
                 ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
@@ -1377,7 +1390,7 @@ export class TicketsPage {
       const hasActiveThumbnail = showThumbnail && ticket.image && this.view === 'active';
 
       return `
-        <article class="ticket-card ${originalFrameClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+          <article class="ticket-card ${originalFrameClass} ${duplicateCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
           <div class="flex items-start gap-3 ${headerMarginClass}">
             ${hasActiveThumbnail
               ? `<div class="app-card-thumb"><img src="${ticket.image}" alt="ticket thumbnail" /></div>`
@@ -1425,6 +1438,7 @@ export class TicketsPage {
     const sortType = this.app.state.ui.sort;
     const activeTags = this.app.state.ui.activeTags;
     const notifyDays = this.app.state.settings.notifyDays;
+    const duplicateSerials = getDuplicateSerialSet(this.app.state.tasks);
 
     let list = this.app.state.tasks.filter((ticket) => {
       if (this.view === 'active' && (ticket.completed || ticket.isDeleted)) return false;
@@ -1438,6 +1452,7 @@ export class TicketsPage {
           const state = getExpiryState(ticket.expiry, notifyDays);
           return ['expired', 'today', 'soon'].includes(state);
         }
+        if (tag === DUPLICATE_FILTER_TAG) return this.view === 'active' && duplicateSerials.has(ticket.serial);
         return (ticket.tags || []).includes(tag);
       })) {
         return false;
@@ -1457,6 +1472,9 @@ export class TicketsPage {
     });
 
     list.sort((a, b) => {
+      if (this.view === 'active' && duplicateSerials.has(a.serial) !== duplicateSerials.has(b.serial)) {
+        return duplicateSerials.has(a.serial) ? -1 : 1;
+      }
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       if (this.view === 'completed') {
         if (sortType === 'redeemed-oldest') return (a.completedAt || 0) - (b.completedAt || 0);
@@ -1535,6 +1553,8 @@ export class TicketsPage {
       ? `<div class="ticket-view-bg-layer" style="background-image: url('${escapeHtml(initialBackgroundImage)}'); opacity: ${bgOpacity};"></div>`
       : '';
     const allTags = [...new Set(this.app.state.tasks.flatMap((t) => t.tags || []))].sort();
+    const duplicateSerials = getDuplicateSerialSet(this.app.state.tasks);
+    const duplicateActiveCount = this.app.state.tasks.filter((ticket) => !ticket.completed && !ticket.isDeleted && duplicateSerials.has(ticket.serial)).length;
     const urgentActiveCount = this.app.state.tasks.filter((ticket) => {
       if (ticket.completed || ticket.isDeleted) return false;
       const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
@@ -1548,6 +1568,8 @@ export class TicketsPage {
         ? '原圖'
         : tag === EXPIRY_URGENT_FILTER_TAG
           ? '到期警示'
+          : tag === DUPLICATE_FILTER_TAG
+            ? '重複票券'
           : `#${escapeHtml(tag)}`
     ));
     const selectedCount = this.app.state.ui.selectedIds.size;
@@ -1677,6 +1699,9 @@ export class TicketsPage {
             <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="app-filter-chip ${this.app.state.ui.activeTags.length === 0 ? 'app-filter-chip--active' : ''}">全部</button>
             ${this.view === 'active'
               ? `<button data-filter-tag="${EXPIRY_URGENT_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'app-filter-chip--active' : 'app-filter-chip--warning'}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>到期警示<span class="ml-1 ${urgentActiveCount > 0 ? '' : 'opacity-60'}">(${urgentActiveCount})</span></button>`
+              : ''}
+            ${this.view === 'active'
+              ? `<button data-filter-tag="${DUPLICATE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(DUPLICATE_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(DUPLICATE_FILTER_TAG) ? 'app-filter-chip--active' : 'app-filter-chip--duplicate'}"><i class="fa-solid fa-copy mr-1"></i>重複票券<span class="ml-1 ${duplicateActiveCount > 0 ? '' : 'opacity-60'}">(${duplicateActiveCount})</span></button>`
               : ''}
             <button data-filter-tag="${ORIGINAL_IMAGE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'app-filter-chip--active' : ''}"><i class="fa-regular fa-image mr-1"></i>原圖</button>
             ${allTags.map((tag) => `
