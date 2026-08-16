@@ -3,6 +3,7 @@ import { generateId, normalizeDateInput } from '../utils.js';
 
 const BATCH_TAG = '批量生成';
 const BASE_WIDTH = 944;
+const BASE_HEIGHT = 2048;
 
 export function validateBatchRows(data) {
   if (!Array.isArray(data)) return { success: false, error: '批量資料必須是 JSON 陣列' };
@@ -46,7 +47,8 @@ const fitFontSize = (ctx, text, maxWidth, initial) => {
 
 export async function renderBatchTicketImage(source, name, serial, expiry) {
   const image = await loadImage(source);
-  const scale = image.width / BASE_WIDTH;
+  const scaleX = image.width / BASE_WIDTH;
+  const scaleY = image.height / BASE_HEIGHT;
   const canvas = document.createElement('canvas');
   canvas.width = image.width;
   canvas.height = image.height;
@@ -54,7 +56,8 @@ export async function renderBatchTicketImage(source, name, serial, expiry) {
   if (!ctx) throw new Error('瀏覽器不支援圖片產生');
   ctx.drawImage(image, 0, 0);
   ctx.save();
-  ctx.scale(scale, scale);
+  // 以固定版型的 944x2048 座標系定位，但保留上傳圖片完整尺寸與比例。
+  ctx.scale(scaleX, scaleY);
 
   ctx.fillStyle = '#fff';
   ctx.fillRect(120, 805, 704, 105);
