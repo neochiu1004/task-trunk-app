@@ -37,6 +37,13 @@ const loadImage = (src) => new Promise((resolve, reject) => {
   image.src = src;
 });
 
+const drawContain = (ctx, image, x, y, width, height) => {
+  const ratio = Math.min(width / image.width, height / image.height);
+  const drawWidth = image.width * ratio;
+  const drawHeight = image.height * ratio;
+  ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+};
+
 const fitFontSize = (ctx, text, maxWidth, initial) => {
   let size = initial;
   while (size > 16) {
@@ -47,7 +54,7 @@ const fitFontSize = (ctx, text, maxWidth, initial) => {
   return size;
 };
 
-export async function renderBatchTicketImage(source = batchTemplateImage, name, serial, expiry) {
+export async function renderBatchTicketImage(source = batchTemplateImage, name, serial, expiry, productImage = '') {
   const image = await loadImage(source);
   const scaleX = image.width / BASE_WIDTH;
   const scaleY = image.height / BASE_HEIGHT;
@@ -81,6 +88,13 @@ export async function renderBatchTicketImage(source = batchTemplateImage, name, 
   ctx.font = '700 28px Arial, sans-serif';
   ctx.fillText(`序號：${serial}`, 472, 1232, 570);
 
+  if (productImage) {
+    const customProductImage = await loadImage(productImage);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(120, 390, 704, 400);
+    drawContain(ctx, customProductImage, 145, 410, 654, 360);
+  }
+
   ctx.fillStyle = '#fff';
   // 期限所在列位於商品描述列下方，避免覆蓋後文字落在上一列。
   ctx.fillRect(190, 1400, 560, 150);
@@ -110,6 +124,7 @@ export async function buildBatchTickets(rows, existingTickets = []) {
       image,
       originalImage: batchTemplateImage,
       images: [image],
+      batchProductImage: '',
       batchImageVersion: BATCH_IMAGE_VERSION,
       tags: [BATCH_TAG, ...(row.buyer ? [row.buyer] : [])],
       barcodeFormat: 'QR_CODE',
@@ -128,7 +143,7 @@ export async function refreshBatchTicketImages(tasks) {
       return ticket;
     }
     try {
-      const image = await renderBatchTicketImage(undefined, ticket.productName || '', ticket.serial, ticket.expiry || '');
+      const image = await renderBatchTicketImage(undefined, ticket.productName || '', ticket.serial, ticket.expiry || '', ticket.batchProductImage || '');
       changed = true;
       return { ...ticket, image, images: [image], batchImageVersion: BATCH_IMAGE_VERSION };
     } catch (_error) {

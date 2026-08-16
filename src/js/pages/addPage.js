@@ -179,8 +179,16 @@ export class AddPage {
               </div>
             </div>
             ${editing?.tags?.includes('批量生成') ? `
+              <div>
+                <label class="block text-sm text-wabi-text-secondary mb-1">名稱上方商品圖（兌換圖片）</label>
+                <input id="batch-product-image-file" type="file" accept="image/*" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
+                <div id="batch-product-image-preview-wrap" class="mt-2 ${editing?.batchProductImage ? '' : 'hidden'}">
+                  <img id="batch-product-image-preview" src="${escapeHtml(editing?.batchProductImage || '')}" class="w-full max-h-40 object-contain rounded-xl border border-wabi-border bg-slate-50" alt="商品圖預覽" />
+                  <button id="batch-product-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除自訂商品圖</button>
+                </div>
+              </div>
               <p class="text-xs text-purple-700 rounded-lg border border-purple-100 bg-purple-50 px-3 py-2">
-                這是批量生成票券。修改名稱、序號或到期日並儲存後，系統會重新產生兌換圖片。
+                這是批量生成票券。可替換名稱上方商品圖；修改圖片、名稱、序號或到期日並儲存後，系統會重新產生兌換圖片。
               </p>
             ` : ''}
           </div>
@@ -268,6 +276,7 @@ export class AddPage {
 
     let imageData = editing?.image || '';
     let originalImage = editing?.originalImage || '';
+    let batchProductImage = editing?.batchProductImage || '';
 
     const isDuplicateSerial = (serial) => this.app.state.tasks.some((ticket) => {
         if (ticket.isDeleted) return false;
@@ -445,6 +454,32 @@ export class AddPage {
       }
     });
 
+    const batchProductImageInput = root.querySelector('#batch-product-image-file');
+    const batchProductImagePreview = root.querySelector('#batch-product-image-preview');
+    const batchProductImageWrap = root.querySelector('#batch-product-image-preview-wrap');
+    batchProductImageInput?.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        batchProductImage = await compressImage(file, 'original');
+        if (batchProductImagePreview) batchProductImagePreview.src = batchProductImage;
+        batchProductImageWrap?.classList.remove('hidden');
+        showToast('商品圖已載入，儲存後會替換名稱上方圖案', 'success');
+      } catch (error) {
+        showToast(`商品圖處理失敗：${error.message}`, 'error');
+      } finally {
+        event.target.value = '';
+      }
+    });
+
+    root.querySelector('#batch-product-image-clear-btn')?.addEventListener('click', () => {
+      batchProductImage = '';
+      if (batchProductImageInput) batchProductImageInput.value = '';
+      if (batchProductImagePreview) batchProductImagePreview.src = '';
+      batchProductImageWrap?.classList.add('hidden');
+      showToast('已清除自訂商品圖，會恢復版型原圖', 'success');
+    });
+
     root.querySelector('#thumb-image-clear-btn')?.addEventListener('click', () => {
       imageData = '';
       if (thumbImageInput) thumbImageInput.value = '';
@@ -535,7 +570,7 @@ export class AddPage {
 
       if (editing?.tags?.includes('批量生成')) {
         try {
-          imageData = await renderBatchTicketImage(undefined, productName, serial, expiry);
+          imageData = await renderBatchTicketImage(undefined, productName, serial, expiry, batchProductImage);
         } catch (error) {
           showToast(`兌換圖片重新產生失敗：${error.message}`, 'error');
           return;
@@ -550,6 +585,7 @@ export class AddPage {
         image: imageData,
         originalImage,
         images: imageData ? [imageData] : (editing?.images || []),
+        batchProductImage: editing?.tags?.includes('批量生成') ? batchProductImage : (editing?.batchProductImage || ''),
         batchImageVersion: editing?.tags?.includes('批量生成') ? BATCH_IMAGE_VERSION : (editing?.batchImageVersion || 0),
         tags: parseTags(root.querySelector('#tags').value),
         note: editing?.note || '',
