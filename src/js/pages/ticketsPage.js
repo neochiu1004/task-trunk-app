@@ -699,7 +699,8 @@ export class TicketsPage {
 
   openRedeemModeModal(ticket) {
     const originalImage = ticket.originalImage || '';
-    const hasOriginalImage = !!originalImage;
+    const displayImage = ticket.image || originalImage;
+    const hasOriginalImage = !!displayImage;
     const hasBarcodeSource = !!ticket.serial;
     const defaultMode = hasOriginalImage ? 'original' : 'barcode';
     const keywords = (this.app.state.settings.specificViewKeywords || []).length
@@ -730,9 +731,9 @@ export class TicketsPage {
         </div>
 
         <div id="redeem-mode-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3">
-          <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>原圖模式</button>
+          <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>票券圖片</button>
           <button type="button" data-redeem-mode="barcode" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasBarcodeSource ? '' : 'opacity-45 cursor-not-allowed'}" ${hasBarcodeSource ? '' : 'disabled aria-disabled="true"'}>條碼模式</button>
-          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">原圖模式優先，無原圖時自動切換條碼</span>
+          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">票券圖片優先，無圖片時自動切換條碼</span>
         </div>
 
         <div id="barcode-variant-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3 ${defaultMode === 'barcode' ? '' : 'hidden'}">
@@ -743,11 +744,11 @@ export class TicketsPage {
         <div id="redeem-preview-wrap" class="flex-1 min-h-0 rounded-lg border border-wabi-border bg-slate-100 p-0 flex items-center justify-center overflow-hidden"></div>
 
         <div id="redeem-original-actions" data-redeem-keepopen="1" class="hidden fixed right-4 bottom-4 z-[96]">
-          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2 rounded-full bg-white/92 text-wabi-primary text-sm font-semibold border border-wabi-border shadow-lg backdrop-blur-sm">下載原圖</button>
+          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2 rounded-full bg-white/92 text-wabi-primary text-sm font-semibold border border-wabi-border shadow-lg backdrop-blur-sm">下載票券圖片</button>
         </div>
 
         <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
-          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border bg-white text-sm md:text-base">${hasOriginalImage ? '下載原圖' : '下載圖片'}</button>
+          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border bg-white text-sm md:text-base">${hasOriginalImage ? '下載票券圖片' : '下載圖片'}</button>
           <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
         </div>
       </div>
@@ -762,7 +763,7 @@ export class TicketsPage {
     const barcodeVariantSwitch = modal.querySelector('#barcode-variant-switch');
     const footer = modal.querySelector('#redeem-footer');
     const originalActions = modal.querySelector('#redeem-original-actions');
-    const downloadSource = ticket.originalImage || ticket.image || '';
+    const downloadSource = ticket.image || ticket.originalImage || '';
 
     const updateModeButtonState = () => {
       modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
@@ -939,7 +940,7 @@ export class TicketsPage {
           return;
         }
         previewWrap.innerHTML = `
-          <img src="${originalImage}" alt="原圖預覽" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-cover bg-black cursor-pointer" />
+          <img src="${displayImage}" alt="替換後票券圖片" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-contain bg-black cursor-pointer" />
         `;
         updateModeButtonState();
         return;

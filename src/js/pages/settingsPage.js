@@ -625,19 +625,10 @@ export class SettingsPage {
         <section class="bg-white border border-purple-200 rounded-2xl p-4 space-y-3">
           <div>
             <h2 class="font-semibold text-purple-900">批量新增票券</h2>
-            <p class="text-xs text-wabi-text-secondary mt-1">請直接貼上 ticketNumber、expiryDate、productName、buyer JSON。這裡不使用檔案匯入；檔案匯入保留給上方完整備份功能。</p>
+            <p class="text-xs text-wabi-text-secondary mt-1">請直接貼上 ticketNumber、expiryDate、productName、buyer JSON。系統會使用內建票券版型自動產生名稱、期限、序號與 QR code 圖片。</p>
           </div>
           <textarea id="batch-json-input" class="w-full min-h-40 rounded-xl border border-wabi-border bg-white p-3 font-mono text-xs" placeholder='[{"ticketNumber":"E123","expiryDate":"2027/02/12","productName":"票券名稱","buyer":"持有人"}]'></textarea>
-          <div class="flex flex-col md:flex-row gap-3 md:items-start">
-            <label class="flex-1 rounded-xl border border-dashed border-purple-300 bg-purple-50 px-3 py-3 text-sm text-purple-900 cursor-pointer">
-              <span class="font-semibold">上傳版型圖片</span>
-              <span class="block text-xs text-purple-700 mt-1">用於產生替換後的名稱、期限、序號與 QR code 圖片</span>
-              <input id="batch-template-image" type="file" accept="image/*" class="mt-2 block w-full text-xs" />
-            </label>
-            <div id="batch-template-preview-wrap" class="hidden w-full md:w-32 rounded-xl overflow-hidden border border-wabi-border bg-slate-50">
-              <img id="batch-template-preview" class="w-full h-32 object-contain" alt="批量版型預覽" />
-            </div>
-          </div>
+          <p class="text-xs text-purple-700 rounded-xl border border-purple-100 bg-purple-50 px-3 py-2">目前使用內建版型：85 度 C 電子票券</p>
           <button id="batch-import-submit" type="button" class="px-4 py-2 rounded-lg bg-purple-700 text-white">解析並批量新增</button>
           <p id="batch-import-status" class="text-xs text-wabi-text-secondary">${escapeHtml(this.batchImportStatus || '尚未開始批量新增')}</p>
           ${this.batchImportPreview ? `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-2"><p class="text-xs font-semibold text-emerald-800 mb-2">第一張產生圖片預覽</p><img src="${escapeHtml(this.batchImportPreview)}" class="w-full max-h-80 object-contain bg-white rounded-lg" alt="批量產生票券預覽" /></div>` : ''}
@@ -1523,26 +1514,6 @@ export class SettingsPage {
       });
     });
 
-    let batchTemplateImage = '';
-    const batchTemplateInput = root.querySelector('#batch-template-image');
-    const batchTemplatePreview = root.querySelector('#batch-template-preview');
-    const batchTemplatePreviewWrap = root.querySelector('#batch-template-preview-wrap');
-    batchTemplateInput?.addEventListener('change', async (event) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      try {
-        batchTemplateImage = await compressImage(file, 'original');
-        if (batchTemplatePreview) batchTemplatePreview.src = batchTemplateImage;
-        batchTemplatePreviewWrap?.classList.remove('hidden');
-        showToast('批量版型圖片已載入', 'success');
-      } catch (error) {
-        batchTemplateImage = '';
-        showToast(`版型圖片處理失敗：${error.message}`, 'error');
-      } finally {
-        event.target.value = '';
-      }
-    });
-
     root.querySelector('#batch-json-input')?.addEventListener('input', (event) => {
       const status = root.querySelector('#batch-import-status');
       if (!status) return;
@@ -1578,18 +1549,13 @@ export class SettingsPage {
         showToast(validation.error, 'error');
         return;
       }
-      if (!batchTemplateImage) {
-        showToast('請先上傳版型圖片', 'error');
-        return;
-      }
-
       const button = root.querySelector('#batch-import-submit');
       if (button) {
         button.disabled = true;
         button.textContent = '產生中...';
       }
       try {
-        const result = await buildBatchTickets(validation.data, batchTemplateImage, this.app.state.tasks);
+        const result = await buildBatchTickets(validation.data, this.app.state.tasks);
         this.app.state.tasks = [...result.tickets, ...this.app.state.tasks];
         await this.app.persistTasks();
         this.batchImportPreview = result.tickets[0]?.image || '';

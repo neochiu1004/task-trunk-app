@@ -1,5 +1,6 @@
 import QRious from 'qrious';
 import { generateId, normalizeDateInput } from '../utils.js';
+import batchTemplateImage from '../../assets/batch-ticket-template.png';
 
 const BATCH_TAG = '批量生成';
 const BASE_WIDTH = 944;
@@ -45,7 +46,7 @@ const fitFontSize = (ctx, text, maxWidth, initial) => {
   return size;
 };
 
-export async function renderBatchTicketImage(source, name, serial, expiry) {
+export async function renderBatchTicketImage(source = batchTemplateImage, name, serial, expiry) {
   const image = await loadImage(source);
   const scaleX = image.width / BASE_WIDTH;
   const scaleY = image.height / BASE_HEIGHT;
@@ -88,7 +89,7 @@ export async function renderBatchTicketImage(source, name, serial, expiry) {
   return canvas.toDataURL('image/webp', 0.92);
 }
 
-export async function buildBatchTickets(rows, templateImage, existingTickets = []) {
+export async function buildBatchTickets(rows, existingTickets = []) {
   const existingSerials = new Set(existingTickets.filter((ticket) => !ticket.isDeleted && ticket.serial).map((ticket) => ticket.serial));
   const seen = new Set();
   let duplicates = 0;
@@ -96,14 +97,14 @@ export async function buildBatchTickets(rows, templateImage, existingTickets = [
   for (const row of rows) {
     if (existingSerials.has(row.ticketNumber) || seen.has(row.ticketNumber)) duplicates += 1;
     seen.add(row.ticketNumber);
-    const image = await renderBatchTicketImage(templateImage, row.productName, row.ticketNumber, row.expiryDate);
+    const image = await renderBatchTicketImage(batchTemplateImage, row.productName, row.ticketNumber, row.expiryDate);
     tickets.push({
       id: generateId(),
       productName: row.productName,
       serial: row.ticketNumber,
       expiry: normalizeDateInput(row.expiryDate || ''),
       image,
-      originalImage: templateImage,
+      originalImage: batchTemplateImage,
       images: [image],
       tags: [BATCH_TAG, ...(row.buyer ? [row.buyer] : [])],
       barcodeFormat: 'QR_CODE',
