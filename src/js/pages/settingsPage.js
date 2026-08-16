@@ -10,6 +10,7 @@ import {
   showToast,
   validateImportData,
 } from '../utils.js';
+import { buildBatchTickets, validateBatchRows } from '../services/batchImportService.js';
 
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
 const APP_VERSION = __APP_VERSION__;
@@ -50,6 +51,8 @@ export class SettingsPage {
       mode: 'append',
       restoreSettings: true,
     };
+    this.batchImportStatus = '';
+    this.batchImportPreview = '';
     this.currentTab = 'general';
   }
 
@@ -612,11 +615,32 @@ export class SettingsPage {
               套用匯入設定
             </label>
           </div>
-          <p class="text-xs text-wabi-text-secondary">匯入來源支援 task-trunk v3 備份格式與純票券陣列。</p>
+          <p class="text-xs text-wabi-text-secondary">檔案匯入僅支援 task-trunk v3 完整備份 JSON；批量資料請使用下方文字框。</p>
           <div class="pt-2 border-t border-wabi-border/70">
             <button id="full-reset" class="px-4 py-2 rounded-lg bg-red-100 text-red-700">清空全部資料</button>
             <p class="text-xs text-wabi-text-secondary mt-2">會清除票券、設定、範本與通知紀錄。請先匯出備份。</p>
           </div>
+        </section>
+
+        <section class="bg-white border border-purple-200 rounded-2xl p-4 space-y-3">
+          <div>
+            <h2 class="font-semibold text-purple-900">批量新增票券</h2>
+            <p class="text-xs text-wabi-text-secondary mt-1">請直接貼上 ticketNumber、expiryDate、productName、buyer JSON。這裡不使用檔案匯入；檔案匯入保留給上方完整備份功能。</p>
+          </div>
+          <textarea id="batch-json-input" class="w-full min-h-40 rounded-xl border border-wabi-border bg-white p-3 font-mono text-xs" placeholder='[{"ticketNumber":"E123","expiryDate":"2027/02/12","productName":"票券名稱","buyer":"持有人"}]'></textarea>
+          <div class="flex flex-col md:flex-row gap-3 md:items-start">
+            <label class="flex-1 rounded-xl border border-dashed border-purple-300 bg-purple-50 px-3 py-3 text-sm text-purple-900 cursor-pointer">
+              <span class="font-semibold">上傳版型圖片</span>
+              <span class="block text-xs text-purple-700 mt-1">用於產生替換後的名稱、期限、序號與 QR code 圖片</span>
+              <input id="batch-template-image" type="file" accept="image/*" class="mt-2 block w-full text-xs" />
+            </label>
+            <div id="batch-template-preview-wrap" class="hidden w-full md:w-32 rounded-xl overflow-hidden border border-wabi-border bg-slate-50">
+              <img id="batch-template-preview" class="w-full h-32 object-contain" alt="批量版型預覽" />
+            </div>
+          </div>
+          <button id="batch-import-submit" type="button" class="px-4 py-2 rounded-lg bg-purple-700 text-white">解析並批量新增</button>
+          <p id="batch-import-status" class="text-xs text-wabi-text-secondary">${escapeHtml(this.batchImportStatus || '尚未開始批量新增')}</p>
+          ${this.batchImportPreview ? `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-2"><p class="text-xs font-semibold text-emerald-800 mb-2">第一張產生圖片預覽</p><img src="${escapeHtml(this.batchImportPreview)}" class="w-full max-h-80 object-contain bg-white rounded-lg" alt="批量產生票券預覽" /></div>` : ''}
         </section>
 
         <section class="bg-white border border-wabi-border rounded-2xl p-4 space-y-3">
@@ -672,6 +696,7 @@ export class SettingsPage {
       const templateSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('範本管理'));
       const presetSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('兌換網址預設'));
       const importSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('資料匯入 / 匯出'));
+      const batchSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('批量新增票券'));
       const healthSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('資料健康檢查'));
       const tagsSection = topLevelSections.find((element) => element.querySelector('h2')?.textContent?.includes('標籤管理'));
       const versionSection = topLevelSections.find((element) => !element.querySelector('h2') && element.textContent?.includes('版本時間'));
@@ -725,6 +750,7 @@ export class SettingsPage {
       const dataPanel = createPanel();
       dataPanel.dataset.settingsPanel = 'data';
       if (importSection) dataPanel.appendChild(importSection);
+      if (batchSection) dataPanel.appendChild(batchSection);
       if (healthSection) dataPanel.appendChild(healthSection);
       if (tagsSection) dataPanel.appendChild(tagsSection);
 
@@ -1495,6 +1521,89 @@ export class SettingsPage {
         showToast(cleanedCount > 0 ? `已刪除預設並清理 ${cleanedCount} 個範本引用` : '已刪除兌換網址預設', 'success');
         this.render();
       });
+    });
+
+    let batchTemplateImage = '';
+    const batchTemplateInput = root.querySelector('#batch-template-image');
+    const batchTemplatePreview = root.querySelector('#batch-template-preview');
+    const batchTemplatePreviewWrap = root.querySelector('#batch-template-preview-wrap');
+    batchTemplateInput?.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        batchTemplateImage = await compressImage(file, 'original');
+        if (batchTemplatePreview) batchTemplatePreview.src = batchTemplateImage;
+        batchTemplatePreviewWrap?.classList.remove('hidden');
+        showToast('批量版型圖片已載入', 'success');
+      } catch (error) {
+        batchTemplateImage = '';
+        showToast(`版型圖片處理失敗：${error.message}`, 'error');
+      } finally {
+        event.target.value = '';
+      }
+    });
+
+    root.querySelector('#batch-json-input')?.addEventListener('input', (event) => {
+      const status = root.querySelector('#batch-import-status');
+      if (!status) return;
+      const value = event.target.value.trim();
+      if (!value) {
+        status.textContent = '尚未開始批量新增';
+        return;
+      }
+      try {
+        const validation = validateBatchRows(JSON.parse(value));
+        status.textContent = validation.success ? `已解析 ${validation.data.length} 筆，按下按鈕後會產生票券與 QR code 圖片。` : validation.error;
+      } catch {
+        status.textContent = 'JSON 尚未完成或格式錯誤';
+      }
+    });
+
+    root.querySelector('#batch-import-submit')?.addEventListener('click', async () => {
+      const status = root.querySelector('#batch-import-status');
+      const jsonText = root.querySelector('#batch-json-input')?.value?.trim() || '';
+      if (!jsonText) {
+        showToast('請先貼上批量 JSON', 'error');
+        return;
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch {
+        showToast('JSON 格式錯誤，請確認內容可以解析', 'error');
+        return;
+      }
+      const validation = validateBatchRows(parsed);
+      if (!validation.success) {
+        showToast(validation.error, 'error');
+        return;
+      }
+      if (!batchTemplateImage) {
+        showToast('請先上傳版型圖片', 'error');
+        return;
+      }
+
+      const button = root.querySelector('#batch-import-submit');
+      if (button) {
+        button.disabled = true;
+        button.textContent = '產生中...';
+      }
+      try {
+        const result = await buildBatchTickets(validation.data, batchTemplateImage, this.app.state.tasks);
+        this.app.state.tasks = [...result.tickets, ...this.app.state.tasks];
+        await this.app.persistTasks();
+        this.batchImportPreview = result.tickets[0]?.image || '';
+        this.batchImportStatus = `批量新增完成：${result.tickets.length} 張，重複序號 ${result.duplicates} 張。已加入「批量生成」標籤。`;
+        showToast(this.batchImportStatus, 'success', 4000);
+        this.currentTab = 'data';
+        this.render();
+      } catch (error) {
+        showToast(`批量新增失敗：${error.message}`, 'error');
+        if (button) {
+          button.disabled = false;
+          button.textContent = '解析並批量新增';
+        }
+      }
     });
 
     root.querySelector('#export-json')?.addEventListener('click', async () => {

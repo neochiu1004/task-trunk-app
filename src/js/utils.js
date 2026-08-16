@@ -157,6 +157,9 @@ export function validateImportData(data) {
   if (!Array.isArray(normalized.tasks)) {
     return { success: false, error: '找不到可匯入的票券陣列 (tasks)' };
   }
+  if (normalized.tasks.some((item) => item && typeof item === 'object' && ('ticketNumber' in item || 'expiryDate' in item || 'buyer' in item))) {
+    return { success: false, error: '這是批量新增格式，請使用資料頁的「批量新增票券」；此處只接受完整備份 JSON。' };
+  }
   if (normalized.tasks.some((item) => !item || typeof item !== 'object')) {
     return { success: false, error: 'tasks 內容必須是物件陣列' };
   }
