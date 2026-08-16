@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FileJson, Loader2, Upload } from 'lucide-react';
+import { FileJson, Loader2 } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { generateId } from '@/lib/helpers';
@@ -22,6 +22,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({ isOpen, onCl
   const [error, setError] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<{ added: number; duplicates: number } | null>(null);
+  const [generatedPreview, setGeneratedPreview] = useState('');
 
   const existingSerials = useMemo(() => new Set(existingTickets.filter(t => !t.isDeleted && t.serial).map(t => t.serial)), [existingTickets]);
 
@@ -42,21 +43,17 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({ isOpen, onCl
     }
   };
 
-  const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = String(reader.result || '');
-      setJsonText(value);
-      parseJson(value);
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
-
   const handleGenerate = async () => {
-    if (!rows?.length) return setError('請先輸入有效的 JSON 資料。');
+    // Parse the current textarea value again so paste-and-submit always uses the latest text.
+    parseJson();
+    let currentRows = rows;
+    try {
+      const validation = validateBatchTicketData(JSON.parse(jsonText));
+      if (validation.success) currentRows = validation.data;
+    } catch {
+      currentRows = null;
+    }
+    if (!currentRows?.length) return setError('請先輸入有效的 JSON 資料。');
     if (!templateImage) return setError('請先上傳票券版型圖片。');
     setIsGenerating(true);
     setError('');
@@ -64,7 +61,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({ isOpen, onCl
       const batchTickets: Ticket[] = [];
       let duplicates = 0;
       const seenInBatch = new Set<string>();
-      for (const row of rows) {
+      for (const row of currentRows) {
         if (existingSerials.has(row.ticketNumber) || seenInBatch.has(row.ticketNumber)) duplicates += 1;
         seenInBatch.add(row.ticketNumber);
         const renderedImage = await renderBatchTicketImage(templateImage, row.productName, row.ticketNumber, row.expiryDate);
@@ -84,6 +81,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({ isOpen, onCl
         });
       }
       onAddBatch(batchTickets);
+      setGeneratedPreview(batchTickets[0]?.image || '');
       setResult({ added: batchTickets.length, duplicates });
     } catch (generationError) {
       setError(generationError instanceof Error ? generationError.message : '產生票券圖片失敗。');
@@ -93,7 +91,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({ isOpen, onCl
   };
 
   const reset = () => {
-    setJsonText(''); setTemplateImage(''); setRows(null); setError(''); setResult(null);
+    setJsonText(''); setTemplateImage(''); setRows(null); setError(''); setResult(null); setGeneratedPreview('');
   };
 
   const handleClose = () => {
@@ -105,27 +103,28 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({ isOpen, onCl
     <ResponsiveModal isOpen={isOpen} onClose={handleClose} title="批量新增票券" description="貼上 JSON，再用一張圖片產生多張票券">
       <div className="space-y-4 pb-4">
         {result ? (
-          <div className="rounded-2xl bg-ticket-success/10 border border-ticket-success/30 p-4 text-sm font-semibold text-ticket-success">
-            已新增 {result.added} 張票券；偵測到 {result.duplicates} 張重複序號。所有票券已加入「批量生成」標籤。
+          <div className="rounded-2xl bg-ticket-success/10 border border-ticket-success/30 p-4 text-sm font-semibold text-ticket-success space-y-3">
+            <div>已新增 {result.added} 張票券；偵測到 {result.duplicates} 張重複序號。所有票券已加入「批量生成」標籤。</div>
+            {generatedPreview && (
+              <div className="rounded-xl overflow-hidden border border-ticket-success/30 bg-white">
+                <img src={generatedPreview} alt="第一張批量產生的票券預覽" className="w-full max-h-80 object-contain" />
+              </div>
+            )}
           </div>
         ) : null}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-sm font-bold">JSON 資料</label>
-            <label className="cursor-pointer text-xs text-primary font-bold flex items-center gap-1">
-              <Upload size={13} /> 上傳 JSON
-              <input type="file" accept="application/json,.json" className="hidden" onChange={handleFile} />
-            </label>
+            <span className="text-[11px] text-muted-foreground">僅限貼上文字</span>
           </div>
           <textarea
             value={jsonText}
-            onChange={(event) => { setJsonText(event.target.value); setRows(null); setResult(null); }}
-            onBlur={() => jsonText.trim() && parseJson()}
+            onChange={(event) => { const value = event.target.value; setJsonText(value); setResult(null); if (value.trim()) parseJson(value); else { setRows(null); setError(''); } }}
             placeholder={'[{"ticketNumber":"E123","expiryDate":"2027/02/12","productName":"票券名稱","buyer":"持有人"}]'}
             className="w-full min-h-40 rounded-2xl border border-border bg-background p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-primary/30"
           />
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <FileJson size={14} /> {rows ? `已解析 ${rows.length} 筆` : '離開輸入框後自動檢查格式'}
+            <FileJson size={14} /> {rows ? `已解析 ${rows.length} 筆，可直接確認新增` : '請直接貼上 JSON 陣列內容'}
           </div>
         </div>
         <div>
