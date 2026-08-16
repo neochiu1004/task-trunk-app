@@ -1,5 +1,5 @@
 import React from 'react';
-import { DatabaseBackup, ArchiveRestore, Eraser, Activity, BellOff } from 'lucide-react';
+import { DatabaseBackup, ArchiveRestore, Eraser, Activity, BellOff, Layers } from 'lucide-react';
 import { Settings } from '../../types/ticket';
 
 interface DataActionsModalProps {
@@ -7,6 +7,7 @@ interface DataActionsModalProps {
   onClose: () => void;
   onBackup: () => void;
   onImportClick: () => void;
+  onBatchImport: () => void;
   onClearExpiryCache: () => void;
   onReset: () => void;
   onHealthCheck: () => void;
@@ -19,6 +20,7 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
   onClose,
   onBackup,
   onImportClick,
+  onBatchImport,
   onClearExpiryCache,
   onReset,
   onHealthCheck,
@@ -53,6 +55,12 @@ export const DataActionsModal: React.FC<DataActionsModalProps> = ({
           className="w-full py-4 bg-ticket-success/10 text-ticket-success rounded-2xl font-bold flex flex-col items-center gap-1 hover:bg-ticket-success/20 transition-colors"
         >
           <ArchiveRestore size={24} /> 匯入還原
+        </button>
+        <button
+          onClick={onBatchImport}
+          className="w-full py-4 bg-purple-500/10 text-purple-600 rounded-2xl font-bold flex flex-col items-center gap-1 hover:bg-purple-500/20 transition-colors"
+        >
+          <Layers size={24} /> 批量新增票券
         </button>
         <button
           onClick={onClearExpiryCache}

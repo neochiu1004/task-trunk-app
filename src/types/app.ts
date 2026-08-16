@@ -21,6 +21,13 @@ export interface BatchEditPayload {
   setPinned?: boolean | null;
 }
 
+export interface BatchTicketInput {
+  ticketNumber: string;
+  expiryDate: string | null;
+  productName: string;
+  buyer?: string;
+}
+
 export type StoredSettings = Partial<Omit<Settings, 'viewConfigs'>> & {
   viewConfigs?: Partial<Record<'active' | 'completed' | 'deleted', Partial<ViewConfig>>>;
 };

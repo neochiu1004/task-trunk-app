@@ -17,6 +17,7 @@ import { Header } from '@/components/layout/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { TicketCard } from '@/components/ticket/TicketCard';
 import { DataActionsModal } from '@/components/modals/DataActionsModal';
+import { BatchImportModal } from '@/components/modals/BatchImportModal';
 import { ImportConfirmModal } from '@/components/modals/ImportConfirmModal';
 import { TagManagerModal } from '@/components/modals/TagManagerModal';
 
@@ -50,6 +51,7 @@ const Index = () => {
   const [isCompact, setIsCompact] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
+  const [showBatchImport, setShowBatchImport] = useState(false);
   const [importPendingData, setImportPendingData] = useState<ImportPayload | Ticket[] | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
@@ -670,6 +672,7 @@ const Index = () => {
         onClose={() => setShowDataModal(false)} 
         onBackup={handleBackup} 
         onImportClick={handleImportClick} 
+        onBatchImport={() => { setShowDataModal(false); setShowBatchImport(true); }}
         onClearExpiryCache={handleClearExpiryCache}
         onReset={handleFullReset} 
         onHealthCheck={() => { setShowDataModal(false); setShowHealthCheck(true); }} 
@@ -678,6 +681,12 @@ const Index = () => {
           setImportPendingData(data);
           setShowDataModal(false);
         }}
+      />
+      <BatchImportModal
+        isOpen={showBatchImport}
+        onClose={() => setShowBatchImport(false)}
+        existingTickets={tasks}
+        onAddBatch={handleAddBatch}
       />
       <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
       <Suspense fallback={null}>
