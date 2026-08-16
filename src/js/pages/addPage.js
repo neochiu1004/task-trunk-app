@@ -8,7 +8,7 @@ import {
   tagsToText,
   normalizeDateInput,
 } from '../utils.js';
-import { renderBatchTicketImage } from '../services/batchImportService.js';
+import { BATCH_IMAGE_VERSION, renderBatchTicketImage } from '../services/batchImportService.js';
 
 let barcodeServicePromise = null;
 
@@ -550,6 +550,7 @@ export class AddPage {
         image: imageData,
         originalImage,
         images: imageData ? [imageData] : (editing?.images || []),
+        batchImageVersion: editing?.tags?.includes('批量生成') ? BATCH_IMAGE_VERSION : (editing?.batchImageVersion || 0),
         tags: parseTags(root.querySelector('#tags').value),
         note: editing?.note || '',
         barcodeFormat: root.querySelector('#barcode-format').value || '',

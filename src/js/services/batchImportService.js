@@ -3,6 +3,7 @@ import { generateId, normalizeDateInput } from '../utils.js';
 import batchTemplateImage from '../../assets/batch-ticket-template.png';
 
 const BATCH_TAG = '批量生成';
+export const BATCH_IMAGE_VERSION = 4;
 const BASE_WIDTH = 944;
 const BASE_HEIGHT = 2048;
 
@@ -83,9 +84,11 @@ export async function renderBatchTicketImage(source = batchTemplateImage, name, 
   ctx.fillStyle = '#fff';
   // 期限所在列位於商品描述列下方，避免覆蓋後文字落在上一列。
   ctx.fillRect(190, 1400, 560, 150);
+  ctx.fillStyle = '#333';
   ctx.textAlign = 'left';
   ctx.font = '700 34px Arial, sans-serif';
-  ctx.fillText(normalizeDateInput(expiry || '').replace(/\//g, '.'), 225, 1490, 500);
+  const expiryText = normalizeDateInput(expiry || '').replace(/\//g, '.') || '無期限';
+  ctx.fillText(expiryText, 225, 1490, 500);
   ctx.restore();
   return canvas.toDataURL('image/webp', 0.92);
 }
@@ -107,6 +110,7 @@ export async function buildBatchTickets(rows, existingTickets = []) {
       image,
       originalImage: batchTemplateImage,
       images: [image],
+      batchImageVersion: BATCH_IMAGE_VERSION,
       tags: [BATCH_TAG, ...(row.buyer ? [row.buyer] : [])],
       barcodeFormat: 'QR_CODE',
       completed: false,
@@ -115,4 +119,21 @@ export async function buildBatchTickets(rows, existingTickets = []) {
     });
   }
   return { tickets, duplicates };
+}
+
+export async function refreshBatchTicketImages(tasks) {
+  let changed = false;
+  const refreshedTasks = await Promise.all(tasks.map(async (ticket) => {
+    if (ticket.isDeleted || !(ticket.tags || []).includes(BATCH_TAG) || !ticket.serial || ticket.batchImageVersion === BATCH_IMAGE_VERSION) {
+      return ticket;
+    }
+    try {
+      const image = await renderBatchTicketImage(undefined, ticket.productName || '', ticket.serial, ticket.expiry || '');
+      changed = true;
+      return { ...ticket, image, images: [image], batchImageVersion: BATCH_IMAGE_VERSION };
+    } catch (_error) {
+      return ticket;
+    }
+  }));
+  return { tasks: refreshedTasks, changed };
 }

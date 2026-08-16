@@ -189,6 +189,7 @@ export function normalizeTicket(ticket) {
     image: ticket.image || '',
     originalImage: ticket.originalImage || '',
     images: Array.isArray(ticket.images) ? ticket.images : [],
+    batchImageVersion: Number(ticket.batchImageVersion) || 0,
     tags: Array.isArray(ticket.tags) ? ticket.tags.filter(Boolean) : [],
     note: ticket.note || '',
     barcodeFormat: ticket.barcodeFormat || '',
