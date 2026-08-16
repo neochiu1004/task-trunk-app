@@ -5,18 +5,30 @@ type ImportValidationResult =
   | { success: true; data: ImportPayload | Ticket[] }
   | { success: false; error: string };
 
+const isBatchTicketShape = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object') return false;
+  const row = value as Record<string, unknown>;
+  return 'ticketNumber' in row || 'expiryDate' in row || 'buyer' in row;
+};
+
 export const validateImportData = (data: unknown): ImportValidationResult => {
   if (!data || typeof data !== 'object') {
     return { success: false, error: '資料格式非物件' };
   }
 
   if (Array.isArray(data)) {
+    if (data.some(isBatchTicketShape)) {
+      return { success: false, error: '這是批量新增格式，請從「資料管理 → 批量新增票券」貼上 JSON；「匯入還原」只接受完整備份檔。' };
+    }
     return { success: true, data: data as Ticket[] };
   }
 
   const normalized = data as ImportPayload;
   if (normalized.tasks != null && !Array.isArray(normalized.tasks)) {
     return { success: false, error: 'tasks 格式錯誤' };
+  }
+  if (Array.isArray(normalized.tasks) && normalized.tasks.some(isBatchTicketShape)) {
+    return { success: false, error: 'tasks 內含批量新增格式，請使用「批量新增票券」；「匯入還原」只接受完整備份檔。' };
   }
   if (normalized.templates != null && !Array.isArray(normalized.templates)) {
     return { success: false, error: 'templates 格式錯誤' };
