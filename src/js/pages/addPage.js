@@ -563,6 +563,7 @@ export class AddPage {
 
       const serial = root.querySelector('#serial').value.trim();
       const expiry = normalizeDateInput(root.querySelector('#expiry').value.trim());
+      const selectedBatchProductImage = batchProductImage || batchProductImagePreview?.src || '';
       if (serial && isDuplicateSerial(serial)) {
         const ok = window.confirm('此序號已存在於其他票券，仍要繼續儲存嗎？');
         if (!ok) return;
@@ -570,7 +571,7 @@ export class AddPage {
 
       if (editing?.tags?.includes('批量生成')) {
         try {
-          imageData = await renderBatchTicketImage(undefined, productName, serial, expiry, batchProductImage);
+          imageData = await renderBatchTicketImage(undefined, productName, serial, expiry, selectedBatchProductImage);
         } catch (error) {
           showToast(`兌換圖片重新產生失敗：${error.message}`, 'error');
           return;
@@ -585,7 +586,7 @@ export class AddPage {
         image: imageData,
         originalImage,
         images: imageData ? [imageData] : (editing?.images || []),
-        batchProductImage: editing?.tags?.includes('批量生成') ? batchProductImage : (editing?.batchProductImage || ''),
+        batchProductImage: editing?.tags?.includes('批量生成') ? selectedBatchProductImage : (editing?.batchProductImage || ''),
         batchImageVersion: editing?.tags?.includes('批量生成') ? BATCH_IMAGE_VERSION : (editing?.batchImageVersion || 0),
         tags: parseTags(root.querySelector('#tags').value),
         note: editing?.note || '',
