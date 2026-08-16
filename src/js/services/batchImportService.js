@@ -81,10 +81,11 @@ export async function renderBatchTicketImage(source = batchTemplateImage, name, 
   ctx.fillText(`序號：${serial}`, 472, 1232, 570);
 
   ctx.fillStyle = '#fff';
-  ctx.fillRect(190, 1380, 560, 115);
+  // 期限所在列位於商品描述列下方，避免覆蓋後文字落在上一列。
+  ctx.fillRect(190, 1400, 560, 150);
   ctx.textAlign = 'left';
   ctx.font = '700 34px Arial, sans-serif';
-  ctx.fillText(normalizeDateInput(expiry || '').replace(/\//g, '.'), 225, 1440, 500);
+  ctx.fillText(normalizeDateInput(expiry || '').replace(/\//g, '.'), 225, 1490, 500);
   ctx.restore();
   return canvas.toDataURL('image/webp', 0.92);
 }

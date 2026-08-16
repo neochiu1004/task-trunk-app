@@ -8,6 +8,7 @@ import {
   tagsToText,
   normalizeDateInput,
 } from '../utils.js';
+import { renderBatchTicketImage } from '../services/batchImportService.js';
 
 let barcodeServicePromise = null;
 
@@ -177,6 +178,11 @@ export class AddPage {
                 <button id="original-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除原圖</button>
               </div>
             </div>
+            ${editing?.tags?.includes('批量生成') ? `
+              <p class="text-xs text-purple-700 rounded-lg border border-purple-100 bg-purple-50 px-3 py-2">
+                這是批量生成票券。修改名稱、序號或到期日並儲存後，系統會重新產生兌換圖片。
+              </p>
+            ` : ''}
           </div>
 
           <div class="grid md:grid-cols-2 gap-3">
@@ -521,18 +527,29 @@ export class AddPage {
       }
 
       const serial = root.querySelector('#serial').value.trim();
+      const expiry = normalizeDateInput(root.querySelector('#expiry').value.trim());
       if (serial && isDuplicateSerial(serial)) {
         const ok = window.confirm('此序號已存在於其他票券，仍要繼續儲存嗎？');
         if (!ok) return;
+      }
+
+      if (editing?.tags?.includes('批量生成')) {
+        try {
+          imageData = await renderBatchTicketImage(undefined, productName, serial, expiry);
+        } catch (error) {
+          showToast(`兌換圖片重新產生失敗：${error.message}`, 'error');
+          return;
+        }
       }
 
       const payload = {
         id: editing?.id || generateId(),
         productName,
         serial,
-        expiry: normalizeDateInput(root.querySelector('#expiry').value.trim()),
+        expiry,
         image: imageData,
         originalImage,
+        images: imageData ? [imageData] : (editing?.images || []),
         tags: parseTags(root.querySelector('#tags').value),
         note: editing?.note || '',
         barcodeFormat: root.querySelector('#barcode-format').value || '',
