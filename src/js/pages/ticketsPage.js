@@ -1166,6 +1166,7 @@ export class TicketsPage {
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
     const cardBorderColor = options.cardBorderColor || '#e2e8f0';
+    const duplicateSerials = getDuplicateSerialSet(this.app.state.tasks);
     if (!tickets.length) {
       const meta = VIEW_META[this.view];
       const hasScope = !!this.app.state.ui.search.trim() || (this.app.state.ui.activeTags || []).length > 0;
