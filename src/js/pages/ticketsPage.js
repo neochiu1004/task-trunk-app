@@ -699,7 +699,8 @@ export class TicketsPage {
 
   openRedeemModeModal(ticket) {
     const originalImage = ticket.originalImage || '';
-    const displayImage = ticket.image || originalImage;
+    const isBatchTicket = (ticket.tags || []).includes('批量生成');
+    const displayImage = isBatchTicket ? (ticket.image || originalImage) : originalImage;
     const hasOriginalImage = !!displayImage;
     const hasBarcodeSource = !!ticket.serial;
     const defaultMode = hasOriginalImage ? 'original' : 'barcode';
