@@ -162,6 +162,12 @@ body.keyboard-open #bottom-nav {
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
+/* A fully transparent card should reveal the background image directly. */
+.ticket-card[style*="backdrop-filter: none"] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .ticket-card:hover {
   transform: translate3d(var(--ticket-swipe-offset), -1px, 0);
   box-shadow: 0 12px 24px -16px rgba(37, 52, 64, 0.48);

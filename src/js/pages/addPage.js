@@ -183,12 +183,12 @@ export class AddPage {
                 <label class="block text-sm text-wabi-text-secondary mb-1">名稱上方商品圖（兌換圖片）</label>
                 <input id="batch-product-image-file" type="file" accept="image/*" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
                 <div id="batch-product-image-preview-wrap" class="mt-2 ${editing?.batchProductImage ? '' : 'hidden'}">
-                  <img id="batch-product-image-preview" src="${escapeHtml(editing?.batchProductImage || '')}" class="w-full max-h-40 object-contain rounded-xl border border-wabi-border bg-slate-50" alt="商品圖預覽" />
+                  <img id="batch-product-image-preview" src="${escapeHtml(editing?.batchProductImage || '')}" class="w-full max-h-40 object-contain rounded-xl border border-wabi-border bg-slate-50" alt="上方圖片替換區預覽" />
                   <button id="batch-product-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除自訂商品圖</button>
                 </div>
               </div>
               <p class="text-xs text-purple-700 rounded-lg border border-purple-100 bg-purple-50 px-3 py-2">
-                這是批量生成票券。可替換名稱上方商品圖；修改圖片、名稱、序號或到期日並儲存後，系統會重新產生兌換圖片。
+                這是批量生成票券。上傳照片後，只會替換預設版面中的「咖啡＋85 度 C LOGO」圖片區，其他版面內容會保留。
               </p>
             ` : ''}
           </div>
