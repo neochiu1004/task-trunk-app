@@ -168,6 +168,12 @@ body.keyboard-open #bottom-nav {
   -webkit-backdrop-filter: none;
 }
 
+/* iOS Safari zooms focused controls smaller than 16px, which is especially
+   disruptive in the installed PWA when the batch import page re-renders. */
+.ios-zoom-safe {
+  font-size: 16px !important;
+}
+
 .ticket-card:hover {
   transform: translate3d(var(--ticket-swipe-offset), -1px, 0);
   box-shadow: 0 12px 24px -16px rgba(37, 52, 64, 0.48);
