@@ -91,7 +91,9 @@ export async function renderBatchTicketImage(source = batchTemplateImage, name, 
   if (productImage) {
     const customProductImage = await loadImage(productImage);
     ctx.fillStyle = '#fff';
-    ctx.fillRect(120, 390, 704, 400);
+    // Clear slightly beyond the source photo slot so the original template
+    // logo cannot remain as a thin strip at the right edge after replacement.
+    ctx.fillRect(100, 370, 750, 440);
     drawContain(ctx, customProductImage, 145, 410, 654, 360);
   }
 
@@ -107,7 +109,7 @@ export async function renderBatchTicketImage(source = batchTemplateImage, name, 
   return canvas.toDataURL('image/webp', 0.92);
 }
 
-export async function buildBatchTickets(rows, existingTickets = []) {
+export async function buildBatchTickets(rows, existingTickets = [], defaultRedeemUrl = '') {
   const existingSerials = new Set(existingTickets.filter((ticket) => !ticket.isDeleted && ticket.serial).map((ticket) => ticket.serial));
   const seen = new Set();
   let duplicates = 0;
@@ -128,6 +130,7 @@ export async function buildBatchTickets(rows, existingTickets = []) {
       batchImageVersion: BATCH_IMAGE_VERSION,
       tags: [BATCH_TAG, ...(row.buyer ? [row.buyer] : [])],
       barcodeFormat: 'QR_CODE',
+      redeemUrl: defaultRedeemUrl || '',
       completed: false,
       isDeleted: false,
       createdAt: Date.now(),
