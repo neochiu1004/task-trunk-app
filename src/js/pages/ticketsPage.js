@@ -1250,7 +1250,7 @@ export class TicketsPage {
       const duplicateCardClass = isActiveDuplicate ? 'ticket-card--duplicate' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
-        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${isCardFullyTransparent ? 'transparent' : escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
+        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
         const compactExpiryCardClass = expiryState === 'expired'
           ? 'ticket-card--expiry-expired'
           : expiryState === 'today'
@@ -1378,7 +1378,7 @@ export class TicketsPage {
       const imageStyle = this.view === 'active'
         ? ` style="width: ${Math.round(Math.max(52, thumbnailScale))}%;"`
         : '';
-      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${isCardFullyTransparent ? 'transparent' : escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
+      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
         active: { left: '核銷', right: '回收' },
         completed: { left: '還原', right: '回收' },

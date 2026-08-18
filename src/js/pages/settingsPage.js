@@ -1563,6 +1563,11 @@ export class SettingsPage {
         showToast(this.batchImportStatus, 'success', 4000);
         this.currentTab = 'data';
         this.render();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+          document.getElementById('app-container')?.scrollTo?.({ top: 0, left: 0, behavior: 'auto' });
+          document.activeElement?.blur?.();
+        });
       } catch (error) {
         showToast(`批量新增失敗：${error.message}`, 'error');
         if (button) {
