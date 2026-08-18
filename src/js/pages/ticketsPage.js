@@ -750,6 +750,7 @@ export class TicketsPage {
 
         <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
           <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border bg-white text-sm md:text-base">${hasOriginalImage ? '下載票券圖片' : '下載圖片'}</button>
+          ${ticket.redeemUrl ? '<button type="button" data-open-redeem-url data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg bg-wabi-accent/30 text-wabi-primary text-sm md:text-base">開啟支付</button>' : ''}
           <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
         </div>
       </div>
@@ -1060,6 +1061,12 @@ export class TicketsPage {
       redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true });
     });
 
+    modal.querySelector('[data-open-redeem-url]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (ticket.redeemUrl) window.open(ticket.redeemUrl, '_blank', 'noopener');
+    });
+
     modal.querySelectorAll('[data-download-image]').forEach((btn) => {
       btn.addEventListener('click', (event) => {
         event.preventDefault();
@@ -1336,7 +1343,7 @@ export class TicketsPage {
 
       const redeemButton = ticket.redeemUrl && !ticket.isDeleted
         ? this.view === 'active'
-          ? ''
+          ? '<button data-action="redeem" class="px-3 py-1 rounded-lg bg-wabi-accent/30 text-wabi-primary text-xs">開啟支付</button>'
           : this.view === 'completed'
             ? ''
           : '<button data-action="redeem" class="px-3 py-1 rounded-lg bg-wabi-accent/30 text-wabi-primary text-xs">前往兌換</button>'

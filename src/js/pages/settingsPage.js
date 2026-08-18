@@ -53,6 +53,7 @@ export class SettingsPage {
     };
     this.batchImportStatus = '';
     this.batchImportPreview = '';
+    this.batchImportRedeemPresetId = '';
     this.currentTab = 'general';
   }
 
@@ -628,6 +629,14 @@ export class SettingsPage {
             <p class="text-xs text-wabi-text-secondary mt-1">請直接貼上 ticketNumber、expiryDate、productName、buyer JSON。系統會使用內建票券版型自動產生名稱、期限、序號與 QR code 圖片。</p>
           </div>
           <textarea id="batch-json-input" class="w-full min-h-40 rounded-xl border border-wabi-border bg-white p-3 font-mono text-xs" placeholder='[{"ticketNumber":"E123","expiryDate":"2027/02/12","productName":"票券名稱","buyer":"持有人"}]'></textarea>
+          <div>
+            <label class="block text-sm text-wabi-text-secondary mb-1">批量套用支付預設</label>
+            <select id="batch-redeem-preset" class="w-full rounded-xl border border-wabi-border bg-white px-3 py-2 text-sm">
+              <option value="">不套用支付預設</option>
+              ${(this.app.state.settings.redeemUrlPresets || []).map((preset) => `<option value="${escapeHtml(preset.id)}" ${preset.id === this.batchImportRedeemPresetId ? 'selected' : ''}>${escapeHtml(preset.label)}</option>`).join('')}
+            </select>
+            <p class="mt-1 text-[11px] text-wabi-text-secondary">選擇後，批量新增的每張票券都會帶入該支付網址。</p>
+          </div>
           <p class="text-xs text-purple-700 rounded-xl border border-purple-100 bg-purple-50 px-3 py-2">目前使用內建版型：85 度 C 電子票券</p>
           <button id="batch-import-submit" type="button" class="px-4 py-2 rounded-lg bg-purple-700 text-white">解析並批量新增</button>
           <p id="batch-import-status" class="text-xs text-wabi-text-secondary">${escapeHtml(this.batchImportStatus || '尚未開始批量新增')}</p>
@@ -1530,6 +1539,10 @@ export class SettingsPage {
       }
     });
 
+    root.querySelector('#batch-redeem-preset')?.addEventListener('change', (event) => {
+      this.batchImportRedeemPresetId = event.target.value || '';
+    });
+
     root.querySelector('#batch-import-submit')?.addEventListener('click', async () => {
       const status = root.querySelector('#batch-import-status');
       const jsonText = root.querySelector('#batch-json-input')?.value?.trim() || '';
@@ -1555,7 +1568,8 @@ export class SettingsPage {
         button.textContent = '產生中...';
       }
       try {
-        const result = await buildBatchTickets(validation.data, this.app.state.tasks);
+        const preset = (this.app.state.settings.redeemUrlPresets || []).find((item) => item.id === this.batchImportRedeemPresetId);
+        const result = await buildBatchTickets(validation.data, this.app.state.tasks, preset?.url || '');
         this.app.state.tasks = [...result.tickets, ...this.app.state.tasks];
         await this.app.persistTasks();
         this.batchImportPreview = result.tickets[0]?.image || '';
