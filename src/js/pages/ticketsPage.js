@@ -1714,7 +1714,7 @@ export class TicketsPage {
                 : ''}
               <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>🖼️ 原圖</option>
               ${allTags.map((tag) => `
-                <option value="${escapeHtml(tag)}" ${(this.app.state.ui.activeTags || []).includes(tag) ? 'selected' : ''}># ${escapeHtml(tag)}</option>
+                <option value="${tag.replace(/"/g, '&quot;')}" ${(this.app.state.ui.activeTags || []).includes(tag) ? 'selected' : ''}># ${escapeHtml(tag)}</option>
               `).join('')}
             </select>
           </div>
@@ -2007,20 +2007,13 @@ export class TicketsPage {
       this.render();
     });
 
-    root.querySelectorAll('[data-filter-tag]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const tag = btn.dataset.filterTag;
-        if (!tag) return;
-        const idx = this.app.state.ui.activeTags.indexOf(tag);
-        if (idx >= 0) {
-          this.app.state.ui.activeTags.splice(idx, 1);
-        } else {
-          this.app.state.ui.activeTags.push(tag);
-        }
-        const pruned = pruneSelectionToVisible();
-        if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-        this.render();
-      });
+    root.querySelector('#tag-filter-select')?.addEventListener('change', (event) => {
+      const selectedValue = event.target.value;
+      this.app.state.ui.activeTags = selectedValue ? [selectedValue] : [];
+      const pruned = pruneSelectionToVisible();
+      if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+      this.render();
+    });
     });
 
     root.querySelector('[data-tag-clear]')?.addEventListener('click', () => {
