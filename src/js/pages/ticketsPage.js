@@ -1703,18 +1703,22 @@ export class TicketsPage {
               : ''}
           </div>
 
-          <div class="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <button data-tag-clear="1" aria-pressed="${this.app.state.ui.activeTags.length === 0 ? 'true' : 'false'}" class="app-filter-chip ${this.app.state.ui.activeTags.length === 0 ? 'app-filter-chip--active' : ''}">全部</button>
-            ${this.view === 'active'
-              ? `<button data-filter-tag="${EXPIRY_URGENT_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'app-filter-chip--active' : 'app-filter-chip--warning'}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>到期警示<span class="ml-1 ${urgentActiveCount > 0 ? '' : 'opacity-60'}">(${urgentActiveCount})</span></button>`
-              : ''}
-            ${this.view === 'active'
-              ? `<button data-filter-tag="${DUPLICATE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(DUPLICATE_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(DUPLICATE_FILTER_TAG) ? 'app-filter-chip--active' : 'app-filter-chip--duplicate'}"><i class="fa-solid fa-copy mr-1"></i>重複票券<span class="ml-1 ${duplicateActiveCount > 0 ? '' : 'opacity-60'}">(${duplicateActiveCount})</span></button>`
-              : ''}
-            <button data-filter-tag="${ORIGINAL_IMAGE_FILTER_TAG}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'app-filter-chip--active' : ''}"><i class="fa-regular fa-image mr-1"></i>原圖</button>
-            ${allTags.map((tag) => `
-              <button data-filter-tag="${escapeHtml(tag)}" aria-pressed="${(this.app.state.ui.activeTags || []).includes(tag) ? 'true' : 'false'}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(tag) ? 'app-filter-chip--active' : ''}">#${escapeHtml(tag)}</button>
-            `).join('')}
+          <div class="mb-2">
+            <select id="tag-filter-select" class="app-sort-select w-full">
+              <option value="" ${this.app.state.ui.activeTags.length === 0 ? 'selected' : ''}>全部標籤</option>
+              ${this.view === 'active'
+                ? `<option value="${EXPIRY_URGENT_FILTER_TAG}" ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>⚠️ 到期警示 (${urgentActiveCount})</option>`
+                : ''}
+              ${this.view === 'active'
+                ? `<option value="${DUPLICATE_FILTER_TAG}" ${(this.app.state.ui.activeTags || []).includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>📋 重複票券 (${duplicateActiveCount})</option>`
+                : ''}
+              <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>🖼️ 原圖</option>
+              ${allTags.map((tag) => `
+                <option value="${escapeHtml(tag)}" ${(this.app.state.ui.activeTags || []).includes(tag) ? 'selected' : ''}># ${escapeHtml(tag)}</option>
+              `).join('')}
+            </select>
+          </div>
+
           </div>
         </div>
 
