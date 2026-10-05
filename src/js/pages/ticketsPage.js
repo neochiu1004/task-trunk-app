@@ -2014,7 +2014,6 @@ export class TicketsPage {
       if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
       this.render();
     });
-    });
 
     root.querySelector('[data-tag-clear]')?.addEventListener('click', () => {
       this.app.state.ui.activeTags = [];
