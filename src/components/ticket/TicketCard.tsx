@@ -161,7 +161,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           <div className="flex-1 min-w-0 flex flex-col justify-between">
             <div>
             <h3 className="font-bold text-foreground leading-tight line-clamp-1 text-sm">
-              {ticket.pinned && <Pin size={10} className="inline mr-1 text-amber-500" />}
+              {ticket.pinned && !ticket.completed && !ticket.isDeleted && <Pin size={10} className="inline mr-1 text-amber-500" />}
               {ticket.productName}
               {ticket.originalImage && <Maximize2 size={10} className="inline ml-1 text-primary" />}
               {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
@@ -309,7 +309,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           <div>
             <div className="flex justify-between items-start">
               <h3 className="font-black text-foreground line-clamp-1 text-[15px] tracking-normal">
-                {ticket.pinned && <Pin size={10} className="inline mr-1 text-amber-500" />}
+                {ticket.pinned && !ticket.completed && !ticket.isDeleted && <Pin size={10} className="inline mr-1 text-amber-500" />}
                 {ticket.productName}
                 {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
               </h3>

@@ -42,6 +42,8 @@ interface BatchEditModalProps {
   onRenameTemplate: (id: string, newLabel: string) => void;
   onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
+  /** 置頂只適用於未使用票券：只有在待使用視圖開啟批次編輯時才顯示優先標記區塊 */
+  allowPin?: boolean;
 }
 
 export const BatchEditModal: React.FC<BatchEditModalProps> = ({
@@ -56,6 +58,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
   onRenameTemplate,
   onEditTemplate,
   redeemUrlPresets,
+  allowPin = false,
 }) => {
   const [tagsToAdd, setTagsToAdd] = useState<string[]>([]);
   const [clearTags, setClearTags] = useState(false);
@@ -75,7 +78,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       image: newImage,
       redeemUrl: newRedeemUrl,
       clearRedeemUrl,
-      setPinned: pinnedAction === 'pin' ? true : pinnedAction === 'unpin' ? false : null,
+      setPinned: !allowPin ? null : pinnedAction === 'pin' ? true : pinnedAction === 'unpin' ? false : null,
     });
     // Reset state
     setTagsToAdd([]);
@@ -343,7 +346,8 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
           )}
         </motion.div>
 
-        {/* Pinned */}
+        {/* Pinned（置頂只適用於未使用票券） */}
+        {allowPin && (
         <motion.div
           custom={6}
           variants={sectionVariants}
@@ -373,6 +377,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
             ))}
           </div>
         </motion.div>
+        )}
 
         {/* Actions */}
         <motion.div

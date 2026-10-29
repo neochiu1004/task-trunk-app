@@ -139,7 +139,7 @@ const Index = () => {
   const handleToggleComplete = async (ticket: Ticket) => {
     const newStatus = !ticket.completed;
     const completedAt = newStatus ? Date.now() : undefined;
-    setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, completed: newStatus, completedAt } : t)));
+    setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, completed: newStatus, completedAt, pinned: false } : t)));
     if (newStatus && settings.tgToken && settings.tgChatId) {
       const msg = `✅ *[已核銷]* ${ticket.productName}\n🔢 序號: ${ticket.serial || '無'}\n⏰ 時間: ${formatDateTime(completedAt)}`;
       sendTelegramMessage(settings.tgToken, settings.tgChatId, msg).catch(console.error);
@@ -159,10 +159,10 @@ const Index = () => {
         setTasks((prev) => prev.filter((t) => t.id !== id));
       }
     } else {
-      setTasks((prev) => prev.map((t) => (id === t.id ? { ...t, isDeleted: true, deletedAt: now } : t)));
+      setTasks((prev) => prev.map((t) => (id === t.id ? { ...t, isDeleted: true, deletedAt: now, pinned: false } : t)));
     }
   };
-  const handleRestore = (ticket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, isDeleted: false, deletedAt: undefined } : t)));
+  const handleRestore = (ticket: Ticket) => setTasks((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, isDeleted: false, deletedAt: undefined, pinned: false } : t)));
   const handleBackup = () => {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
@@ -261,7 +261,8 @@ const Index = () => {
         image: payload.image || t.image, 
         expiry: payload.expiry ? payload.expiry.replace(/-/g, '/') : t.expiry,
         redeemUrl: newRedeemUrl,
-        ...(payload.setPinned === true ? { pinned: true } : payload.setPinned === false ? { pinned: false } : {}),
+        // 置頂只適用於未使用票券：已使用／回收桶中的票券不套用設為置頂
+        ...(payload.setPinned === true && !t.completed && !t.isDeleted ? { pinned: true } : payload.setPinned === false ? { pinned: false } : {}),
       };
     }));
     clearSelection();
@@ -576,7 +577,8 @@ const Index = () => {
                     index={index}
                     hasHealthIssue={healthIssueSerials.has(t.serial || '')}
                     onTogglePin={(id) => {
-                      setTasks(prev => prev.map(tk => tk.id === id ? { ...tk, pinned: !tk.pinned } : tk));
+                      // 置頂只適用於未使用票券
+                      setTasks(prev => prev.map(tk => tk.id === id && !tk.completed && !tk.isDeleted ? { ...tk, pinned: !tk.pinned } : tk));
                     }}
                   />
                 ))
@@ -690,7 +692,7 @@ const Index = () => {
       />
       <ImportConfirmModal isOpen={!!importPendingData} data={importPendingData} onConfirm={executeImport} onCancel={() => setImportPendingData(null)} />
       <Suspense fallback={null}>
-        <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} redeemUrlPresets={settings.redeemUrlPresets} />
+        <BatchEditModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} selectedCount={selectedIds.size} onBatchEdit={handleBatchEdit} allTags={allTags} templates={templates} onDeleteTemplate={handleDeleteTemplate} onReorderTemplate={handleReorderTemplate} onRenameTemplate={handleRenameTemplate} onEditTemplate={handleEditTemplate} redeemUrlPresets={settings.redeemUrlPresets} allowPin={view === 'active'} />
       </Suspense>
       <TagManagerModal isOpen={showTagManager} onClose={() => setShowTagManager(false)} tags={allTags} onDeleteTag={handleDeleteTag} />
       <Suspense fallback={null}>

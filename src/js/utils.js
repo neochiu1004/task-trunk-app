@@ -200,7 +200,9 @@ export function normalizeTicket(ticket) {
     deletedAt: ticket.deletedAt || undefined,
     createdAt: ticket.createdAt || now,
     redeemUrl: ticket.redeemUrl || '',
-    pinned: !!ticket.pinned,
+    // 置頂（pin）只適用於未使用票券：已使用或回收桶中的票券一律清除置頂，
+    // 這裡是資料正規化的中央規則，讀取／儲存／匯入都會經過，舊資料也會自動清理。
+    pinned: !!ticket.pinned && !ticket.completed && !ticket.isDeleted,
   };
   if (normalized.completed && !normalized.completedAt) {
     normalized.completedAt = now;

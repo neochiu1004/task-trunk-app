@@ -5,7 +5,20 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 const appVersion = process.env.npm_package_version || "0.0.0";
-const appUpdatedAt = "2026-04-02 14:35";
+// 更新時間改為建置當下自動產生（Asia/Taipei），避免手寫日期過期、首頁顯示錯誤的更新時間。
+const appUpdatedAt = (() => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const pick = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  return `${pick("year")}-${pick("month")}-${pick("day")} ${pick("hour")}:${pick("minute")}`;
+})();
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({

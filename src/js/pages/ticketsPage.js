@@ -226,6 +226,7 @@ export class TicketsPage {
         if (!ok) return false;
         ticket.isDeleted = true;
         ticket.deletedAt = Date.now();
+        ticket.pinned = false;
         await this.app.persistTasks();
         this.triggerHapticFeedback([14, 28, 14]);
         showToast('已移至回收桶', 'success');
@@ -242,6 +243,7 @@ export class TicketsPage {
         if (!ok) return false;
         ticket.completed = false;
         ticket.completedAt = undefined;
+        ticket.pinned = false;
         await this.app.persistTasks();
         this.triggerHapticFeedback(14);
         showToast('已改回待使用', 'success');
@@ -254,6 +256,7 @@ export class TicketsPage {
         if (!ok) return false;
         ticket.isDeleted = true;
         ticket.deletedAt = Date.now();
+        ticket.pinned = false;
         await this.app.persistTasks();
         this.triggerHapticFeedback([14, 28, 14]);
         showToast('已移至回收桶', 'success');
@@ -270,6 +273,7 @@ export class TicketsPage {
         if (!ok) return false;
         ticket.isDeleted = false;
         ticket.deletedAt = undefined;
+        ticket.pinned = false;
         await this.app.persistTasks();
         this.triggerHapticFeedback(14);
         showToast('已還原票券', 'success');
@@ -1011,6 +1015,7 @@ export class TicketsPage {
       try {
         ticket.completed = true;
         ticket.completedAt = Date.now();
+        ticket.pinned = false;
         await this.app.persistTasks();
         await this.app.sendRedeemNotification(ticket);
 
@@ -1300,7 +1305,7 @@ export class TicketsPage {
                 </div>
               </div>
               <div class="flex items-center gap-1">
-                ${ticket.pinned ? '<span class="ticket-card-pin-pill text-[10px] rounded-full px-1.5 py-0.5 bg-amber-100 text-amber-700 whitespace-nowrap" title="置頂票券"><i class="fa-solid fa-thumbtack"></i></span>' : ''}
+                ${ticket.pinned && !ticket.completed && !ticket.isDeleted ? '<span class="ticket-card-pin-pill text-[10px] rounded-full px-1.5 py-0.5 bg-amber-100 text-amber-700 whitespace-nowrap" title="置頂票券"><i class="fa-solid fa-thumbtack"></i></span>' : ''}
                 ${hasOriginalImage ? '<span class="ticket-card-original-pill text-[10px] rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700 whitespace-nowrap"><i class="fa-regular fa-image mr-1"></i>原圖</span>' : ''}
               </div>
             </div>
@@ -1412,9 +1417,9 @@ export class TicketsPage {
                     ${hideTagAndSerial ? '' : `<p class="text-xs text-wabi-text-secondary mt-1">序號：${escapeHtml(ticket.serial || '未填寫')}</p>`}
                     <p class="${standardExpiryClass}">${standardExpiryPrefix}${standardExpiryDisplay}</p>
                   </div>
-                  <button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
+                  ${!ticket.completed && !ticket.isDeleted ? `<button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
                     <i class="fa-solid fa-thumbtack"></i>
-                  </button>
+                  </button>` : ''}
                 </div>
               </div>
             </div>
@@ -1479,11 +1484,27 @@ export class TicketsPage {
       return haystack.includes(search);
     });
 
+    // 待使用視圖才需要到期緊急度：先逐張預算一次，避免排序比較時重複解析日期。
+    const expiryRankById = new Map();
+    if (this.view === 'active') {
+      const urgencyRank = {
+        expired: 0,
+        today: 1,
+        soon: 2,
+        normal: 3,
+      };
+      list.forEach((ticket) => {
+        const state = getExpiryState(ticket.expiry, notifyDays);
+        expiryRankById.set(ticket.id, urgencyRank[state] ?? urgencyRank.normal);
+      });
+    }
+
     list.sort((a, b) => {
       if (this.view === 'active' && duplicateSerials.has(a.serial) !== duplicateSerials.has(b.serial)) {
         return duplicateSerials.has(a.serial) ? -1 : 1;
       }
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      // 置頂只適用於未使用票券：只有待使用視圖才讓置頂票券排到前面。
+      if (this.view === 'active' && a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       if (this.view === 'completed') {
         if (sortType === 'redeemed-oldest') return (a.completedAt || 0) - (b.completedAt || 0);
         if (sortType === 'newest') return (b.createdAt || 0) - (a.createdAt || 0);
@@ -1491,16 +1512,8 @@ export class TicketsPage {
         return (b.completedAt || 0) - (a.completedAt || 0);
       }
       if (this.view === 'active') {
-        const urgencyRank = {
-          expired: 0,
-          today: 1,
-          soon: 2,
-          normal: 3,
-        };
-        const stateA = getExpiryState(a.expiry, this.app.state.settings.notifyDays);
-        const stateB = getExpiryState(b.expiry, this.app.state.settings.notifyDays);
-        const rankA = urgencyRank[stateA] ?? urgencyRank.normal;
-        const rankB = urgencyRank[stateB] ?? urgencyRank.normal;
+        const rankA = expiryRankById.get(a.id) ?? 3;
+        const rankB = expiryRankById.get(b.id) ?? 3;
         if (rankA !== rankB) return rankA - rankB;
       }
       return getSortComparator(sortType)(a, b);
@@ -1748,7 +1761,7 @@ export class TicketsPage {
                   ${this.view === 'deleted' ? `${batchButton('restore', '批次還原', 'px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs')}${batchButton('purge', '批次永久刪除', 'px-3 py-1 rounded-lg bg-red-100 text-red-700 text-xs')}` : ''}
                   ${this.view === 'active' ? batchButton('complete', '批次已用', 'px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs') : ''}
                   ${this.view === 'completed' ? batchButton('uncomplete', '批次取消已用', 'px-3 py-1 rounded-lg bg-slate-100 text-xs') : ''}
-                  ${this.view !== 'deleted' ? `${batchButton('pin', '批次置頂', 'px-3 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs')}${batchButton('unpin', '批次取消置頂', 'px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs')}` : ''}
+                  ${this.view === 'active' ? `${batchButton('pin', '批次置頂', 'px-3 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs')}${batchButton('unpin', '批次取消置頂', 'px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs')}` : ''}
                   ${batchButton('add-tag', '批次加標籤', 'px-3 py-1 rounded-lg bg-wabi-primary/10 text-wabi-primary text-xs')}
                   ${batchButton('remove-tag', '批次移標籤', 'px-3 py-1 rounded-lg bg-wabi-primary/10 text-wabi-primary text-xs')}
                   ${batchButton('apply-template', '批次套用範本', 'px-3 py-1 rounded-lg bg-wabi-primary/10 text-wabi-primary text-xs')}
@@ -1943,6 +1956,7 @@ export class TicketsPage {
           ...ticket,
           isDeleted: true,
           deletedAt,
+          pinned: false,
         };
       });
       this.app.state.ui.selectedIds.clear();
@@ -2305,15 +2319,16 @@ export class TicketsPage {
         const ticketsCompletedNow = [];
         const next = this.app.state.tasks.map((ticket) => {
           if (!ids.includes(ticket.id)) return ticket;
-          if (action === 'delete') return { ...ticket, isDeleted: true, deletedAt: Date.now() };
-          if (action === 'restore') return { ...ticket, isDeleted: false, deletedAt: undefined };
+          if (action === 'delete') return { ...ticket, isDeleted: true, deletedAt: Date.now(), pinned: false };
+          if (action === 'restore') return { ...ticket, isDeleted: false, deletedAt: undefined, pinned: false };
           if (action === 'complete') {
             const completedAt = Date.now();
             ticketsCompletedNow.push({ ...ticket, completedAt });
-            return { ...ticket, completed: true, completedAt };
+            return { ...ticket, completed: true, completedAt, pinned: false };
           }
-          if (action === 'uncomplete') return { ...ticket, completed: false, completedAt: undefined };
-          if (action === 'pin') return { ...ticket, pinned: true };
+          if (action === 'uncomplete') return { ...ticket, completed: false, completedAt: undefined, pinned: false };
+          // 置頂只適用於未使用票券，已使用／回收桶中的票券不套用。
+          if (action === 'pin') return ticket.completed || ticket.isDeleted ? ticket : { ...ticket, pinned: true };
           if (action === 'unpin') return { ...ticket, pinned: false };
           return ticket;
         }).filter((ticket) => !(action === 'purge' && ids.includes(ticket.id)));
@@ -2358,6 +2373,15 @@ export class TicketsPage {
         }
 
         if (action === 'toggle-pin') {
+          // 置頂只適用於未使用票券：已使用／回收桶中的票券不可置頂，並順手清除殘留標記。
+          if (ticket.completed || ticket.isDeleted) {
+            if (ticket.pinned) {
+              ticket.pinned = false;
+              await this.app.persistTasks();
+              this.render();
+            }
+            return;
+          }
           ticket.pinned = !ticket.pinned;
           await this.app.persistTasks();
           this.render();
@@ -2382,6 +2406,7 @@ export class TicketsPage {
         if (action === 'toggle-complete') {
           ticket.completed = !ticket.completed;
           ticket.completedAt = ticket.completed ? Date.now() : undefined;
+          ticket.pinned = false;
           await this.app.persistTasks();
           if (ticket.completed) {
             await this.app.sendRedeemNotification(ticket);
@@ -2393,6 +2418,7 @@ export class TicketsPage {
         if (action === 'delete') {
           ticket.isDeleted = true;
           ticket.deletedAt = Date.now();
+          ticket.pinned = false;
           await this.app.persistTasks();
           this.render();
           return;
@@ -2401,6 +2427,7 @@ export class TicketsPage {
         if (action === 'restore') {
           ticket.isDeleted = false;
           ticket.deletedAt = undefined;
+          ticket.pinned = false;
           await this.app.persistTasks();
           this.render();
           return;

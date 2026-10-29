@@ -221,13 +221,14 @@ export class AddPage {
             </select>
           </div>
 
+          ${editing?.completed || editing?.isDeleted ? '' : `
           <div class="rounded-lg border border-wabi-border/70 p-3">
             <label class="inline-flex items-center gap-2 text-sm font-medium text-wabi-primary">
               <input id="ticket-pinned" type="checkbox" ${editing?.pinned ? 'checked' : ''} />
               設為置頂票券
             </label>
-            <p class="text-xs text-wabi-text-secondary mt-1">置頂票券會優先顯示在主頁前面。</p>
-          </div>
+            <p class="text-xs text-wabi-text-secondary mt-1">置頂只適用於未使用票券，會優先顯示在待使用清單前面；票券一旦核銷或移至回收桶會自動取消置頂。</p>
+          </div>`}
 
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">標籤（預設快速選取）</label>
@@ -597,7 +598,8 @@ export class AddPage {
         deletedAt: editing?.deletedAt,
         createdAt: editing?.createdAt || Date.now(),
         redeemUrl,
-        pinned: !!root.querySelector('#ticket-pinned')?.checked,
+        // 置頂只適用於未使用票券。
+        pinned: !editing?.completed && !editing?.isDeleted && !!root.querySelector('#ticket-pinned')?.checked,
       };
 
       if (editing) {
