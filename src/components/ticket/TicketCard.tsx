@@ -4,6 +4,37 @@ import { Check, AlertCircle, Clock, CheckCircle2, Maximize2, ExternalLink, QrCod
 import { Ticket } from '@/types/ticket';
 import { checkIsExpiringSoon, formatTime, formatDateTime } from '@/lib/helpers';
 
+// v1.6.2: card transparency is true transparency — the alpha lives on
+// the background color itself (no backdrop blur, no element opacity on
+// the background layer), so the canvas behind the card shows through
+// directly and the card content stays fully opaque.
+const withAlpha = (color: string | undefined, alpha: number): string | undefined => {
+  if (!color) return undefined;
+  const a = Math.max(0, Math.min(1, alpha));
+  const trimmed = color.trim();
+  const hex = trimmed.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const h = hex[1].length === 3 ? hex[1].split('').map((c) => c + c).join('') : hex[1];
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  const rgb = trimmed.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgb) {
+    const parts = rgb[1].split(/[,/]/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 3) return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${a})`;
+  }
+  const hslVar = trimmed.match(/^hsl\(\s*(var\(--[a-z0-9-]+\))\s*\)$/i);
+  if (hslVar) return `hsl(${hslVar[1]} / ${a})`;
+  const hsl = trimmed.match(/^hsla?\(([^)]+)\)$/i);
+  if (hsl) {
+    const base = hsl[1].split('/')[0].trim();
+    return `hsl(${base} / ${a})`;
+  }
+  return trimmed;
+};
+
 interface TicketCardProps {
   ticket: Ticket;
   onClick: (ticket: Ticket) => void;
@@ -100,7 +131,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     return '';
   };
 
-  // Calculate background opacity for card (content stays at full opacity)
+  // Background alpha for the card face (applied to the background color
+  // itself via withAlpha; content stays at full opacity)
   const cardBgOpacity = opacity !== undefined && opacity < 1 ? opacity : 1;
 
   // Get status dot color
@@ -130,9 +162,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         <div 
           className="absolute inset-0 glass-card glass-card--translucent rounded-2xl border border-border/50"
           style={{
-            opacity: cardBgOpacity,
-            ...(isDuplicateWarning ? { backgroundColor: 'rgba(168, 85, 247, 0.14)' } : cardBgColor && { backgroundColor: cardBgColor }),
-            borderColor: isDuplicateWarning ? 'rgba(147, 51, 234, 0.65)' : cardBorderColor,
+            backgroundColor: isDuplicateWarning
+              ? `rgba(168, 85, 247, ${0.14 * cardBgOpacity})`
+              : withAlpha(cardBgColor || 'hsl(var(--wabi-surface))', cardBgOpacity),
+            borderColor: isDuplicateWarning ? 'rgba(147, 51, 234, 0.65)' : withAlpha(cardBorderColor, 0.55),
             ...(cardBorderColor && !isDuplicateWarning && { borderWidth: '1px', borderStyle: 'solid' }),
           }} 
         />
@@ -242,11 +275,12 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     >
       {/* Background layer with opacity */}
       <div 
-        className="absolute inset-0 rounded-[24px] border border-border/70 shadow-[0_14px_30px_-22px_hsl(200_30%_20%_/_0.36),0_2px_8px_hsl(200_20%_20%_/_0.07)] backdrop-blur-[10px]"
-        style={{ 
-          opacity: cardBgOpacity,
-          backgroundColor: isDuplicateWarning ? 'rgba(168, 85, 247, 0.14)' : (cardBgColor || 'hsl(var(--wabi-surface))'),
-          borderColor: isDuplicateWarning ? 'rgba(147, 51, 234, 0.65)' : cardBorderColor,
+        className="absolute inset-0 rounded-[24px] border border-border/70 shadow-[0_14px_30px_-22px_hsl(200_30%_20%_/_0.36),0_2px_8px_hsl(200_20%_20%_/_0.07)]"
+        style={{
+          backgroundColor: isDuplicateWarning
+            ? `rgba(168, 85, 247, ${0.14 * cardBgOpacity})`
+            : withAlpha(cardBgColor || 'hsl(var(--wabi-surface))', cardBgOpacity),
+          borderColor: isDuplicateWarning ? 'rgba(147, 51, 234, 0.65)' : withAlpha(cardBorderColor, 0.55),
           borderWidth: '1px',
           borderStyle: 'solid',
         }} 

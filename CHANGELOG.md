@@ -2,6 +2,29 @@
 
 Notable project changes are tracked here.
 
+## 1.6.2 - 2026-10-29
+
+- Ticket cards switch from frosted glass to TRUE transparency
+  (去毛玻璃、改真透明): the v1.6.1 `backdrop-filter:
+  blur(14px) saturate(1.45)` blurred whatever sat behind a card
+  into a milky wash, so the background itself was never visible.
+  The backdrop filter is gone entirely from ticket cards (JS
+  `.ticket-card`, the React background layers, and the React
+  `.glass-card--translucent` variant). Transparency now comes
+  only from the background color's alpha — the JS cards already
+  rendered `rgba(cardBgColor, cardOpacity)` inline; the React
+  background layers previously used element `opacity` plus a
+  `backdrop-blur-[10px]`, and now apply alpha to the background
+  color via `withAlpha(...)` instead. Card content stays fully
+  opaque, the Settings transparency slider maps linearly onto
+  the background alpha, and the default stays 0.73
+  (`GLASS_CARD_OPACITY`, no new settings migration — the v1.6.1
+  one-time migration is untouched). Card edges are defined by
+  the 55%-alpha border and the light shadow, not by blur.
+  The redeem / barcode surface stays fully opaque white, and
+  non-card chrome (top bar, tab bar, modals) keeps its own
+  backdrop blur — out of scope for this change.
+
 ## 1.6.1 - 2026-10-29
 
 - Empty views stop taking up navigation space: the 已使用 and

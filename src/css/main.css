@@ -173,11 +173,12 @@ body.keyboard-open #bottom-nav {
   --ticket-swipe-offset: 0px;
   transform: translate3d(var(--ticket-swipe-offset), 0, 0);
   border-radius: 14px !important;
-  /* v1.6.1 glass: lighter shadow + stronger blur/saturate so the steel-navy
-     canvas and ice-blue glow show through the translucent card face. */
+  /* v1.6.2 true transparency: no backdrop-filter at all. The card face is
+     just a translucent background color (inline rgba from cardOpacity),
+     so the steel-navy canvas / glow behind shows through directly
+     instead of being blurred into frosted glass. The border + light
+     shadow define the card edge. */
   box-shadow: 0 10px 24px rgba(4, 32, 66, 0.15), 0 1px 4px rgba(4, 32, 66, 0.05);
-  backdrop-filter: blur(14px) saturate(1.45);
-  -webkit-backdrop-filter: blur(14px) saturate(1.45);
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
@@ -219,12 +220,6 @@ body.keyboard-open #bottom-nav {
   color: #ffffff;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-}
-
-/* A fully transparent card should reveal the background image directly. */
-.ticket-card[style*="backdrop-filter: none"] {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* iOS Safari zooms focused controls smaller than 16px, which is especially

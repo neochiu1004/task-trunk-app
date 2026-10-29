@@ -7,8 +7,10 @@ export const DB_KEYS = {
   LAST_BACKUP: 'lastBackupTime',
 };
 
-// v1.6.1: cards default to a translucent glass look so the canvas shows
-// through. LEGACY_DEFAULT_CARD_OPACITY is the pre-1.6.1 default; stored
+// v1.6.1: cards default to a translucent look so the canvas shows
+// through; v1.6.2 makes that TRUE transparency (background-color alpha
+// only, no backdrop-filter blur). LEGACY_DEFAULT_CARD_OPACITY is the
+// pre-1.6.1 default; stored
 // settings still carrying it (and not yet migrated) are treated as
 // "never customized" by DataService.compactViewConfig.
 export const GLASS_CARD_OPACITY = 0.73;
