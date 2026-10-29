@@ -294,7 +294,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               alt=""
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#ffb020] to-[#ff7a45] flex items-center justify-center">
+            <div className="w-full h-full bg-gradient-to-br from-[#38a1f2] to-[#0b5ed7] flex items-center justify-center">
               <TicketIcon size={24} className="text-primary-foreground" />
             </div>
           )}

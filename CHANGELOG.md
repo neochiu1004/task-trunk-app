@@ -2,6 +2,16 @@
 
 Notable project changes are tracked here.
 
+## 1.3.0 - 2026-10-29
+
+- Blue/white masculine re-theme (visual only): deep steel-navy canvas
+  (#0c2b52 -> #061831) with an ice-blue glow, pure-white cards with
+  sharper corners (cards 14px, top bar 16px, chips 10px), royal-blue
+  primary (#0b5ed7, gradient #38a1f2 -> #0b5ed7), ice-blue selected
+  states (#dbeafe), deep-ocean summary hero (#06264d -> #0b5ed7),
+  deep-navy desktop sidebar, PWA theme color #0a2a52. Replaces the
+  sunny theme from 1.2.0; fixed dashboard and gear hardening stay.
+
 ## 1.2.0 - 2026-10-29
 
 - Sunny youth re-theme (visual only): warm cream canvas
