@@ -488,6 +488,15 @@ export class TicketsPage {
     layer.style.top = `${insetTop}px`;
   }
 
+  syncTopBarSpacer() {
+    const root = this.app.getRoot();
+    const topBar = root?.querySelector('#tickets-top-bar');
+    const spacer = root?.querySelector('#tickets-top-bar-spacer');
+    if (!topBar || !spacer) return;
+    // Fixed bar sits 12px below the safe-area top; keep 12px breathing room under it too.
+    spacer.style.height = `${topBar.offsetHeight + 24}px`;
+  }
+
   startBackgroundRotation(backgroundImages, showBackground) {
     this.clearBackgroundRotationTimer();
     if (!showBackground) return;
@@ -1636,7 +1645,8 @@ export class TicketsPage {
     this.app.mount(`
       ${backgroundLayerHtml}
       <section class="page active relative z-10 px-4 pt-0 pb-24 md:pb-8 max-w-5xl mx-auto">
-        <div id="tickets-top-bar" class="app-top-bar sticky z-30 -mx-4 px-4 pb-3 mb-3" style="top: 0; padding-top: calc(var(--safe-top) + 0.65rem);">
+        <div id="tickets-top-bar-spacer" aria-hidden="true"></div>
+        <div id="tickets-top-bar" class="app-top-bar z-30 -mx-4 px-4 pb-3 mb-3" style="padding-top: 0.65rem;">
           <header class="flex items-center justify-between mb-3 gap-3">
             <div class="min-w-0">
               <h1 class="text-[1.55rem] md:text-2xl leading-tight font-black text-wabi-primary truncate tracking-normal">${escapeHtml(this.app.state.settings.appTitle)}</h1>
@@ -1777,8 +1787,13 @@ export class TicketsPage {
     `);
 
     this.bindEvents();
+    this.syncTopBarSpacer();
+    requestAnimationFrame(() => this.syncTopBarSpacer());
     this.updateBackgroundLayerInset();
-    this.backgroundInsetHandler = () => this.updateBackgroundLayerInset();
+    this.backgroundInsetHandler = () => {
+      this.updateBackgroundLayerInset();
+      this.syncTopBarSpacer();
+    };
     window.addEventListener('resize', this.backgroundInsetHandler);
     window.addEventListener('orientationchange', this.backgroundInsetHandler);
     window.visualViewport?.addEventListener('resize', this.backgroundInsetHandler);

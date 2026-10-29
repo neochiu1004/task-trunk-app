@@ -2,6 +2,13 @@
 
 Notable project changes are tracked here.
 
+## 1.1.1 - 2026-10-29
+
+- The tickets dashboard (top bar with title, search, summary and tag
+  filter) is now `position: fixed`: it never scrolls with the ticket
+  list below. A spacer matched to the bar height (re-measured on every
+  render and on resize/orientation changes) keeps the list clear of it.
+
 ## 1.1.0 - 2026-10-29
 
 - OmniPass-style redesign (visual only, all features unchanged): deep-navy
