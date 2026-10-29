@@ -1,7 +1,7 @@
 {
   "name": "task-trunk-app",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Local-first PWA for managing tickets, vouchers, serial numbers, and redemption links.",
   "license": "MIT",
   "type": "module",

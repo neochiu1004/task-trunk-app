@@ -2,6 +2,17 @@
 
 Notable project changes are tracked here.
 
+## 1.4.0 - 2026-10-29
+
+- Title rule: when a ticket's name contains "85度C", the default
+  template is auto-applied while typing (legacy JS app and React app).
+  The typed name and serial are preserved; the template fills expiry,
+  tags, barcode format, thumbnail and redeem URL. It fires once per
+  match and re-arms when the title no longer contains the keyword.
+  If no default template is set, a template whose label/product name
+  contains "85度C" is used instead. Shared matcher
+  `findTitleAutoTemplate` in utils with unit tests (10 passing).
+
 ## 1.3.0 - 2026-10-29
 
 - Blue/white masculine re-theme (visual only): deep steel-navy canvas

@@ -269,6 +269,20 @@ export async function compressImage(fileOrUrl, type = 'thumbnail') {
 }
 
 let lastToastTimer = null;
+export const TITLE_AUTO_TEMPLATE_KEYWORD = '85度C';
+
+// Title rule (neo, 2026-10-29): when a ticket title contains the keyword,
+// the default template is auto-applied. Falls back to a template whose
+// label/product name contains the keyword when no default is set.
+export function findTitleAutoTemplate(templates, defaultTemplateId, keyword = TITLE_AUTO_TEMPLATE_KEYWORD) {
+  const list = Array.isArray(templates) ? templates : [];
+  if (defaultTemplateId) {
+    const byDefault = list.find((t) => t.id === defaultTemplateId);
+    if (byDefault) return byDefault;
+  }
+  return list.find((t) => `${t.label || ''} ${t.productName || ''}`.includes(keyword)) || null;
+}
+
 export function showToast(message, variant = 'info', durationMs = 2200) {
   const toast = document.getElementById('toast');
   const textNode = document.getElementById('toast-message');

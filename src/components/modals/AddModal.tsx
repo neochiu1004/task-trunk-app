@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { X, LayoutDashboard, Search, Loader2, ScanLine, RotateCcw, Pin, ChevronDown } from 'lucide-react';
 import { Template, RedeemUrlPreset } from '@/types/ticket';
@@ -24,6 +24,7 @@ interface AddModalProps {
   onRenameTemplate: (id: string, newLabel: string) => void;
   onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
+  defaultTemplateId?: string;
   onSaveTemplate?: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   onAddBatch: (tickets: Array<{
     id: string;
@@ -56,6 +57,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   onRenameTemplate,
   onEditTemplate,
   redeemUrlPresets,
+  defaultTemplateId,
   onSaveTemplate,
   onAddBatch,
 }) => {
@@ -112,6 +114,36 @@ export const AddModal: React.FC<AddModalProps> = ({
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
     setHasAppliedTemplate(true);
   };
+
+  // Title rule: when the ticket name contains 85度C, auto-apply the
+  // default template (fallback: a template named with the keyword).
+  // The typed name and serial are preserved.
+  const titleTemplateAppliedRef = useRef(false);
+  useEffect(() => {
+    const KEYWORD = '85度C';
+    if (!manualData.name.includes(KEYWORD)) {
+      titleTemplateAppliedRef.current = false;
+      return;
+    }
+    if (titleTemplateAppliedRef.current) return;
+    const tpl = templates.find((t) => t.id === defaultTemplateId)
+      || templates.find((t) => `${t.label || ''} ${t.productName || ''}`.includes(KEYWORD));
+    if (!tpl) return;
+    titleTemplateAppliedRef.current = true;
+    const resolvedUrl = tpl.redeemUrlPresetId
+      ? redeemUrlPresets?.find((preset) => preset.id === tpl.redeemUrlPresetId)?.url
+      : undefined;
+    setManualData((prev) => ({
+      ...prev,
+      expiry: tpl.expiry || prev.expiry,
+      redeemUrl: resolvedUrl || prev.redeemUrl,
+    }));
+    if (tpl.image) setImages([tpl.image]);
+    if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
+    if (tpl.barcodeFormat) setBarcodeFormat(tpl.barcodeFormat);
+    setHasAppliedTemplate(true);
+    toast({ title: '已自動套用預設範本', description: '標題含 85度C' });
+  }, [manualData.name, templates, defaultTemplateId, redeemUrlPresets, toast]);
 
   const clearTemplateData = () => {
     setManualData({ name: '', serial: '', expiry: '', redeemUrl: '' });

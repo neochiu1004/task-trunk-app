@@ -7,6 +7,8 @@ import {
   showToast,
   tagsToText,
   normalizeDateInput,
+  findTitleAutoTemplate,
+  TITLE_AUTO_TEMPLATE_KEYWORD,
 } from '../utils.js';
 import { BATCH_IMAGE_VERSION, renderBatchTicketImage } from '../services/batchImportService.js';
 
@@ -406,6 +408,34 @@ export class AddPage {
       };
       this.app.persistSettings();
     }
+
+    // Title rule: when the product name contains 85度C, auto-apply the
+    // default template. The typed name and serial are preserved (they are
+    // per-voucher); the template fills expiry, tags, barcode format,
+    // thumbnail and redeem URL. Fires once per match and re-arms when the
+    // title no longer contains the keyword.
+    const productNameInput = root.querySelector('#product-name');
+    let titleTemplateApplied = (productNameInput?.value || '').includes(TITLE_AUTO_TEMPLATE_KEYWORD);
+    productNameInput?.addEventListener('input', () => {
+      const matches = (productNameInput.value || '').includes(TITLE_AUTO_TEMPLATE_KEYWORD);
+      if (!matches) {
+        titleTemplateApplied = false;
+        return;
+      }
+      if (titleTemplateApplied) return;
+      const template = findTitleAutoTemplate(this.app.state.templates, this.app.state.settings.defaultTemplateId);
+      if (!template) return;
+      titleTemplateApplied = true;
+      const typedName = productNameInput.value;
+      const typedSerial = root.querySelector('#serial')?.value || '';
+      applyTemplate(template, { showAppliedToast: false });
+      productNameInput.value = typedName;
+      const serialInput = root.querySelector('#serial');
+      if (serialInput) serialInput.value = typedSerial;
+      const templateSelect = root.querySelector('#template-id');
+      if (templateSelect) templateSelect.value = template.id;
+      showToast('標題含 85度C，已自動套用預設範本', 'success');
+    });
 
     root.querySelector('#redeem-url-preset')?.addEventListener('change', (event) => {
       const presetId = event.target.value;
