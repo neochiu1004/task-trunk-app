@@ -2,6 +2,32 @@
 
 Notable project changes are tracked here.
 
+## 1.6.0 - 2026-10-29
+
+- Slimmed down the tickets page (features and data unchanged):
+  the fixed top bar drops from six stacked rows to four — the title
+  row now carries the view name inline and a primary "+ 新增"
+  button, grid/selection controls moved into the "more" menu, the
+  gradient summary hero and the scope line became a single small
+  summary line (count + status, with the active filter and a clear
+  action only while filtering), and the full-width tag dropdown
+  became one horizontally scrollable row of filter chips next to a
+  slimmer sort select. The version pill left the bar (the version
+  still shows in Settings and the sidebar). The bar stays
+  `position: fixed` and the spacer is still re-measured on render
+  and resize, so the shorter bar simply gives the list more room.
+- Ticket cards show only decision-relevant info: name, one expiry
+  pill (date and countdown together — the expiry used to render
+  twice per card), status and the redeem entry (card tap). The
+  serial line and the full note preview no longer render on cards
+  (both stay in the data, the edit form and the redeem view), and
+  tag chips are capped at two with a "+N" indicator.
+- Cleanup: removed the now-unused `ticket-expiry-chip` CSS and the
+  version constants in the tickets page. React app mirrors the
+  same slimming (summary hero + static chips became one line,
+  duplicated expiring label folded into the expiry pill, compact
+  cards drop the tag subtitle, card tags capped at two).
+
 ## 1.5.0 - 2026-10-29
 
 - Templates now store the original ticket image (originalImage):

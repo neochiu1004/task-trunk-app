@@ -37,8 +37,6 @@ const DataHealthCheck = lazy(() =>
   import('@/components/modals/DataHealthCheck').then((module) => ({ default: module.DataHealthCheck }))
 );
 
-const APP_VERSION = __APP_VERSION__;
-const APP_UPDATED_AT = __APP_UPDATED_AT__;
 
 const Index = () => {
   const { isDark, toggleTheme } = useTheme();
@@ -471,60 +469,25 @@ const Index = () => {
           style={{ paddingTop: `${headerHeight + 12}px` }}
         >
           <div className="px-4 mb-4 space-y-3">
-            <div className="app-summary-card">
-              <div className="min-w-0 flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
-                <span className="text-[10px] uppercase tracking-[0.18em] text-primary-foreground/65 font-bold">
-                  {viewLabelMap[view]}
-                </span>
-                <span className="text-2xl leading-none font-black text-primary-foreground tabular-nums">{filteredTasks.length}</span>
-                <span className="text-[11px] font-bold text-primary-foreground/70">/ {currentViewCount} 張</span>
-                <span className="text-[11px] font-semibold text-primary-foreground/78">
-                  {statusCaption}
-                  {visiblePinnedCount > 0 && view === 'active' ? ` · 優先 ${visiblePinnedCount} 張` : ''}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {(hasActiveFilters || isSelectionMode) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setActiveTags([]);
-                      setIsSelectionMode(false);
-                      setSelectedIds(new Set());
-                    }}
-                    className="px-3 py-1.5 rounded-full bg-white/14 text-[11px] font-bold text-primary-foreground hover:bg-white/20"
-                  >
-                    清除
-                  </button>
-                )}
-                <span className="rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-semibold text-primary-foreground/78 whitespace-nowrap">v{APP_VERSION} · {APP_UPDATED_AT}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-              {searchQuery.trim() && (
-                <span className="app-filter-chip app-filter-chip-active">
-                  搜尋: {searchQuery.trim()}
-                </span>
-              )}
-              {activeTags.map((tag) => (
-                <span key={tag} className="app-filter-chip">
-                  {tag}
-                </span>
-              ))}
-              {isSelectionMode && (
-                <span className="app-filter-chip app-filter-chip-warning">
-                  已選 {selectedIds.size} 張
-                </span>
-              )}
-              {!searchQuery.trim() && activeTags.length === 0 && !isSelectionMode && (
-                <>
-                  <span className="app-filter-chip app-filter-chip-active">快到期 {visibleExpiringCount}</span>
-                  <span className="app-filter-chip">優先 {visiblePinnedCount}</span>
-                  <span className="app-filter-chip">全部 {currentViewCount}</span>
-                </>
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
+              <span className="truncate">
+                {viewLabelMap[view]} {filteredTasks.length} / {currentViewCount} 張 · {statusCaption}
+                {visiblePinnedCount > 0 && view === 'active' ? ` · 優先 ${visiblePinnedCount} 張` : ''}
+                {isSelectionMode ? ` · 已選 ${selectedIds.size} 張` : ''}
+              </span>
+              {(hasActiveFilters || isSelectionMode) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setActiveTags([]);
+                    setIsSelectionMode(false);
+                    setSelectedIds(new Set());
+                  }}
+                  className="shrink-0 font-bold text-primary underline underline-offset-2"
+                >
+                  清除
+                </button>
               )}
             </div>
 

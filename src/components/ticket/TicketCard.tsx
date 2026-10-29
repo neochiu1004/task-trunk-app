@@ -167,13 +167,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               {ticket.redeemUrl && <ExternalLink size={10} className="inline ml-1 text-ticket-momo" />}
             </h3>
             
-            {/* Tags as subtitle */}
-            {ticket.tags && ticket.tags.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                {ticket.tags.join(', ')}
-              </p>
-            )}
-            
+
             {/* Expiry & duplicate info */}
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               {isDuplicateWarning && (
@@ -318,23 +312,15 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               )}
             </div>
             
-            {isExpiringWarning && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-[10px] font-semibold text-ticket-warning mt-1 flex items-center gap-0.5"
-              >
-                <AlertCircle size={10} /> 快到期
-              </motion.div>
-            )}
-            
             <div className="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar">
-              {ticket.tags && ticket.tags.map((t) => (
+              {ticket.tags && ticket.tags.slice(0, 2).map((t) => (
                 <span key={t} className="text-[10px] bg-primary/8 text-primary px-2 py-1 rounded-full font-bold whitespace-nowrap">
                   {t}
                 </span>
               ))}
-              {!ticket.tags?.length && <span className="text-[9px] text-muted-foreground/50">#</span>}
+              {ticket.tags && ticket.tags.length > 2 && (
+                <span className="text-[10px] text-muted-foreground px-1 py-1 font-bold whitespace-nowrap">+{ticket.tags.length - 2}</span>
+              )}
             </div>
           </div>
           
@@ -345,7 +331,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               </div>
             ) : (
               <div className={`text-[11px] font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full ${isExpiring ? 'text-ticket-warning bg-ticket-warning/10' : 'text-ticket-success bg-ticket-success/10'}`}>
-                <Clock size={12} /> <span>{ticket.expiry || '無期限'}</span>
+                <Clock size={12} /> <span>{isExpiring ? `快到期 · ${ticket.expiry}` : ticket.expiry || '無期限'}</span>
               </div>
             )}
             
