@@ -128,7 +128,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       >
         {/* Background layer with opacity */}
         <div 
-          className="absolute inset-0 glass-card rounded-2xl border border-border/50"
+          className="absolute inset-0 glass-card glass-card--translucent rounded-2xl border border-border/50"
           style={{
             opacity: cardBgOpacity,
             ...(isDuplicateWarning ? { backgroundColor: 'rgba(168, 85, 247, 0.14)' } : cardBgColor && { backgroundColor: cardBgColor }),

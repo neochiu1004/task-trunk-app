@@ -9,6 +9,7 @@ import {
   sendTelegramMessage,
   showToast,
   validateImportData,
+  GLASS_CARD_OPACITY,
 } from '../utils.js';
 import { buildBatchTickets, validateBatchRows } from '../services/batchImportService.js';
 
@@ -257,13 +258,13 @@ export class SettingsPage {
       : 1;
     const activeCardOpacity = Number.isFinite(Number(activeViewConfig.cardOpacity))
       ? Math.max(0, Math.min(1, Number(activeViewConfig.cardOpacity)))
-      : 0.95;
+      : GLASS_CARD_OPACITY;
     const completedCardOpacity = Number.isFinite(Number(completedViewConfig.cardOpacity))
       ? Math.max(0, Math.min(1, Number(completedViewConfig.cardOpacity)))
-      : 0.95;
+      : GLASS_CARD_OPACITY;
     const deletedCardOpacity = Number.isFinite(Number(deletedViewConfig.cardOpacity))
       ? Math.max(0, Math.min(1, Number(deletedViewConfig.cardOpacity)))
-      : 0.95;
+      : GLASS_CARD_OPACITY;
     const activeCardTransparencyPercent = Math.round((1 - activeCardOpacity) * 100);
     const completedCardTransparencyPercent = Math.round((1 - completedCardOpacity) * 100);
     const deletedCardTransparencyPercent = Math.round((1 - deletedCardOpacity) * 100);

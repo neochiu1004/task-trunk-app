@@ -3,7 +3,7 @@ import type { ViewConfig, Settings, RedeemUrlPreset } from '@/types/ticket';
 export const defaultViewConfig: ViewConfig = {
   backgroundImage: '',
   headerBackgroundImage: '',
-  cardOpacity: 0.95,
+  cardOpacity: 0.73, // v1.6.1 glass default, mirrors the JS app
   bgOpacity: 1,
   bgPosY: 50,
   bgSize: 100,

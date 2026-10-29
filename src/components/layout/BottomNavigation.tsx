@@ -60,20 +60,27 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             <span className="text-[10px] font-bold text-[#0b5ed7]">新增</span>
           </motion.button>
           
-          <NavItem
-            icon={navItems[1].icon}
-            label={navItems[1].label}
-            count={counts.completed}
-            isActive={view === navItems[1].id}
-            onClick={() => setView(navItems[1].id)}
-          />
-          <NavItem
-            icon={navItems[2].icon}
-            label={navItems[2].label}
-            count={counts.deleted}
-            isActive={view === navItems[2].id}
-            onClick={() => setView(navItems[2].id)}
-          />
+          {/* v1.6.1: 已使用 / 回收桶 entries only appear while they hold
+              tickets (the entry for the view you are on stays, so you
+              are never stranded on an empty view). */}
+          {(counts.completed > 0 || view === navItems[1].id) && (
+            <NavItem
+              icon={navItems[1].icon}
+              label={navItems[1].label}
+              count={counts.completed}
+              isActive={view === navItems[1].id}
+              onClick={() => setView(navItems[1].id)}
+            />
+          )}
+          {(counts.deleted > 0 || view === navItems[2].id) && (
+            <NavItem
+              icon={navItems[2].icon}
+              label={navItems[2].label}
+              count={counts.deleted}
+              isActive={view === navItems[2].id}
+              onClick={() => setView(navItems[2].id)}
+            />
+          )}
         </nav>
       </div>
     </div>

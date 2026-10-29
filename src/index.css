@@ -181,6 +181,20 @@
     -webkit-backdrop-filter: blur(8px);
   }
 
+  /* v1.6.1: translucent variant for ticket cards + list empty states,
+     mirroring the JS app's GLASS_CARD_OPACITY default so the canvas
+     shows through. Deliberately NOT applied in RedeemModal — barcode /
+     redeem surfaces keep the opaque .glass-card for scanning. */
+  .glass-card--translucent {
+    background: hsl(var(--wabi-surface) / 0.73);
+    border-color: hsl(var(--wabi-border) / 0.55);
+    box-shadow:
+      0 10px 24px -14px hsl(200 28% 22% / 0.18),
+      0 1px 4px hsl(200 18% 20% / 0.05);
+    backdrop-filter: blur(14px) saturate(1.45);
+    -webkit-backdrop-filter: blur(14px) saturate(1.45);
+  }
+
   .glass-header {
     background: linear-gradient(180deg, hsl(var(--wabi-surface) / 0.94) 0%, hsl(var(--wabi-surface) / 0.84) 100%);
     border-bottom: 1px solid hsl(var(--wabi-border) / 0.7);

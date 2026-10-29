@@ -2,6 +2,31 @@
 
 Notable project changes are tracked here.
 
+## 1.6.1 - 2026-10-29
+
+- Empty views stop taking up navigation space: the 已使用 and
+  回收桶 nav entries now hide while their ticket count is zero and
+  reappear on their own when a ticket lands there. Visibility is
+  computed from the data on every render (`getNavVisibility`), never
+  hard-coded. If you are standing on a view that just emptied, the
+  page shows a slim plain-text empty state ("目前沒有已使用票券" /
+  "回收桶是空的") instead of the old opaque panel, so the canvas
+  stays visible. The React app's bottom navigation mirrors this
+  (the entry for the view you are on stays, so you are never
+  stranded).
+- Ticket cards go translucent glass: the default card opacity moves
+  from 0.95 to 0.73 (`GLASS_CARD_OPACITY`), borders soften to 55%
+  alpha, shadows lighten, and the card blur grows to
+  `blur(14px) saturate(1.45)`, letting the steel-navy canvas and
+  ice-blue glow show through. Secondary text inside cards deepens a
+  step to stay readable. Stored settings still carrying the old
+  0.95 default are migrated once (`cardOpacityGlassMigrated`);
+  a deliberately chosen transparency in Settings is untouched.
+  The redeem / barcode surface stays fully opaque white — scanning
+  wins over looks. React mirrors this with a
+  `glass-card--translucent` variant scoped to ticket cards and the
+  list empty state (RedeemModal keeps the opaque `.glass-card`).
+
 ## 1.6.0 - 2026-10-29
 
 - Slimmed down the tickets page (features and data unchanged):

@@ -549,7 +549,7 @@ const Index = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mx-4 text-center py-16 px-6 glass-card rounded-[28px] text-muted-foreground border border-border/50"
+                  className="mx-4 text-center py-16 px-6 glass-card glass-card--translucent rounded-[28px] text-muted-foreground border border-border/50"
                 >
                   <span className="text-6xl mb-6 block opacity-20">🎫</span>
                   <p className="font-semibold text-base text-foreground">{emptyStateTitle}</p>

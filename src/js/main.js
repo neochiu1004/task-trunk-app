@@ -11,6 +11,7 @@ import {
   showToast,
   todayISO,
   backfillTitleTemplateImages,
+  getNavVisibility,
 } from './utils.js';
 
 const APP_VERSION = __APP_VERSION__;
@@ -150,10 +151,21 @@ class TicketTrunkJijunApp {
     this.root.innerHTML = html;
   }
 
+  // 已使用 / 回收桶 entries hide while their count is zero (v1.6.1) and
+  // come back on their own as soon as a ticket lands there.
+  syncNavVisibility() {
+    const visibility = getNavVisibility(this.state.tasks);
+    document.querySelector('.nav-item[data-page="completed"]')
+      ?.classList.toggle('nav-item--hidden', !visibility.showCompleted);
+    document.querySelector('.nav-item[data-page="deleted"]')
+      ?.classList.toggle('nav-item--hidden', !visibility.showDeleted);
+  }
+
   setActiveNav(route) {
     document.querySelectorAll('.nav-item').forEach((item) => {
       item.classList.toggle('active', item.dataset.page === route);
     });
+    this.syncNavVisibility();
     const versionInfo = document.getElementById('sidebar-version-info');
     if (versionInfo) {
       versionInfo.textContent = `票夾 PWA v${APP_VERSION} · ${APP_UPDATED_AT}`;

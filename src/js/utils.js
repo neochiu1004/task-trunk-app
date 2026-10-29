@@ -7,11 +7,18 @@ export const DB_KEYS = {
   LAST_BACKUP: 'lastBackupTime',
 };
 
+// v1.6.1: cards default to a translucent glass look so the canvas shows
+// through. LEGACY_DEFAULT_CARD_OPACITY is the pre-1.6.1 default; stored
+// settings still carrying it (and not yet migrated) are treated as
+// "never customized" by DataService.compactViewConfig.
+export const GLASS_CARD_OPACITY = 0.73;
+export const LEGACY_DEFAULT_CARD_OPACITY = 0.95;
+
 export const defaultViewConfig = {
   backgroundImage: '',
   backgroundImages: [],
   showBackground: true,
-  cardOpacity: 0.95,
+  cardOpacity: GLASS_CARD_OPACITY,
   bgOpacity: 1,
   cardBgColor: '#ffffff',
   cardBorderColor: '#d7e3f0',
@@ -58,6 +65,20 @@ export const BARCODE_FORMATS = [
   { value: 'CODABAR', label: 'CODABAR' },
   { value: 'QR_CODE', label: 'QR_CODE' },
 ];
+
+// Nav entries for 已使用 / 回收桶 only take up space when they hold
+// tickets (v1.6.1). Pure + data-driven so every render can recompute it.
+export function getNavVisibility(tasks = []) {
+  const list = Array.isArray(tasks) ? tasks : [];
+  const completedCount = list.filter((t) => t.completed && !t.isDeleted).length;
+  const deletedCount = list.filter((t) => t.isDeleted).length;
+  return {
+    completedCount,
+    deletedCount,
+    showCompleted: completedCount > 0,
+    showDeleted: deletedCount > 0,
+  };
+}
 
 export function generateId() {
   return `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;

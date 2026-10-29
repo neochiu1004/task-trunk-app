@@ -5,6 +5,7 @@ import {
   parseTags,
   showToast,
   normalizeDateInput,
+  GLASS_CARD_OPACITY,
 } from '../utils.js';
 // bwip-js／qrious 體積大，只在核銷模式真的要畫條碼／QR 時才動態載入（各自拆成獨立 chunk、由 SW 快取），
 // 不要綁進 ticketsPage 主 chunk 拖慢首屏。
@@ -1187,7 +1188,7 @@ export class TicketsPage {
     const ultraCompactCard = !!options.ultraCompactCard;
     const gridColumns = [1, 2, 3].includes(Number(options.gridColumns)) ? Number(options.gridColumns) : 2;
     const hideTagAndSerial = gridColumns === 3;
-    const cardOpacity = clamp(options.cardOpacity, 0, 1, 0.95);
+    const cardOpacity = clamp(options.cardOpacity, 0, 1, GLASS_CARD_OPACITY);
     const isCardFullyTransparent = cardOpacity <= 0.01;
     const cardHeight = clamp(options.cardHeight, 0, 360, 0);
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
@@ -1201,7 +1202,7 @@ export class TicketsPage {
         ? '<button type="button" data-clear-scope="1" class="mt-4 rounded-lg bg-wabi-primary px-4 py-2 text-sm font-semibold text-white">清除篩選</button>'
         : this.view === 'active'
           ? '<a href="#add" class="mt-4 inline-flex rounded-lg bg-wabi-primary px-4 py-2 text-sm font-semibold text-white">新增第一張票券</a>'
-          : '<a href="#active" class="mt-4 inline-flex rounded-lg border border-wabi-border bg-white px-4 py-2 text-sm font-semibold text-wabi-primary">回待使用票券</a>';
+          : '<a href="#active" class="ticket-empty-state-action mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold">回待使用票券</a>';
       const helperText = hasScope
         ? '目前搜尋或標籤篩選沒有符合的票券。'
         : this.view === 'active'
@@ -1210,10 +1211,10 @@ export class TicketsPage {
             ? '核銷完成的票券會集中在這裡，方便日後查找。'
             : '刪除的票券會先放在回收桶，確認後再永久刪除。';
       return `
-        <div class="col-span-full rounded-xl border border-dashed border-wabi-border bg-white/85 p-10 text-center text-wabi-text-secondary">
-          <i class="fa-solid ${meta.icon} text-2xl mb-3"></i>
-          <p class="font-semibold text-wabi-primary">${meta.empty}</p>
-          <p class="mt-2 text-sm">${helperText}</p>
+        <div class="ticket-empty-state col-span-full">
+          <i class="fa-solid ${meta.icon} ticket-empty-state-icon"></i>
+          <p class="ticket-empty-state-title">${meta.empty}</p>
+          <p class="ticket-empty-state-text">${helperText}</p>
           ${actionHtml}
         </div>
       `;
@@ -1260,7 +1261,7 @@ export class TicketsPage {
       const duplicateCardClass = isActiveDuplicate ? 'ticket-card--duplicate' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
-        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
+        const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${hexToRgba(cardBorderColor, 0.55)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
         const compactExpiryCardClass = expiryState === 'expired'
           ? 'ticket-card--expiry-expired'
           : expiryState === 'today'
@@ -1387,7 +1388,7 @@ export class TicketsPage {
       const imageStyle = this.view === 'active'
         ? ` style="width: ${Math.round(Math.max(52, thumbnailScale))}%;"`
         : '';
-      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${escapeHtml(cardBorderColor)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
+      const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${hexToRgba(cardBorderColor, 0.55)};${isCardFullyTransparent ? ' box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
       const swipeMap = {
         active: { left: '核銷', right: '回收' },
         completed: { left: '還原', right: '回收' },
@@ -1534,7 +1535,7 @@ export class TicketsPage {
     }
     const showBackground = viewConfig.showBackground !== false;
     const bgOpacity = clamp(viewConfig.bgOpacity, 0, 1, 1);
-    const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, 0.95);
+    const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, GLASS_CARD_OPACITY);
     const cardHeight = clamp(viewConfig.cardHeight, 0, 360, 0);
     const cardBgColor = viewConfig.cardBgColor || '#ffffff';
     const cardBorderColor = viewConfig.cardBorderColor || '#d7e3f0';
@@ -1750,6 +1751,7 @@ export class TicketsPage {
     `);
 
     this.bindEvents();
+    this.app.syncNavVisibility?.();
     this.syncTopBarSpacer();
     requestAnimationFrame(() => this.syncTopBarSpacer());
     this.updateBackgroundLayerInset();

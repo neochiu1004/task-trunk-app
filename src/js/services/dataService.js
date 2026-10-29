@@ -1,4 +1,4 @@
-import { DB_KEYS, defaultSettings, normalizeTicket } from '../utils.js';
+import { DB_KEYS, defaultSettings, normalizeTicket, GLASS_CARD_OPACITY, LEGACY_DEFAULT_CARD_OPACITY } from '../utils.js';
 
 export class DataService {
   constructor() {
@@ -20,19 +20,30 @@ export class DataService {
       backgroundImages.push(legacyBackgroundImage);
     }
 
+    const rawCardOpacity = Number.isFinite(Number(normalizedInput.cardOpacity))
+      ? Math.max(0, Math.min(1, Number(normalizedInput.cardOpacity)))
+      : Number.isFinite(Number(normalizedFallback.cardOpacity))
+        ? Number(normalizedFallback.cardOpacity)
+        : GLASS_CARD_OPACITY;
+    // One-time migration (v1.6.1): a stored opacity equal to the old
+    // default means the user never customized it, so move it to the
+    // glass default once. The marker keeps a later deliberate choice
+    // of the same value intact.
+    const cardOpacity = rawCardOpacity === LEGACY_DEFAULT_CARD_OPACITY
+      && normalizedInput.cardOpacityGlassMigrated !== true
+      ? GLASS_CARD_OPACITY
+      : rawCardOpacity;
+
     return {
       ...normalizedFallback,
+      cardOpacityGlassMigrated: true,
       showBackground: normalizedInput.showBackground !== false,
       bgOpacity: Number.isFinite(Number(normalizedInput.bgOpacity))
         ? Math.max(0, Math.min(1, Number(normalizedInput.bgOpacity)))
         : Number.isFinite(Number(normalizedFallback.bgOpacity))
           ? Number(normalizedFallback.bgOpacity)
           : 1,
-      cardOpacity: Number.isFinite(Number(normalizedInput.cardOpacity))
-        ? Math.max(0, Math.min(1, Number(normalizedInput.cardOpacity)))
-        : Number.isFinite(Number(normalizedFallback.cardOpacity))
-          ? Number(normalizedFallback.cardOpacity)
-          : 0.95,
+      cardOpacity,
       cardBgColor: normalizedInput.cardBgColor || normalizedFallback.cardBgColor || '#ffffff',
       cardBorderColor: normalizedInput.cardBorderColor || normalizedFallback.cardBorderColor || '#d7e3f0',
       cardHeight: Number.isFinite(Number(normalizedInput.cardHeight))
