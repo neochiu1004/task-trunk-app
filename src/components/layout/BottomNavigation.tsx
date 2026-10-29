@@ -53,11 +53,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           >
             <div className="relative">
               <motion.div
-                className="absolute -inset-2.5 bg-gradient-to-tr from-[#334A52] to-[#6A9C89] rounded-[17px] shadow-md"
+                className="absolute -inset-2.5 bg-gradient-to-tr from-[#536dfe] to-[#3656db] rounded-[17px] shadow-md"
               />
               <Plus size={22} className="relative z-10 text-primary-foreground" />
             </div>
-            <span className="text-[10px] font-bold text-[#334A52]">新增</span>
+            <span className="text-[10px] font-bold text-[#3656db]">新增</span>
           </motion.button>
           
           <NavItem
@@ -95,7 +95,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, count, isActive, o
       onClick={onClick}
       className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-2xl transition-colors min-w-[58px] ${
         isActive 
-          ? 'text-[#334A52]' 
+          ? 'text-[#3656db]' 
           : 'text-muted-foreground hover:text-foreground'
       }`}
     >
@@ -103,14 +103,14 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, count, isActive, o
         {isActive && (
           <motion.div
             layoutId="bottomNavIndicator"
-            className="absolute -inset-2 bg-[#6A9C89]/16 rounded-2xl"
+            className="absolute -inset-2 bg-[#536dfe]/14 rounded-2xl"
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           />
         )}
         <Icon size={22} className="relative z-10" />
         {count > 0 && (
           <span className={`absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center z-20 ${
-            isActive ? 'bg-[#334A52] text-white' : 'bg-white/90 text-[#334A52] border border-border/60'
+            isActive ? 'bg-[#3656db] text-white' : 'bg-white/90 text-[#3656db] border border-border/60'
           }`}>
             {count > 99 ? '99+' : count}
           </span>

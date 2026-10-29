@@ -287,7 +287,7 @@ export class SettingsPage {
       : 72;
     this.app.mount(`
       <section class="page active px-4 pt-0 pb-24 md:pb-8 max-w-4xl mx-auto space-y-4">
-        <div class="sticky z-30 -mx-4 px-4 pb-3 mb-3 bg-wabi-bg border-b border-wabi-border shadow-[0_8px_16px_-14px_rgba(37,52,64,0.45)]" style="top: 0; padding-top: calc(var(--safe-top) + 0.5rem);">
+        <div class="app-top-bar sticky z-30 -mx-4 px-4 pb-3 mb-3" style="top: 0; padding-top: calc(var(--safe-top) + 0.5rem);">
           <div class="flex items-center justify-between gap-2">
             <div>
               <h1 class="text-2xl font-bold text-wabi-primary">設定</h1>

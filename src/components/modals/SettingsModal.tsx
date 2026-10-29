@@ -804,11 +804,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </label>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono text-muted-foreground">
-                      {currentViewConfig.cardBorderColor || '#e2e8f0'}
+                      {currentViewConfig.cardBorderColor || '#dfe3ec'}
                     </span>
                     <input
                       type="color"
-                      value={currentViewConfig.cardBorderColor || '#e2e8f0'}
+                      value={currentViewConfig.cardBorderColor || '#dfe3ec'}
                       onChange={(e) => handleViewConfigChange('cardBorderColor', e.target.value)}
                       className="w-6 h-6 rounded overflow-hidden border-none outline-none cursor-pointer"
                     />

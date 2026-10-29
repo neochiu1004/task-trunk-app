@@ -34,7 +34,7 @@ export class DataService {
           ? Number(normalizedFallback.cardOpacity)
           : 0.95,
       cardBgColor: normalizedInput.cardBgColor || normalizedFallback.cardBgColor || '#ffffff',
-      cardBorderColor: normalizedInput.cardBorderColor || normalizedFallback.cardBorderColor || '#e2e8f0',
+      cardBorderColor: normalizedInput.cardBorderColor || normalizedFallback.cardBorderColor || '#dfe3ec',
       cardHeight: Number.isFinite(Number(normalizedInput.cardHeight))
         ? Math.max(0, Math.min(360, Number(normalizedInput.cardHeight)))
         : Number.isFinite(Number(normalizedFallback.cardHeight))

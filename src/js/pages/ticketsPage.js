@@ -1185,7 +1185,7 @@ export class TicketsPage {
     const cardHeight = clamp(options.cardHeight, 0, 360, 0);
     const thumbnailScale = clamp(options.thumbnailScale, 10, 100, 100);
     const cardBgColor = options.cardBgColor || '#ffffff';
-    const cardBorderColor = options.cardBorderColor || '#e2e8f0';
+    const cardBorderColor = options.cardBorderColor || '#dfe3ec';
     const duplicateSerials = getDuplicateSerialSet(this.app.state.tasks);
     if (!tickets.length) {
       const meta = VIEW_META[this.view];
@@ -1549,7 +1549,7 @@ export class TicketsPage {
     const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, 0.95);
     const cardHeight = clamp(viewConfig.cardHeight, 0, 360, 0);
     const cardBgColor = viewConfig.cardBgColor || '#ffffff';
-    const cardBorderColor = viewConfig.cardBorderColor || '#e2e8f0';
+    const cardBorderColor = viewConfig.cardBorderColor || '#dfe3ec';
     const ultraCompactCard = viewConfig.ultraCompactCard === true;
     const compactGrid = gridColumns > 1;
     const thumbnailScale = Number.isFinite(Number(viewConfig.thumbnailScale))

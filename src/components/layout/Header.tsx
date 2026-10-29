@@ -166,10 +166,10 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const topButtons = [
-    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-[#486773] to-[#334A52]', hoverClass: 'hover:from-[#557985] hover:to-[#3D5963]', tooltip: '背景' },
-    { icon: isDark ? Sun : Moon, onClick: onToggleTheme || (() => {}), bgClass: isDark ? 'bg-gradient-to-br from-[#c18f3e] to-[#996f31]' : 'bg-gradient-to-br from-[#5e7f72] to-[#4a6a5e]', hoverClass: isDark ? 'hover:from-[#cf9a45] hover:to-[#a17736]' : 'hover:from-[#6a8e7f] hover:to-[#557769]', tooltip: isDark ? '淺色模式' : '深色模式' },
-    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-[#6A9C89] to-[#4f8070]', hoverClass: 'hover:from-[#76ab97] hover:to-[#5b8e7d]', tooltip: '設定' },
-    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-[#9e7862] to-[#7d5f4f]', hoverClass: 'hover:from-[#ad846c] hover:to-[#8a6a58]', tooltip: '選單' },
+    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-[#536dfe] to-[#3656db]', hoverClass: 'hover:from-[#6a82fe] hover:to-[#4665e0]', tooltip: '背景' },
+    { icon: isDark ? Sun : Moon, onClick: onToggleTheme || (() => {}), bgClass: isDark ? 'bg-gradient-to-br from-[#c18f3e] to-[#996f31]' : 'bg-gradient-to-br from-[#3c465f] to-[#273353]', hoverClass: isDark ? 'hover:from-[#cf9a45] hover:to-[#a17736]' : 'hover:from-[#4a5570] hover:to-[#31405f]', tooltip: isDark ? '淺色模式' : '深色模式' },
+    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-[#16b889] to-[#0b956e]', hoverClass: 'hover:from-[#2ac496] hover:to-[#0da87c]', tooltip: '設定' },
+    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-[#68728c] to-[#3c465f]', hoverClass: 'hover:from-[#76819c] hover:to-[#46506a]', tooltip: '選單' },
   ];
 
   return (
@@ -313,7 +313,7 @@ export const Header: React.FC<HeaderProps> = ({
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.02 }}
               onClick={onForceUpdate}
-              className="h-11 px-3 rounded-[17px] flex items-center justify-center gap-1.5 text-white bg-gradient-to-br from-[#d98c3f] to-[#b96c2d] shadow-sm shrink-0"
+              className="h-11 px-3 rounded-[17px] flex items-center justify-center gap-1.5 text-white bg-gradient-to-br from-[#ff9500] to-[#ff5e3a] shadow-sm shrink-0"
             >
               <RefreshCcw size={13} />
               <span className="text-xs font-semibold">更新</span>

@@ -14,7 +14,7 @@ export const defaultViewConfig = {
   cardOpacity: 0.95,
   bgOpacity: 1,
   cardBgColor: '#ffffff',
-  cardBorderColor: '#e2e8f0',
+  cardBorderColor: '#dfe3ec',
   cardHeight: 0,
   gridImageHeight: 84,
   thumbnailScale: 100,

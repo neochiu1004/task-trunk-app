@@ -2,6 +2,19 @@
 
 Notable project changes are tracked here.
 
+## 1.1.0 - 2026-10-29
+
+- OmniPass-style redesign (visual only, all features unchanged): deep-navy
+  canvas (#0b1020 -> #10172b gradient with a soft indigo glow), light
+  floating cards (20px radius, layered shadow), indigo primary
+  (#536dfe -> #3656db gradient buttons, #e8edff selected chips/tabs),
+  OmniPass wallet-style summary hero (#111827 -> #1d4ed8), full-width
+  light bottom navigation on mobile and a deep-navy sidebar on desktop.
+- Palette remapped in one place per stack: Tailwind `wabi-*` tokens and
+  CSS variables in the legacy JS app, HSL theme tokens in the React app;
+  default ticket-card border now #dfe3ec. PWA theme/background color
+  updated to #0b1020.
+
 ## 1.0.5 - 2026-10-29
 
 - Shrunk the top summary card on the ticket lists: single-row compact
