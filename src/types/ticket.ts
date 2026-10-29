@@ -23,6 +23,7 @@ export interface Template {
   label: string;
   productName: string;
   image?: string;
+  originalImage?: string;
   tags?: string[];
   serial?: string;
   expiry?: string;

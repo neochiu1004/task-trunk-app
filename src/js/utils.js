@@ -283,6 +283,41 @@ export function findTitleAutoTemplate(templates, defaultTemplateId, keyword = TI
   return list.find((t) => `${t.label || ''} ${t.productName || ''}`.includes(keyword)) || null;
 }
 
+// One-time style backfill for the title rule: tickets whose name contains
+// the keyword should redeem with the original ticket image (format 1),
+// not the generated barcode card. If the resolved template has no
+// originalImage yet, adopt one from an existing ticket that has it
+// (e.g. a JSON-imported ticket), then fill every matching ticket that
+// lacks an originalImage (and a thumbnail when the template has one).
+// Mutates the passed arrays; returns what changed.
+export function backfillTitleTemplateImages(tasks, templates, defaultTemplateId, keyword = TITLE_AUTO_TEMPLATE_KEYWORD) {
+  const list = Array.isArray(tasks) ? tasks : [];
+  const template = findTitleAutoTemplate(templates, defaultTemplateId, keyword);
+  let templateChanged = false;
+  let tasksChanged = 0;
+  if (!template) return { templateChanged, tasksChanged };
+
+  if (!template.originalImage) {
+    const source = list.find((t) => (t.productName || '').includes(keyword) && t.originalImage);
+    if (source) {
+      template.originalImage = source.originalImage;
+      if (!template.image && source.image) template.image = source.image;
+      templateChanged = true;
+    }
+  }
+
+  if (template.originalImage) {
+    for (const t of list) {
+      if (!(t.productName || '').includes(keyword)) continue;
+      let changed = false;
+      if (!t.originalImage) { t.originalImage = template.originalImage; changed = true; }
+      if (!t.image && template.image) { t.image = template.image; changed = true; }
+      if (changed) tasksChanged += 1;
+    }
+  }
+  return { templateChanged, tasksChanged };
+}
+
 export function showToast(message, variant = 'info', durationMs = 2200) {
   const toast = document.getElementById('toast');
   const textNode = document.getElementById('toast-message');

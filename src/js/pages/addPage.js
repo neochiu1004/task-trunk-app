@@ -362,6 +362,11 @@ export class AddPage {
         if (thumbImagePreview) thumbImagePreview.src = template.image;
         thumbImageWrap?.classList.remove('hidden');
       }
+      if (template.originalImage) {
+        originalImage = template.originalImage;
+        if (originalImagePreview) originalImagePreview.src = template.originalImage;
+        originalImageWrap?.classList.remove('hidden');
+      }
       if (template.redeemUrlPresetId) {
         root.querySelector('#redeem-url-preset').value = template.redeemUrlPresetId;
         const preset = (this.app.state.settings.redeemUrlPresets || []).find((p) => p.id === template.redeemUrlPresetId);
@@ -564,6 +569,7 @@ export class AddPage {
         expiry: normalizeDateInput(root.querySelector('#expiry').value.trim()),
         tags: parseTags(root.querySelector('#tags').value),
         image: imageData,
+        originalImage,
         barcodeFormat: root.querySelector('#barcode-format').value || '',
         redeemUrlPresetId: root.querySelector('#redeem-url-preset').value || '',
       };

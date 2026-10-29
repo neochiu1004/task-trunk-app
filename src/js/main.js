@@ -10,6 +10,7 @@ import {
   sendTelegramMessage,
   showToast,
   todayISO,
+  backfillTitleTemplateImages,
 } from './utils.js';
 
 const APP_VERSION = __APP_VERSION__;
@@ -84,6 +85,25 @@ class TicketTrunkJijunApp {
         tasks: this.state.tasks,
         expiryNotified: this.state.expiryNotified,
       });
+    }
+
+    // Title rule backfill: 85度C tickets should all redeem with the
+    // original ticket image. Fill missing original images from the
+    // default template (adopting one from an imported ticket first
+    // when the template has none).
+    try {
+      const backfill = backfillTitleTemplateImages(
+        this.state.tasks,
+        this.state.templates,
+        this.state.settings.defaultTemplateId,
+      );
+      if (backfill.templateChanged) await this.persistTemplates();
+      if (backfill.tasksChanged > 0) {
+        await this.persistTasks();
+        console.info('[TaskTrunk] title template backfill:', backfill.tasksChanged);
+      }
+    } catch (error) {
+      console.warn('[TaskTrunk] title template backfill failed:', error);
     }
 
     const refreshedBatchImages = await refreshBatchTicketImages(this.state.tasks);

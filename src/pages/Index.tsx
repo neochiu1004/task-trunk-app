@@ -325,7 +325,7 @@ const Index = () => {
       return next;
     });
   };
-  const handleSaveTemplate = (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => {
+  const handleSaveTemplate = (data: { label: string; productName: string; image?: string; originalImage?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => {
     setTemplates((prev) => [...prev, { id: 'tpl_' + Date.now(), ...data }]);
     alert(`已儲存範本：${data.label}`);
   };

@@ -2,6 +2,20 @@
 
 Notable project changes are tracked here.
 
+## 1.5.0 - 2026-10-29
+
+- Templates now store the original ticket image (originalImage):
+  saving a template from the add/edit form captures it, and applying
+  a template (manually, as default, or via the 85度C title rule)
+  restores it, so the redeem view shows the original ticket image
+  (format 1) instead of the generated barcode card.
+- Startup backfill for previously entered tickets: 85度C tickets
+  missing an original image adopt the default template's one; when
+  the template has none, it first adopts one from an existing
+  JSON-imported 85度C ticket. Thumbnails are filled the same way
+  when empty. Pure helper `backfillTitleTemplateImages` in utils
+  with unit tests (13 passing).
+
 ## 1.4.0 - 2026-10-29
 
 - Title rule: when a ticket's name contains "85度C", the default

@@ -42,7 +42,7 @@ interface RedeemModalProps {
   onUpdate: (ticket: Ticket) => void;
   allTags: string[];
   specificViewKeywords: string[];
-  onSaveTemplate: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
+  onSaveTemplate: (data: { label: string; productName: string; image?: string; originalImage?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   templates: Template[];
   onDeleteTemplate: (id: string) => void;
   onReorderTemplate: (fromIndex: number, toIndex: number) => void;
@@ -731,7 +731,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                             onSaveTemplate({ 
                               label: name, 
                               productName: editName, 
-                              image: editImage, 
+                              image: editImage,
+                              originalImage: editOriginalImage || undefined,
                               tags: editTags, 
                               serial: editSerial, 
                               expiry: editExpiry, 

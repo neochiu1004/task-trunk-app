@@ -25,7 +25,7 @@ interface AddModalProps {
   onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
   defaultTemplateId?: string;
-  onSaveTemplate?: (data: { label: string; productName: string; image?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
+  onSaveTemplate?: (data: { label: string; productName: string; image?: string; originalImage?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   onAddBatch: (tickets: Array<{
     id: string;
     productName: string;
@@ -111,6 +111,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       redeemUrl: resolvedUrl || prev.redeemUrl
     }));
     if (tpl.image) setImages([tpl.image]);
+    if (tpl.originalImage) setOriginalImage(tpl.originalImage);
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
     setHasAppliedTemplate(true);
   };
@@ -139,6 +140,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       redeemUrl: resolvedUrl || prev.redeemUrl,
     }));
     if (tpl.image) setImages([tpl.image]);
+    if (tpl.originalImage) setOriginalImage(tpl.originalImage);
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
     if (tpl.barcodeFormat) setBarcodeFormat(tpl.barcodeFormat);
     setHasAppliedTemplate(true);
@@ -481,6 +483,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           label: name,
                           productName: manualData.name,
                           image: images[0] || undefined,
+                          originalImage: originalImage || undefined,
                           tags: manualTags,
                           serial: manualData.serial,
                           expiry: manualData.expiry,
