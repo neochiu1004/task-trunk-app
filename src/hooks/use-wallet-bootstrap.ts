@@ -43,7 +43,7 @@ export function useWalletBootstrap(migrateConfig: MigrateConfig): UseWalletBoots
           const mergedSettings: Settings = {
             ...defaultSettings,
             ...dbSettings,
-            appTitle: shouldUseNewDefaultTitle ? defaultSettings.appTitle : dbSettings.appTitle,
+            appTitle: shouldUseNewDefaultTitle ? defaultSettings.appTitle : (dbSettings.appTitle || defaultSettings.appTitle),
             bgConfigMap: dbSettings.bgConfigMap || {},
             specificViewKeywords: dbSettings.specificViewKeywords || ['MOMO', '85度C'],
             brandLogo: dbSettings.brandLogo || '',

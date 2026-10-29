@@ -50,7 +50,7 @@ export type BatchTicketValidation =
 export const validateBatchTicketData = (data: unknown): BatchTicketValidation => {
   if (!Array.isArray(data)) return { success: false, error: '批量票券資料必須是 JSON 陣列' };
   const errors: string[] = [];
-  const normalized = data.map((item, index) => {
+  const normalized = data.map((item, index): BatchTicketInput | null => {
     if (!item || typeof item !== 'object') {
       errors.push(`第 ${index + 1} 筆不是物件`);
       return null;

@@ -2,6 +2,22 @@
 
 Notable project changes are tracked here.
 
+## 1.0.5 - 2026-10-29
+
+- Shrunk the top summary card on the ticket lists: single-row compact
+  layout, smaller count type, slimmer padding, and the version/update
+  info collapsed into one pill (legacy JS app and React app).
+- Lazy-load `bwip-js` and `qrious`: they are only needed when drawing a
+  barcode/QR in redeem mode, so they are now separate on-demand chunks.
+  The tickets page chunk drops from ~922 kB to ~72 kB (gzip ~257 kB to
+  ~18 kB).
+- TypeScript is clean: `tsc --noEmit` went from 15 errors to 0, and
+  `strictNullChecks` is now enabled (the root cause of one error was
+  truthiness narrowing being unavailable without it).
+- Removed the stale Bun lockfiles (`bun.lock`, `bun.lockb`); npm with
+  `package-lock.json` is the single supported package manager, matching
+  the README.
+
 ## 1.0.4 - 2026-10-29
 
 - Pinned （置頂） now applies only to unused tickets: the pin toggle, pin

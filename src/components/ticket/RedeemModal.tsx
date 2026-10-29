@@ -211,14 +211,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
         onClose();
         // 核銷後詢問是否跳轉網址 (with URL validation)
         if (!ticket.completed && ticket.redeemUrl) {
+          const redeemUrl = ticket.redeemUrl;
           setTimeout(() => {
-            const urlValidation = validateRedeemUrl(ticket.redeemUrl);
+            const urlValidation = validateRedeemUrl(redeemUrl);
             if (!urlValidation.valid) {
               alert(`無法開啟連結：${urlValidation.error}`);
               return;
             }
             if (window.confirm('是否開啟跳轉連結？')) {
-              window.open(ticket.redeemUrl, '_blank', 'noopener,noreferrer');
+              window.open(redeemUrl, '_blank', 'noopener,noreferrer');
             }
           }, 300);
         }

@@ -6,8 +6,12 @@ import {
   showToast,
   normalizeDateInput,
 } from '../utils.js';
-import bwipjs from 'bwip-js';
-import QRious from 'qrious';
+// bwip-js／qrious 體積大，只在核銷模式真的要畫條碼／QR 時才動態載入（各自拆成獨立 chunk、由 SW 快取），
+// 不要綁進 ticketsPage 主 chunk 拖慢首屏。
+let bwipjsPromise = null;
+let qriousPromise = null;
+const loadBwipjs = () => (bwipjsPromise ??= import('bwip-js').then((mod) => mod.default ?? mod));
+const loadQRious = () => (qriousPromise ??= import('qrious').then((mod) => mod.default ?? mod));
 
 const VIEW_META = {
   active: { title: '待使用票券', empty: '目前沒有待使用票券', icon: 'fa-ticket' },
@@ -816,7 +820,8 @@ export class TicketsPage {
       });
     };
 
-    const drawBarcodeCanvas = (canvas, targetBcid = safeBcid, scale = 3, height = 10) => {
+    const drawBarcodeCanvas = async (canvas, targetBcid = safeBcid, scale = 3, height = 10) => {
+      const bwipjs = await loadBwipjs();
       try {
         bwipjs.toCanvas(canvas, {
           bcid: targetBcid,
@@ -840,7 +845,8 @@ export class TicketsPage {
       }
     };
 
-    const drawQrCanvas = (canvas, size = 180) => {
+    const drawQrCanvas = async (canvas, size = 180) => {
+      const QRious = await loadQRious();
       new QRious({
         element: canvas,
         value: ticket.serial || '',
@@ -1690,19 +1696,14 @@ export class TicketsPage {
           </div>
 
           <div class="app-summary-card mb-2">
-            <div class="min-w-0">
-              <div class="text-[10px] uppercase tracking-[0.18em] text-white/65 font-black">${meta.title}</div>
-              <div class="mt-1 flex items-end gap-2">
-                <span class="text-4xl leading-none font-black text-white tabular-nums">${tickets.length}</span>
-                <span class="pb-1 text-xs font-bold text-white/70">/ ${currentViewTotal} 張</span>
-              </div>
-              <div class="mt-2 text-xs font-semibold text-white/78">${viewStatusCaption}</div>
+            <div class="min-w-0 flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
+              <span class="text-[10px] uppercase tracking-[0.18em] text-white/65 font-black">${meta.title}</span>
+              <span class="text-2xl leading-none font-black text-white tabular-nums">${tickets.length}</span>
+              <span class="text-[11px] font-bold text-white/70">/ ${currentViewTotal} 張</span>
+              <span class="text-[11px] font-semibold text-white/78">${viewStatusCaption}</span>
             </div>
-            <div class="flex flex-col items-end gap-2 shrink-0">
-              <div class="rounded-2xl bg-white/12 px-3 py-2 text-right">
-                <div class="text-[10px] font-bold text-white/62">v${escapeHtml(APP_VERSION)}</div>
-                <div class="mt-0.5 text-[10px] font-semibold text-white/78">${escapeHtml(APP_UPDATED_AT)}</div>
-              </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-semibold text-white/78 whitespace-nowrap">v${escapeHtml(APP_VERSION)} · ${escapeHtml(APP_UPDATED_AT)}</span>
               ${(searchKeyword || this.app.state.ui.activeTags.length > 0)
                 ? `<button type="button" data-clear-scope="1" class="shrink-0 text-[11px] px-3 py-1.5 rounded-full bg-white/14 text-white font-bold">清除</button>`
                 : ''}

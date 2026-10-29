@@ -209,7 +209,7 @@ class DBHelper {
       }
 
       // Check for persistent storage
-      if (navigator.storage && navigator.storage.persist) {
+      if (typeof navigator.storage?.persisted === 'function') {
         const isPersisted = await navigator.storage.persisted();
         if (!isPersisted) {
           recommendations.push('建議啟用持久化儲存以防止資料遺失');

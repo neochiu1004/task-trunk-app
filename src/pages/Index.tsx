@@ -201,8 +201,13 @@ const Index = () => {
   const executeImport = (mode: 'append' | 'overwrite', restoreSettings: boolean) => {
     if (!importPendingData) return;
     const importedTasks = Array.isArray(importPendingData) ? importPendingData : (importPendingData.tasks || []);
-    if (restoreSettings && importPendingData.settings) {
-      const impSet = importPendingData.settings;
+    // 陣列格式（純票券清單）沒有 settings／bgHistory／templates，只有完整備份物件才有
+    const importPayload = Array.isArray(importPendingData) ? null : importPendingData;
+    const importedSettings = importPayload?.settings;
+    const importedBgHistory = importPayload?.bgHistory;
+    const importedTemplates = importPayload?.templates;
+    if (restoreSettings && importedSettings) {
+      const impSet = importedSettings;
       setSettings((prev) => ({
         ...prev,
         ...impSet,
@@ -218,16 +223,16 @@ const Index = () => {
       }));
     }
     // 還原背景歷史
-    if (restoreSettings && importPendingData.bgHistory && Array.isArray(importPendingData.bgHistory)) {
+    if (restoreSettings && importedBgHistory && Array.isArray(importedBgHistory)) {
       if (mode === 'append') {
-        setBgHistory((prev) => [...new Set([...importPendingData.bgHistory, ...prev])].slice(0, 20));
+        setBgHistory((prev) => [...new Set([...importedBgHistory, ...prev])].slice(0, 20));
       } else {
-        setBgHistory(importPendingData.bgHistory);
+        setBgHistory(importedBgHistory);
       }
     }
-    if (importPendingData.templates && Array.isArray(importPendingData.templates)) {
-      if (mode === 'append') setTemplates((prev) => [...prev, ...importPendingData.templates]);
-      else setTemplates(importPendingData.templates);
+    if (importedTemplates && Array.isArray(importedTemplates)) {
+      if (mode === 'append') setTemplates((prev) => [...prev, ...importedTemplates]);
+      else setTemplates(importedTemplates);
     }
     if (mode === 'append') setTasks((prev) => [...prev, ...importedTasks]);
     else setTasks(importedTasks);
@@ -467,21 +472,19 @@ const Index = () => {
         >
           <div className="px-4 mb-4 space-y-3">
             <div className="app-summary-card">
-              <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-primary-foreground/65 font-bold">
+              <div className="min-w-0 flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-primary-foreground/65 font-bold">
                   {viewLabelMap[view]}
-                </div>
-                <div className="mt-1 flex items-end gap-2">
-                  <span className="text-4xl leading-none font-black text-primary-foreground tabular-nums">{filteredTasks.length}</span>
-                  <span className="pb-1 text-xs font-bold text-primary-foreground/70">/ {currentViewCount} 張</span>
-                </div>
-                <div className="mt-2 text-xs font-semibold text-primary-foreground/78">
+                </span>
+                <span className="text-2xl leading-none font-black text-primary-foreground tabular-nums">{filteredTasks.length}</span>
+                <span className="text-[11px] font-bold text-primary-foreground/70">/ {currentViewCount} 張</span>
+                <span className="text-[11px] font-semibold text-primary-foreground/78">
                   {statusCaption}
                   {visiblePinnedCount > 0 && view === 'active' ? ` · 優先 ${visiblePinnedCount} 張` : ''}
-                </div>
+                </span>
               </div>
 
-              <div className="flex flex-col items-end gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 {(hasActiveFilters || isSelectionMode) && (
                   <button
                     type="button"
@@ -491,15 +494,12 @@ const Index = () => {
                       setIsSelectionMode(false);
                       setSelectedIds(new Set());
                     }}
-                    className="px-3 py-2 rounded-2xl bg-white/14 text-xs font-bold text-primary-foreground hover:bg-white/20"
+                    className="px-3 py-1.5 rounded-full bg-white/14 text-[11px] font-bold text-primary-foreground hover:bg-white/20"
                   >
                     清除
                   </button>
                 )}
-                <div className="rounded-2xl bg-white/12 px-3 py-2 text-right">
-                  <div className="text-[10px] font-bold text-primary-foreground/62">v{APP_VERSION}</div>
-                  <div className="mt-0.5 text-[10px] font-semibold text-primary-foreground/78">{APP_UPDATED_AT}</div>
-                </div>
+                <span className="rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-semibold text-primary-foreground/78 whitespace-nowrap">v{APP_VERSION} · {APP_UPDATED_AT}</span>
               </div>
             </div>
 

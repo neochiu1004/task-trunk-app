@@ -72,7 +72,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       if (!next.bgConfigMap) next.bgConfigMap = {};
 
       if (key === 'backgroundImage' && value) {
-        const sharedConfig = next.bgConfigMap[value];
+        const sharedConfig = next.bgConfigMap[imageUrl];
         if (sharedConfig) {
           currentView.bgSize = sharedConfig.bgSize ?? currentView.bgSize;
           currentView.bgPosY = sharedConfig.bgPosY ?? currentView.bgPosY;
@@ -93,7 +93,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const currentVal = isViewConfig
       ? currentViewConfig[key as keyof ViewConfig]
       : localSettings[key as keyof Settings];
-    let nextVal = parseFloat(currentVal || 0) + delta * stepVal;
+    let nextVal = parseFloat(String(currentVal || 0)) + delta * stepVal;
     // Wrap around: if exceeds max, go to min; if below min, go to max
     if (nextVal > max) {
       nextVal = min;

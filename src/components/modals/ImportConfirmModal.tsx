@@ -22,7 +22,7 @@ export const ImportConfirmModal: React.FC<ImportConfirmModalProps> = ({
   if (!isOpen || !data) return null;
 
   const count = Array.isArray(data) ? data.length : (data.tasks || []).length;
-  const hasSettings = !!data.settings;
+  const hasSettings = !Array.isArray(data) && !!data.settings;
 
   return (
     <div
