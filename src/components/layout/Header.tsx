@@ -166,10 +166,10 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const topButtons = [
-    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-[#536dfe] to-[#3656db]', hoverClass: 'hover:from-[#6a82fe] hover:to-[#4665e0]', tooltip: '背景' },
-    { icon: isDark ? Sun : Moon, onClick: onToggleTheme || (() => {}), bgClass: isDark ? 'bg-gradient-to-br from-[#c18f3e] to-[#996f31]' : 'bg-gradient-to-br from-[#3c465f] to-[#273353]', hoverClass: isDark ? 'hover:from-[#cf9a45] hover:to-[#a17736]' : 'hover:from-[#4a5570] hover:to-[#31405f]', tooltip: isDark ? '淺色模式' : '深色模式' },
-    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-[#16b889] to-[#0b956e]', hoverClass: 'hover:from-[#2ac496] hover:to-[#0da87c]', tooltip: '設定' },
-    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-[#68728c] to-[#3c465f]', hoverClass: 'hover:from-[#76819c] hover:to-[#46506a]', tooltip: '選單' },
+    { icon: Palette, onClick: onQuickBgChange, bgClass: 'bg-gradient-to-br from-[#ffb020] to-[#ff7a45]', hoverClass: 'hover:from-[#ffc53d] hover:to-[#ff8a5c]', tooltip: '背景' },
+    { icon: isDark ? Sun : Moon, onClick: onToggleTheme || (() => {}), bgClass: isDark ? 'bg-gradient-to-br from-[#c18f3e] to-[#996f31]' : 'bg-gradient-to-br from-[#a78bfa] to-[#7c5cfc]', hoverClass: isDark ? 'hover:from-[#cf9a45] hover:to-[#a17736]' : 'hover:from-[#bfa5fb] hover:to-[#8f73fc]', tooltip: isDark ? '淺色模式' : '深色模式' },
+    { icon: Settings2, onClick: onOpenSettings, bgClass: 'bg-gradient-to-br from-[#3ed598] to-[#22b573]', hoverClass: 'hover:from-[#5ce3ab] hover:to-[#2ec27e]', tooltip: '設定' },
+    { icon: MoreVertical, onClick: onOpenMenu, bgClass: 'bg-gradient-to-br from-[#4fc3f7] to-[#1d9bf0]', hoverClass: 'hover:from-[#7cd4fa] hover:to-[#38aef5]', tooltip: '選單' },
   ];
 
   return (

@@ -8,7 +8,7 @@ export const defaultViewConfig: ViewConfig = {
   bgPosY: 50,
   bgSize: 100,
   cardBgColor: '#ffffff',
-  cardBorderColor: '#dfe3ec',
+  cardBorderColor: '#f0ddbb',
   gridImageHeight: 96,
   gridColumns: 2,
   headerBgSize: 100,

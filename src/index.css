@@ -4,53 +4,53 @@
 
 @layer base {
   :root {
-    /* OmniPass-inspired: deep-navy canvas, light cards, indigo primary */
-    --background: 225 44% 9%;
-    --foreground: 228 100% 97%;
+    /* Sunny youth palette: warm cream canvas, white cards, sunshine-orange primary */
+    --background: 42 100% 94%;
+    --foreground: 28 35% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 226 38% 19%;
+    --card-foreground: 28 35% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 226 38% 19%;
+    --popover-foreground: 28 35% 20%;
 
-    --primary: 224 68% 54%;
+    --primary: 28 93% 47%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 222 33% 95%;
-    --secondary-foreground: 226 38% 24%;
-    --muted: 220 29% 96%;
-    --muted-foreground: 222 16% 48%;
-    --accent: 228 99% 66%;
-    --accent-foreground: 0 0% 100%;
+    --secondary: 38 100% 89%;
+    --secondary-foreground: 28 35% 24%;
+    --muted: 40 100% 96%;
+    --muted-foreground: 30 35% 48%;
+    --accent: 41 100% 56%;
+    --accent-foreground: 36 90% 16%;
 
-    --destructive: 4 63% 49%;
+    --destructive: 358 74% 59%;
     --destructive-foreground: 0 0% 100%;
-    --border: 222 27% 90%;
-    --input: 222 27% 90%;
-    --ring: 224 68% 54%;
+    --border: 38 62% 84%;
+    --input: 38 62% 84%;
+    --ring: 28 93% 47%;
     --radius: 1.25rem;
 
-    --ticket-success: 163 89% 31%;
-    --ticket-warning: 36 100% 50%;
-    --ticket-danger: 4 63% 49%;
+    --ticket-success: 152 66% 44%;
+    --ticket-warning: 41 100% 50%;
+    --ticket-danger: 358 74% 59%;
     --ticket-momo: 328 85% 55%;
 
-    --wabi-bg: 225 44% 9%;
+    --wabi-bg: 42 100% 94%;
     --wabi-surface: 0 0% 100%;
-    --wabi-primary: 224 68% 54%;
-    --wabi-accent: 228 99% 66%;
-    --wabi-income: 163 89% 31%;
-    --wabi-expense: 4 63% 49%;
-    --wabi-border: 222 27% 90%;
-    --wabi-text-primary: 226 38% 19%;
-    --wabi-text-secondary: 222 16% 48%;
+    --wabi-primary: 28 93% 47%;
+    --wabi-accent: 41 100% 56%;
+    --wabi-income: 152 66% 44%;
+    --wabi-expense: 358 74% 59%;
+    --wabi-border: 38 62% 84%;
+    --wabi-text-primary: 28 35% 20%;
+    --wabi-text-secondary: 30 35% 48%;
 
-    --sidebar-background: 225 44% 9%;
-    --sidebar-foreground: 228 100% 97%;
-    --sidebar-primary: 224 68% 54%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 40% 16%;
-    --sidebar-accent-foreground: 228 100% 97%;
-    --sidebar-border: 222 30% 22%;
-    --sidebar-ring: 228 99% 66%;
+    --sidebar-background: 27 95% 55%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 28 93% 47%;
+    --sidebar-accent: 27 95% 62%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 27 80% 48%;
+    --sidebar-ring: 0 0% 100%;
   }
 
   .dark {
@@ -61,20 +61,20 @@
     --popover: 201 20% 14%;
     --popover-foreground: 43 23% 92%;
 
-    --primary: 230 95% 74%;
-    --primary-foreground: 226 45% 12%;
+    --primary: 38 100% 62%;
+    --primary-foreground: 30 60% 12%;
     --secondary: 202 16% 18%;
     --secondary-foreground: 40 15% 85%;
     --muted: 202 16% 18%;
     --muted-foreground: 39 10% 68%;
-    --accent: 230 95% 74%;
-    --accent-foreground: 226 45% 12%;
+    --accent: 38 100% 62%;
+    --accent-foreground: 30 60% 12%;
 
     --destructive: 1 58% 62%;
     --destructive-foreground: 0 0% 100%;
     --border: 202 14% 24%;
     --input: 202 14% 24%;
-    --ring: 230 95% 74%;
+    --ring: 38 100% 62%;
 
     --ticket-success: 160 36% 54%;
     --ticket-warning: 31 88% 62%;
@@ -83,8 +83,8 @@
 
     --wabi-bg: 200 20% 10%;
     --wabi-surface: 201 20% 14%;
-    --wabi-primary: 230 95% 74%;
-    --wabi-accent: 230 95% 74%;
+    --wabi-primary: 38 100% 62%;
+    --wabi-accent: 38 100% 62%;
     --wabi-income: 160 36% 54%;
     --wabi-expense: 1 58% 62%;
     --wabi-border: 202 14% 24%;
@@ -93,12 +93,12 @@
 
     --sidebar-background: 201 20% 14%;
     --sidebar-foreground: 43 23% 92%;
-    --sidebar-primary: 230 95% 74%;
+    --sidebar-primary: 38 100% 62%;
     --sidebar-primary-foreground: 199 23% 17%;
     --sidebar-accent: 202 16% 18%;
     --sidebar-accent-foreground: 43 23% 92%;
     --sidebar-border: 202 14% 24%;
-    --sidebar-ring: 230 95% 74%;
+    --sidebar-ring: 38 100% 62%;
   }
 
   * {
@@ -139,8 +139,8 @@
     inset: 0;
     letter-spacing: 0;
     background-image:
-      radial-gradient(circle at 5% 0%, rgba(91, 125, 255, 0.24), transparent 32%),
-      linear-gradient(180deg, #10172b 0%, #0b1020 100%);
+      radial-gradient(circle at 5% 0%, rgba(255, 190, 80, 0.5), transparent 34%),
+      linear-gradient(180deg, #fff6e0 0%, #ffefd0 100%);
     background-attachment: fixed;
   }
 
@@ -214,8 +214,8 @@
     gap: 0.5rem;
     border-radius: 16px;
     padding: 0.55rem 0.8rem;
-    background: linear-gradient(135deg, #111827 0%, #1d4ed8 100%);
-    box-shadow: 0 10px 22px rgba(29, 78, 216, 0.25);
+    background: linear-gradient(135deg, #ffb020 0%, #ff7a45 100%);
+    box-shadow: 0 10px 22px rgba(255, 150, 50, 0.35);
   }
 
   .app-filter-chip {
@@ -258,9 +258,9 @@
   .app-tabbar {
     min-height: 68px;
     border-radius: 0;
-    background: rgba(248, 250, 255, 0.94);
-    border: 1px solid rgba(205, 214, 236, 0.85);
-    box-shadow: 0 -8px 24px rgba(7, 14, 35, 0.14);
+    background: rgba(255, 251, 240, 0.95);
+    border: 1px solid rgba(240, 221, 187, 0.9);
+    box-shadow: 0 -8px 24px rgba(180, 120, 30, 0.15);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
   }
@@ -271,8 +271,8 @@
     border: none;
     border-radius: 18px;
     box-shadow:
-      0 16px 36px rgba(0, 0, 0, 0.22),
-      0 2px 8px rgba(7, 14, 35, 0.08);
+      0 16px 36px rgba(190, 130, 40, 0.18),
+      0 2px 8px rgba(120, 80, 20, 0.08);
   }
 
   .ticket-card::before,

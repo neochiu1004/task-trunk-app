@@ -5,23 +5,23 @@
 @tailwind utilities;
 
 :root {
-  /* OmniPass-inspired palette: deep-navy canvas, light floating cards, indigo primary */
-  --wabi-bg: #0b1020;
+  /* Sunny youth palette: warm cream canvas, white cards, sunshine-orange primary */
+  --wabi-bg: #fff6e0;
   --wabi-surface: #ffffff;
-  --wabi-primary: #3656db;
-  --wabi-expense: #c0392b;
-  --wabi-income: #0b956e;
-  --wabi-accent: #536dfe;
-  --wabi-text-primary: #1d2744;
-  --wabi-text-secondary: #68728c;
-  --wabi-border: #dfe3ec;
-  --omni-canvas-top: #10172b;
-  --omni-canvas-bottom: #0b1020;
-  --omni-ink: #273353;
-  --omni-soft: #e8edff;
-  --omni-panel: #f4f6fb;
-  --omni-on-dark: #eef2ff;
-  --omni-on-dark-dim: #aeb8d4;
+  --wabi-primary: #ff7a45;
+  --wabi-expense: #e5484d;
+  --wabi-income: #22b573;
+  --wabi-accent: #ffb020;
+  --wabi-text-primary: #463322;
+  --wabi-text-secondary: #a07b54;
+  --wabi-border: #f0ddbb;
+  --omni-canvas-top: #fff6e0;
+  --omni-canvas-bottom: #ffefd0;
+  --omni-ink: #463322;
+  --omni-soft: #ffe9c7;
+  --omni-panel: #fff9ee;
+  --omni-on-dark: #463322;
+  --omni-on-dark-dim: #a07b54;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --keyboard-inset-height: 0px;
@@ -35,7 +35,7 @@ body {
   font-family: 'Inter', 'Noto Sans TC', sans-serif;
   padding-bottom: calc(84px + var(--safe-bottom));
   background:
-    radial-gradient(circle at 5% 0%, rgba(91, 125, 255, 0.24), transparent 32%),
+    radial-gradient(circle at 5% 0%, rgba(255, 190, 80, 0.5), transparent 32%),
     linear-gradient(180deg, var(--omni-canvas-top) 0%, var(--omni-canvas-bottom) 100%);
   background-attachment: fixed;
   color: var(--wabi-text-primary);
@@ -53,11 +53,11 @@ body {
   padding-bottom: var(--safe-bottom);
   border-radius: 0;
   border: none;
-  border-top: 1px solid rgba(205, 214, 236, 0.85);
-  background: rgba(248, 250, 255, 0.94);
+  border-top: 1px solid rgba(240, 221, 187, 0.9);
+  background: rgba(255, 251, 240, 0.95);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 -8px 24px rgba(7, 14, 35, 0.14);
+  box-shadow: 0 -8px 24px rgba(120, 80, 20, 0.14);
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
@@ -132,10 +132,10 @@ body.keyboard-open #bottom-nav {
     width: 46px;
     height: 46px;
     border-radius: 14px;
-    background: linear-gradient(135deg, #536dfe, #3656db);
+    background: linear-gradient(135deg, #ffb020, #ff7a45);
     color: #fff;
     border-color: transparent;
-    box-shadow: 0 8px 18px rgba(54, 86, 219, 0.35);
+    box-shadow: 0 8px 18px rgba(255, 150, 50, 0.35);
   }
 }
 
@@ -150,14 +150,14 @@ body.keyboard-open #bottom-nav {
 
 .add-nav-item:hover .add-nav-pill {
   transform: translateY(-1px);
-  box-shadow: 0 10px 18px -14px rgba(54, 86, 219, 0.7);
+  box-shadow: 0 10px 18px -14px rgba(255, 150, 50, 0.7);
 }
 
 .add-nav-item.active .add-nav-pill {
   background: var(--wabi-primary);
   color: #fff;
   border-color: var(--wabi-primary);
-  box-shadow: 0 10px 20px -14px rgba(54, 86, 219, 0.72);
+  box-shadow: 0 10px 20px -14px rgba(255, 150, 50, 0.72);
 }
 
 .ticket-card {
@@ -168,7 +168,7 @@ body.keyboard-open #bottom-nav {
   --ticket-swipe-offset: 0px;
   transform: translate3d(var(--ticket-swipe-offset), 0, 0);
   border-radius: 18px !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(7, 14, 35, 0.08);
+  box-shadow: 0 16px 36px rgba(190, 130, 40, 0.18), 0 2px 8px rgba(120, 80, 20, 0.08);
   backdrop-filter: blur(10px);
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
@@ -187,18 +187,18 @@ body.keyboard-open #bottom-nav {
 
 .ticket-card:hover {
   transform: translate3d(var(--ticket-swipe-offset), -1px, 0);
-  box-shadow: 0 12px 24px -16px rgba(7, 14, 35, 0.48);
+  box-shadow: 0 12px 24px -16px rgba(120, 80, 20, 0.48);
 }
 
 .ticket-card[tabindex]:focus-visible {
-  outline: 2px solid rgba(54, 86, 219, 0.45);
+  outline: 2px solid rgba(255, 150, 50, 0.45);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px rgba(54, 86, 219, 0.12), 0 14px 26px -20px rgba(7, 14, 35, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 150, 50, 0.12), 0 14px 26px -20px rgba(120, 80, 20, 0.5);
 }
 
 .ticket-card--selected {
-  border-color: rgba(54, 86, 219, 0.5);
-  box-shadow: 0 0 0 1px rgba(54, 86, 219, 0.08), 0 14px 26px -20px rgba(7, 14, 35, 0.5);
+  border-color: rgba(255, 150, 50, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 150, 50, 0.08), 0 14px 26px -20px rgba(120, 80, 20, 0.5);
 }
 
 .ticket-card--has-original {
@@ -208,8 +208,8 @@ body.keyboard-open #bottom-nav {
 .ticket-card--has-original.ticket-card--selected {
   box-shadow:
     inset 0 0 0 1.6px rgba(3, 105, 161, 0.52),
-    0 0 0 1px rgba(54, 86, 219, 0.12),
-    0 14px 26px -20px rgba(7, 14, 35, 0.5);
+    0 0 0 1px rgba(255, 150, 50, 0.12),
+    0 14px 26px -20px rgba(120, 80, 20, 0.5);
 }
 
 .ticket-card--duplicate {
@@ -258,11 +258,11 @@ body.keyboard-open #bottom-nav {
 }
 
 .ticket-card--swiping {
-  box-shadow: 0 18px 30px -24px rgba(7, 14, 35, 0.5);
+  box-shadow: 0 18px 30px -24px rgba(120, 80, 20, 0.5);
 }
 
 .ticket-card--swipe-ready {
-  box-shadow: 0 20px 32px -22px rgba(7, 14, 35, 0.6);
+  box-shadow: 0 20px 32px -22px rgba(120, 80, 20, 0.6);
 }
 
 .ticket-card--swipe-left::after,
@@ -286,9 +286,9 @@ body.keyboard-open #bottom-nav {
 
 .app-top-bar {
   background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid #f6e7c8;
   border-radius: 20px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 16px 36px rgba(190, 130, 40, 0.18);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   margin-top: 12px;
@@ -301,26 +301,26 @@ body.keyboard-open #bottom-nav {
   width: 2.35rem;
   border-radius: 12px;
   border: 1px solid var(--wabi-border);
-  background: #f8faff;
+  background: #fff9ee;
   color: var(--wabi-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.82rem;
-  box-shadow: 0 4px 10px rgba(7, 14, 35, 0.08);
+  box-shadow: 0 4px 10px rgba(120, 80, 20, 0.08);
 }
 
 .app-search-input,
 .app-sort-select {
   min-height: 2.75rem;
   border-radius: 12px;
-  border: 2px solid #dce2f0;
+  border: 2px solid #f0ddbb;
   background: #ffffff;
   color: var(--wabi-text-primary);
   font-size: 0.875rem;
   font-weight: 650;
   outline: none;
-  box-shadow: 0 8px 18px -16px rgba(7, 14, 35, 0.35);
+  box-shadow: 0 8px 18px -16px rgba(120, 80, 20, 0.35);
 }
 
 .app-sort-select {
@@ -334,8 +334,8 @@ body.keyboard-open #bottom-nav {
   gap: 0.5rem;
   border-radius: 16px;
   padding: 0.55rem 0.8rem;
-  background: linear-gradient(135deg, #111827 0%, #1d4ed8 100%);
-  box-shadow: 0 10px 22px rgba(29, 78, 216, 0.25);
+  background: linear-gradient(135deg, #ffb020 0%, #ff7a45 100%);
+  box-shadow: 0 10px 22px rgba(255, 150, 50, 0.25);
 }
 
 .app-filter-chip {
@@ -346,7 +346,7 @@ body.keyboard-open #bottom-nav {
   border-radius: 12px;
   padding: 0.4rem 0.75rem;
   background: #ffffff;
-  border: 2px solid #d2d2d7;
+  border: 2px solid #ecd9ae;
   color: var(--wabi-text-secondary);
   font-size: 0.72rem;
   font-weight: 800;
@@ -376,7 +376,7 @@ body.keyboard-open #bottom-nav {
   flex: 0 0 72px;
   border-radius: 18px;
   overflow: hidden;
-  background: linear-gradient(135deg, #536dfe, #3656db);
+  background: linear-gradient(135deg, #ffb020, #ff7a45);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
 }
 
@@ -470,7 +470,7 @@ body.keyboard-open #bottom-nav {
 }
 
 .ticket-grid--ultra .ticket-card.ticket-card--ultra .ticket-card-expiry--normal {
-  color: #3656db;
+  color: #1d7ed8;
 }
 
 .ticket-grid--ultra .ticket-card.ticket-card--ultra .ticket-card-expiry--normal-pill {
@@ -495,16 +495,16 @@ body.keyboard-open #bottom-nav {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  background: rgba(83, 109, 254, 0.1);
-  border-color: rgba(83, 109, 254, 0.3);
-  color: #273353;
+  background: rgba(255, 176, 32, 0.1);
+  border-color: rgba(255, 176, 32, 0.3);
+  color: #463322;
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
 .ticket-tag--active:hover {
-  background: rgba(54, 86, 219, 0.15);
-  border-color: rgba(54, 86, 219, 0.34);
-  color: #273353;
+  background: rgba(255, 150, 50, 0.15);
+  border-color: rgba(255, 150, 50, 0.34);
+  color: #463322;
 }
 
 .ticket-expiry-chip {
@@ -519,9 +519,9 @@ body.keyboard-open #bottom-nav {
 }
 
 .ticket-expiry-chip--normal {
-  background: rgba(83, 109, 254, 0.12);
-  border-color: rgba(83, 109, 254, 0.32);
-  color: #3656db;
+  background: rgba(56, 170, 255, 0.12);
+  border-color: rgba(56, 170, 255, 0.35);
+  color: #1d7ed8;
 }
 
 .ticket-expiry-chip--soon,
@@ -560,9 +560,9 @@ body.keyboard-open #bottom-nav {
 }
 
 .ticket-card-expiry-highlight--normal {
-  background: rgba(83, 109, 254, 0.12);
-  border-color: rgba(83, 109, 254, 0.32);
-  color: #3656db;
+  background: rgba(56, 170, 255, 0.12);
+  border-color: rgba(56, 170, 255, 0.35);
+  color: #1d7ed8;
 }
 
 .ticket-card-expiry-highlight--soon,
@@ -648,7 +648,7 @@ body.keyboard-open #bottom-nav {
   object-position: center;
   border-radius: 0.9rem;
   border: 1px solid rgba(216, 210, 198, 0.9);
-  box-shadow: 0 10px 20px -16px rgba(7, 14, 35, 0.45), 0 4px 10px rgba(7, 14, 35, 0.12);
+  box-shadow: 0 10px 20px -16px rgba(120, 80, 20, 0.45), 0 4px 10px rgba(120, 80, 20, 0.12);
   background: rgba(255, 255, 255, 0.88);
 }
 
@@ -676,10 +676,10 @@ body.keyboard-open #bottom-nav {
 }
 
 .continue-batch-hint:focus-visible {
-  outline: 2px solid rgba(54, 86, 219, 0.45);
+  outline: 2px solid rgba(255, 150, 50, 0.45);
   outline-offset: 2px;
   border-radius: 4px;
-  background: rgba(54, 86, 219, 0.08);
+  background: rgba(255, 150, 50, 0.08);
 }
 
 @keyframes continue-hint-fade {
@@ -706,9 +706,9 @@ body.keyboard-open #bottom-nav {
 }
 
 .batch-actions [data-batch]:focus-visible {
-  outline: 2px solid rgba(54, 86, 219, 0.45);
+  outline: 2px solid rgba(255, 150, 50, 0.45);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px rgba(54, 86, 219, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 150, 50, 0.14);
 }
 
 .batch-actions--compact {
@@ -729,7 +729,7 @@ body.keyboard-open #bottom-nav {
   }
 
   .batch-toolbar--elevated {
-    box-shadow: 0 10px 24px -18px rgba(7, 14, 35, 0.55);
+    box-shadow: 0 10px 24px -18px rgba(120, 80, 20, 0.55);
     border-color: #cdd5e4;
     background-color: rgba(255, 255, 255, 0.92);
   }
@@ -796,12 +796,12 @@ body.keyboard-open #bottom-nav {
 /* Primary actions: indigo gradient like OmniPass .btn */
 button.bg-wabi-primary,
 a.bg-wabi-primary {
-  background-image: linear-gradient(135deg, #536dfe, #3656db);
-  box-shadow: 0 5px 12px rgba(54, 86, 219, 0.22);
+  background-image: linear-gradient(135deg, #ffb020, #ff7a45);
+  box-shadow: 0 5px 12px rgba(255, 150, 50, 0.22);
 }
 
 #toast {
-  background: linear-gradient(135deg, #536dfe, #3656db);
+  background: linear-gradient(135deg, #ffb020, #ff7a45);
   border-radius: 14px;
   box-shadow: 0 10px 28px rgba(28, 46, 112, 0.35);
 }
@@ -810,53 +810,57 @@ a.bg-wabi-primary {
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
 select:focus,
 textarea:focus {
-  border-color: #536dfe !important;
+  border-color: #ffb020 !important;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(83, 109, 254, 0.16);
+  box-shadow: 0 0 0 3px rgba(255, 176, 32, 0.16);
 }
 
 /* Page titles that sit directly on the dark canvas (add/edit page) */
 .omni-page-head h1 {
-  color: #f8faff;
+  color: #463322;
   letter-spacing: -0.02em;
 }
 .omni-page-head p {
   color: var(--omni-on-dark-dim);
 }
 
-/* Desktop sidebar: deep-navy panel, OmniPass tab-style active pill */
+/* Desktop sidebar: sunshine gradient panel, white active pill */
 @media (min-width: 768px) {
   #bottom-nav {
-    background: linear-gradient(180deg, #10172b 0%, #0b1020 100%);
-    border-right: 1px solid rgba(205, 214, 236, 0.16);
-    box-shadow: 8px 0 24px rgba(7, 14, 35, 0.25);
+    background: linear-gradient(180deg, #ffa53d 0%, #ff7a45 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 8px 0 24px rgba(190, 120, 30, 0.25);
   }
 
   #bottom-nav .nav-item {
-    color: var(--omni-on-dark-dim);
+    color: rgba(255, 255, 255, 0.88);
     border-radius: 13px;
     margin: 0 12px;
     width: auto;
   }
 
   #bottom-nav .nav-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.14);
   }
 
   #bottom-nav .nav-item.active {
-    background: var(--omni-soft);
+    background: #ffffff;
     color: var(--wabi-primary);
   }
 
   #bottom-nav h1 {
-    color: #f8faff !important;
+    color: #ffffff !important;
+  }
+
+  #bottom-nav .cursor-default {
+    color: rgba(255, 255, 255, 0.8);
   }
 
   #bottom-nav .add-nav-pill {
-    background: linear-gradient(135deg, #536dfe, #3656db);
-    color: #fff;
+    background: #ffffff;
+    color: var(--wabi-primary);
     border-color: transparent;
-    box-shadow: 0 5px 12px rgba(54, 86, 219, 0.3);
+    box-shadow: 0 5px 12px rgba(160, 80, 0, 0.25);
   }
 }
 

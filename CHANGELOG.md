@@ -2,6 +2,19 @@
 
 Notable project changes are tracked here.
 
+## 1.2.0 - 2026-10-29
+
+- Sunny youth re-theme (visual only): warm cream canvas
+  (#fff6e0 -> #ffefd0) with a sun glow, sunshine-orange primary
+  (gradient #ffb020 -> #ff7a45), peach selected states, grass-green
+  success, sky-blue accents, sunshine-gradient desktop sidebar and
+  PWA theme color #ff9a3d. Replaces the short-lived OmniPass navy
+  theme from 1.1.x; the fixed dashboard from 1.1.1 stays.
+- Hardened the top-right gear settings link: it now also navigates via
+  an explicit click handler, after a report that the gear felt
+  unresponsive on a phone (desktop re-test passed; the handler makes
+  the tap work even if the anchor's default behaviour is swallowed).
+
 ## 1.1.1 - 2026-10-29
 
 - The tickets dashboard (top bar with title, search, summary and tag
