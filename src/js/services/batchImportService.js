@@ -1,9 +1,9 @@
 import QRious from 'qrious';
-import { generateId, normalizeDateInput, findTitleAutoTemplate, ticketUsesTemplateImage } from '../utils.js';
+import { generateId, normalizeDateInput, findTitleAutoTemplate, ticketUsesTemplateImage, deriveTicketDescription } from '../utils.js';
 import batchTemplateImage from '../../assets/batch-ticket-template.png';
 
 const BATCH_TAG = '批量生成';
-export const BATCH_IMAGE_VERSION = 4;
+export const BATCH_IMAGE_VERSION = 5;
 const BASE_WIDTH = 944;
 const BASE_HEIGHT = 2048;
 
@@ -97,6 +97,19 @@ export async function renderBatchTicketImage(source = batchTemplateImage, name, 
     drawContain(ctx, customProductImage, 145, 410, 654, 360);
   }
 
+  // 商品描述列是底圖截圖的固定文字（35元飲品任選一），依本票品名重繪，
+  // 避免 50 元票券卻顯示 35 元描述。
+  const description = deriveTicketDescription(name);
+  if (description) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(215, 1320, 620, 66);
+    ctx.fillStyle = '#333';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = '32px Arial, sans-serif';
+    ctx.fillText(description, 229, 1353, 590);
+  }
+
   ctx.fillStyle = '#fff';
   // 期限所在列位於商品描述列下方，避免覆蓋後文字落在上一列。
   ctx.fillRect(190, 1400, 560, 150);
@@ -170,6 +183,27 @@ export async function personalizeBorrowedTemplateImages(tasks, templates, defaul
       const image = await renderBatchTicketImage(undefined, ticket.productName || '', ticket.serial, ticket.expiry || '', '');
       changed += 1;
       return { ...ticket, originalImage: image, originalImageGenerated: true };
+    } catch (_error) {
+      return ticket;
+    }
+  }));
+  return { tasks: next, changed };
+}
+
+
+// Generated original images (borrowed-template personalization and
+// keyword auto-generation) are re-rendered when the renderer version
+// bumps, so layout fixes (e.g. the description row) reach old tickets.
+export async function refreshGeneratedTicketImages(tasks) {
+  let changed = 0;
+  const next = await Promise.all((tasks || []).map(async (ticket) => {
+    if (ticket.isDeleted || !ticket.serial || !ticket.originalImageGenerated) return ticket;
+    if ((ticket.tags || []).includes(BATCH_TAG)) return ticket;
+    if (ticket.generatedImageVersion === BATCH_IMAGE_VERSION) return ticket;
+    try {
+      const image = await renderBatchTicketImage(undefined, ticket.productName || '', ticket.serial, ticket.expiry || '', '');
+      changed += 1;
+      return { ...ticket, originalImage: image, generatedImageVersion: BATCH_IMAGE_VERSION };
     } catch (_error) {
       return ticket;
     }

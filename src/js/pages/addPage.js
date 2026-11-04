@@ -602,6 +602,7 @@ export class AddPage {
         image: imageData,
         originalImage,
         originalImageGenerated: generatedOriginalImage || (originalImageFromTemplate ? !!editing?.originalImageGenerated : false),
+        generatedImageVersion: generatedOriginalImage ? BATCH_IMAGE_VERSION : (originalImageFromTemplate ? (editing?.generatedImageVersion || 0) : 0),
         barcodeFormat: root.querySelector('#barcode-format').value || '',
         redeemUrlPresetId: root.querySelector('#redeem-url-preset').value || '',
       };

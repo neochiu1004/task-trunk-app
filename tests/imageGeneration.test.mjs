@@ -52,3 +52,17 @@ ticketImageGenerationMode({ borrowed: true, hasOriginalImage: true, serial: 'E1'
 null,
 );
 });
+
+import { deriveTicketDescription } from '../src/js/utils.js';
+
+test('商品描述依品名金額推導', () => {
+  assert.equal(deriveTicketDescription('【85度C】50元飲品（好禮即享券）'), '50元飲品任選一');
+  assert.equal(deriveTicketDescription('85度C 35元飲品好禮即享券'), '35元飲品任選一');
+  assert.equal(deriveTicketDescription('85度C 65元飲品任選一'), '65元飲品任選一');
+});
+
+test('無法推導描述時回空字串（保留底圖文字）', () => {
+  assert.equal(deriveTicketDescription('天仁茗茶券'), '');
+  assert.equal(deriveTicketDescription('85度C 蛋糕券'), '');
+  assert.equal(deriveTicketDescription(''), '');
+});

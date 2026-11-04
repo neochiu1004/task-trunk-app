@@ -222,6 +222,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       image: editImage,
       originalImage: finalOriginalImage,
       originalImageGenerated: stillGenerated || undefined,
+      generatedImageVersion: stillGenerated ? 5 : undefined,
       images: editImage ? [editImage] : [],
       barcodeFormat: editBarcodeFormat,
       redeemUrl: editRedeemUrl,

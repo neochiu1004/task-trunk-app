@@ -6,6 +6,7 @@ export interface Ticket {
   image: string;
   originalImage?: string;
   originalImageGenerated?: boolean;
+  generatedImageVersion?: number;
   images?: string[];
   tags: string[];
   note?: string;

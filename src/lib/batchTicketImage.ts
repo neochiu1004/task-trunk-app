@@ -2,6 +2,19 @@ import QRious from 'qrious';
 
 const BASE_WIDTH = 944;
 
+export const BATCH_IMAGE_VERSION = 5;
+
+// The base layout's 商品描述 row is baked into the template screenshot;
+// derive the description matching this ticket's own product name.
+const deriveTicketDescription = (productName: string): string => {
+  const text = String(productName || '');
+  const direct = text.match(/(\d+)\s*元\s*[^，。]*?任選一/);
+  if (direct) return direct[0].replace(/\s+/g, '');
+  const amount = text.match(/(\d+)\s*元/);
+  if (amount && text.includes('飲品')) return `${amount[1]}元飲品任選一`;
+  return '';
+};
+
 const loadImage = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
   const image = new Image();
   image.onload = () => resolve(image);
@@ -57,6 +70,17 @@ export const renderBatchTicketImage = async (source: string, name: string, seria
   ctx.font = `700 28px Arial, sans-serif`;
   ctx.fillStyle = '#333';
   ctx.fillText(`序號：${serial}`, 472, 1232, 570);
+
+  const description = deriveTicketDescription(name);
+  if (description) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(215, 1320, 620, 58);
+    ctx.font = '32px Arial, sans-serif';
+    ctx.fillStyle = '#333';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(description, 229, 1350, 590);
+  }
 
   ctx.fillStyle = '#fff';
   ctx.fillRect(190, 1380, 560, 115);

@@ -262,6 +262,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       image: images[0] || '',
       originalImage: finalOriginalImage,
       originalImageGenerated: generatedOriginalImage || undefined,
+      generatedImageVersion: generatedOriginalImage ? 5 : undefined,
       images: images,
       tags: manualTags,
       barcodeFormat: barcodeFormat,

@@ -352,6 +352,19 @@ export function findTitleAutoTemplate(templates, defaultTemplateId, keyword = TI
 //   from the typed name/serial/expiry.
 // Batch-tagged tickets have their own regeneration path (image field),
 // and tickets without a serial cannot be rendered.
+// The base voucher layout's 商品描述 row is baked into the template
+// screenshot (it says 35元飲品任選一). Derive the description that
+// matches this ticket's own product name so generated images do not
+// contradict the title (e.g. a 50元 ticket showing a 35元 description).
+export function deriveTicketDescription(productName = '') {
+  const text = String(productName || '');
+  const direct = text.match(/(\d+)\s*元\s*[^，。]*?任選一/);
+  if (direct) return direct[0].replace(/\s+/g, '');
+  const amount = text.match(/(\d+)\s*元/);
+  if (amount && text.includes('飲品')) return `${amount[1]}元飲品任選一`;
+  return '';
+}
+
 export function ticketImageGenerationMode({ borrowed = false, hasOriginalImage = false, serial = '', productName = '', isBatchEditing = false } = {}) {
   if (isBatchEditing || !serial) return null;
   if (borrowed) return 'borrowed';

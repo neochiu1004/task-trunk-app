@@ -1,5 +1,5 @@
 import { DataService } from './services/dataService.js';
-import { refreshBatchTicketImages, personalizeBorrowedTemplateImages } from './services/batchImportService.js';
+import { refreshBatchTicketImages, personalizeBorrowedTemplateImages, refreshGeneratedTicketImages } from './services/batchImportService.js';
 import { Router } from './router.js';
 import {
   checkIsExpiringSoon,
@@ -122,6 +122,17 @@ class TicketTrunkJijunApp {
       }
     } catch (error) {
       console.warn('[TaskTrunk] personalize borrowed template images failed:', error);
+    }
+
+    try {
+      const refreshedGenerated = await refreshGeneratedTicketImages(this.state.tasks);
+      if (refreshedGenerated.changed > 0) {
+        this.state.tasks = refreshedGenerated.tasks;
+        await this.persistTasks();
+        console.info('[TaskTrunk] refreshed generated ticket images:', refreshedGenerated.changed);
+      }
+    } catch (error) {
+      console.warn('[TaskTrunk] refresh generated ticket images failed:', error);
     }
 
     const refreshedBatchImages = await refreshBatchTicketImages(this.state.tasks);
