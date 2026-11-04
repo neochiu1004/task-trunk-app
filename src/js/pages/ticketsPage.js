@@ -751,6 +751,7 @@ export class TicketsPage {
           <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>票券圖片</button>
           <button type="button" data-redeem-mode="barcode" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasBarcodeSource ? '' : 'opacity-45 cursor-not-allowed'}" ${hasBarcodeSource ? '' : 'disabled aria-disabled="true"'}>條碼模式</button>
           <span class="text-xs md:text-sm text-wabi-text-secondary self-center">票券圖片優先，無圖片時自動切換條碼</span>
+          ${hasOriginalImage && !hasBarcodeSource ? '<button type="button" data-scan-serial data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-primary text-wabi-primary bg-wabi-primary/10">從原圖掃描序號</button>' : ''}
         </div>
 
         <div id="barcode-variant-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3 ${defaultMode === 'barcode' ? '' : 'hidden'}">
@@ -820,7 +821,34 @@ export class TicketsPage {
         barcodeVariantSwitch.classList.toggle('hidden', immersiveOriginal || mode !== 'barcode');
       }
 
-      modal.querySelectorAll('[data-barcode-variant]').forEach((btn) => {
+      modal.querySelector('[data-scan-serial]')?.addEventListener('click', async (event) => {
+      const btn = event.currentTarget;
+      if (btn.disabled) return;
+      btn.disabled = true;
+      try {
+        showToast('正在辨識條碼...');
+        const { scanMultipleBarcodesFromImage } = await import('../services/barcodeService.js');
+        const results = await scanMultipleBarcodesFromImage(displayImage, { preferredFormat: ticket.barcodeFormat || '' });
+        if (!results.length) {
+          showToast('未從原圖找到條碼，請改從編輯頁輸入序號', 'error');
+          return;
+        }
+        ticket.serial = results[0].content;
+        if (results[0].format && !ticket.barcodeFormat) ticket.barcodeFormat = results[0].format;
+        await this.app.persistTasks();
+        showToast('已從原圖帶入序號', 'success');
+        cleanup();
+        this.openRedeemModeModal(ticket);
+        this.render();
+      } catch (error) {
+        console.warn('原圖掃描序號失敗', error);
+        showToast('條碼辨識失敗', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    modal.querySelectorAll('[data-barcode-variant]').forEach((btn) => {
         const isActive = btn.dataset.barcodeVariant === barcodeVariant;
         btn.classList.toggle('bg-wabi-primary', isActive);
         btn.classList.toggle('text-white', isActive);
@@ -1256,6 +1284,9 @@ export class TicketsPage {
       const originalImageBadge = hasOriginalImage
         ? '<span class="text-xs rounded-full px-2 py-1 bg-sky-100 text-sky-700"><i class="fa-regular fa-image mr-1"></i>原圖</span>'
         : '';
+      const serialHtml = gridColumns === 1 && ticket.serial
+        ? `<p class="ticket-card-serial text-xs text-wabi-text-secondary font-mono break-all mt-1">序號：${escapeHtml(ticket.serial)}</p>`
+        : '';
       const isActiveDuplicate = this.view === 'active' && isDuplicateSerial;
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
       const duplicateCardClass = isActiveDuplicate ? 'ticket-card--duplicate' : '';
@@ -1301,6 +1332,7 @@ export class TicketsPage {
                 <div class="min-w-0">
                   <h3 class="ticket-card-title font-semibold text-wabi-primary text-[13px] leading-tight truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
                   <p class="ticket-card-expiry ${compactExpiryClass} text-[11px] text-wabi-text-secondary mt-1">${compactExpiryPrefix}${compactExpiryDisplay}</p>
+                  ${serialHtml}
                 </div>
               </div>
               <div class="flex items-center gap-1">
@@ -1413,6 +1445,7 @@ export class TicketsPage {
                   <div class="min-w-0 flex-1">
                     <h3 class="font-semibold text-wabi-primary text-base truncate">${escapeHtml(ticket.productName || '未命名票券')}</h3>
                     <p class="${standardExpiryClass}">${standardExpiryPrefix}${standardExpiryDisplay}</p>
+                    ${serialHtml}
                   </div>
                   ${!ticket.completed && !ticket.isDeleted ? `<button data-action="toggle-pin" class="text-sm shrink-0 ${ticket.pinned ? 'text-amber-500' : 'text-slate-300'}" title="置頂">
                     <i class="fa-solid fa-thumbtack"></i>
@@ -1524,8 +1557,7 @@ export class TicketsPage {
     const meta = VIEW_META[this.view];
     const tickets = this.filterTickets();
     const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
-    const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
-    const showThumbnail = viewConfig.showThumbnail !== false;
+    const { gridColumns, showThumbnail, compactGrid, ultraCompactCard, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor, ticketGridClass } = this.getCardRenderOptions();
     const backgroundImage = viewConfig.backgroundImage || '';
     const backgroundImages = Array.isArray(viewConfig.backgroundImages)
       ? viewConfig.backgroundImages.filter(Boolean)
@@ -1535,29 +1567,6 @@ export class TicketsPage {
     }
     const showBackground = viewConfig.showBackground !== false;
     const bgOpacity = clamp(viewConfig.bgOpacity, 0, 1, 1);
-    const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, GLASS_CARD_OPACITY);
-    const cardHeight = clamp(viewConfig.cardHeight, 0, 360, 0);
-    const cardBgColor = viewConfig.cardBgColor || '#ffffff';
-    const cardBorderColor = viewConfig.cardBorderColor || '#d7e3f0';
-    const ultraCompactCard = viewConfig.ultraCompactCard === true;
-    const compactGrid = gridColumns > 1;
-    const thumbnailScale = Number.isFinite(Number(viewConfig.thumbnailScale))
-      ? clamp(viewConfig.thumbnailScale, 10, 100, 100)
-      : Number.isFinite(Number(viewConfig.gridImageHeight))
-        ? clamp(Math.round((Number(viewConfig.gridImageHeight) / 84) * 100), 10, 100, 100)
-        : 100;
-    let ticketGridClass = gridColumns === 3
-      ? 'grid grid-cols-3 gap-1.5'
-      : gridColumns === 2
-        ? 'grid grid-cols-2 gap-2'
-        : 'grid gap-3';
-    if (ultraCompactCard) {
-      ticketGridClass = gridColumns === 3
-        ? 'grid grid-cols-3 gap-1.5'
-        : gridColumns === 2
-          ? 'grid grid-cols-2 gap-1.5'
-          : 'grid gap-1.5';
-    }
     if (backgroundImages.length > 0) {
       this.backgroundRotationIndex = this.backgroundRotationIndex % backgroundImages.length;
       if (this.backgroundRotationIndex < 0) this.backgroundRotationIndex = 0;
@@ -1669,18 +1678,11 @@ export class TicketsPage {
             <label class="relative flex-1 min-w-0">
               <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-wabi-text-secondary"></i>
               <input id="ticket-search" value="${escapeHtml(this.app.state.ui.search)}" placeholder="搜尋票券、標籤或序號" class="app-search-input w-full pl-9 ${searchKeyword ? 'pr-9' : 'pr-3'}" />
-              ${searchKeyword
-                ? `<button type="button" data-clear-search="1" class="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-slate-400 hover:text-slate-700" aria-label="清除搜尋"><i class="fa-solid fa-xmark text-xs"></i></button>`
-                : ''}
+              <button type="button" data-clear-search="1" class="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-slate-400 hover:text-slate-700 ${searchKeyword ? '' : 'hidden'}" aria-label="清除搜尋"><i class="fa-solid fa-xmark text-xs"></i></button>
             </label>
           </div>
 
-          <p class="app-summary-line mb-1.5">
-            <span>${tickets.length} / ${currentViewTotal} 張 · ${viewStatusCaption}</span>
-            ${(searchKeyword || this.app.state.ui.activeTags.length > 0)
-              ? `<span class="app-summary-line-scope">· ${compactScopeText}</span><button type="button" data-clear-scope="1" class="app-summary-line-clear">清除篩選</button>`
-              : ''}
-          </p>
+          <p id="tickets-summary-line" class="app-summary-line mb-1.5">${this.buildSummaryLineHtml({ ticketsCount: tickets.length, currentViewTotal, viewStatusCaption, compactScopeText, hasScope: !!searchKeyword || this.app.state.ui.activeTags.length > 0 })}</p>
 
           <div class="flex items-center gap-2">
             <div class="app-chip-row flex-1 min-w-0" role="group" aria-label="標籤篩選">
@@ -1746,7 +1748,7 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor })}</div>
+        <div id="tickets-grid" class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor })}</div>
       </section>
     `);
 
@@ -1763,6 +1765,206 @@ export class TicketsPage {
     window.addEventListener('orientationchange', this.backgroundInsetHandler);
     window.visualViewport?.addEventListener('resize', this.backgroundInsetHandler);
     this.startBackgroundRotation(backgroundImages, showBackground);
+  }
+
+  bindCardEvents(root) {
+    root.querySelectorAll('[data-select]').forEach((box) => {
+      box.addEventListener('change', () => {
+        const id = box.dataset.select;
+        if (!id) return;
+        if (box.checked) this.app.state.ui.selectedIds.add(id);
+        else this.app.state.ui.selectedIds.delete(id);
+        this.hideContinueBatchHint();
+        this.render();
+      });
+    });
+
+    const toggleCardSelection = (ticketId) => {
+      if (!ticketId || !this.app.state.ui.selectionMode) return;
+      if (this.app.state.ui.selectedIds.has(ticketId)) {
+        this.app.state.ui.selectedIds.delete(ticketId);
+      } else {
+        this.app.state.ui.selectedIds.add(ticketId);
+      }
+      this.hideContinueBatchHint();
+      this.render();
+    };
+
+    root.querySelectorAll('.ticket-card').forEach((card) => {
+      card.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target.closest('button, a, input, textarea, select, label')) return;
+        if (card.dataset.swipeSuppressClick === '1') {
+          card.dataset.swipeSuppressClick = '0';
+          return;
+        }
+        const ticketId = card.dataset.ticketId;
+        if (!ticketId) return;
+
+        if (this.app.state.ui.selectionMode) {
+          toggleCardSelection(ticketId);
+          return;
+        }
+
+        const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
+        if (!ticket || ticket.isDeleted) return;
+        if (ticket.completed) {
+          showToast('此票券已核銷，請至已使用視圖管理', 'success');
+          return;
+        }
+
+        this.openRedeemModeModal(ticket);
+      });
+
+      card.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const target = event.target;
+        if (target.closest('button, a, input, textarea, select, label')) return;
+        event.preventDefault();
+        toggleCardSelection(card.dataset.ticketId);
+      });
+
+      this.bindCardSwipeGesture(card);
+    });
+
+    root.querySelectorAll('[data-tag]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tag = btn.dataset.tag;
+        if (!tag) return;
+        if (!this.app.state.ui.activeTags.includes(tag)) {
+          this.app.state.ui.activeTags.push(tag);
+        }
+        this.render();
+      });
+    });
+
+  }
+
+  bindClearScopeButtons(root) {
+    root.querySelectorAll('[data-clear-scope]').forEach((btn) => {
+      btn.addEventListener('click', () => { this.clearFilterScope(); });
+    });
+  }
+
+  async clearFilterScope() {
+    this.app.state.ui.search = '';
+    this.app.state.ui.activeTags = [];
+    if (this.app.state.ui.selectionMode) {
+      const visibleIds = new Set(this.filterTickets().map((ticket) => ticket.id));
+      const before = this.app.state.ui.selectedIds.size;
+      this.app.state.ui.selectedIds = new Set([...this.app.state.ui.selectedIds].filter((id) => visibleIds.has(id)));
+      const pruned = before - this.app.state.ui.selectedIds.size;
+      if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+      await this.render();
+    } else {
+      await this.renderSearchResults();
+    }
+    const input = this.app.getRoot().querySelector('#ticket-search');
+    if (input) input.value = '';
+  }
+
+  getCardRenderOptions() {
+    const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
+    const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
+    const showThumbnail = viewConfig.showThumbnail !== false;
+    const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, GLASS_CARD_OPACITY);
+    const cardHeight = clamp(viewConfig.cardHeight, 0, 360, 0);
+    const cardBgColor = viewConfig.cardBgColor || '#ffffff';
+    const cardBorderColor = viewConfig.cardBorderColor || '#d7e3f0';
+    const ultraCompactCard = viewConfig.ultraCompactCard === true;
+    const compactGrid = gridColumns > 1;
+    const thumbnailScale = Number.isFinite(Number(viewConfig.thumbnailScale))
+      ? clamp(viewConfig.thumbnailScale, 10, 100, 100)
+      : Number.isFinite(Number(viewConfig.gridImageHeight))
+        ? clamp(Math.round((Number(viewConfig.gridImageHeight) / 84) * 100), 10, 100, 100)
+        : 100;
+    let ticketGridClass = gridColumns === 3
+      ? 'grid grid-cols-3 gap-1.5'
+      : gridColumns === 2
+        ? 'grid grid-cols-2 gap-2'
+        : 'grid gap-3';
+    if (ultraCompactCard) {
+      ticketGridClass = gridColumns === 3
+        ? 'grid grid-cols-3 gap-1.5'
+        : gridColumns === 2
+          ? 'grid grid-cols-2 gap-1.5'
+          : 'grid gap-1.5';
+    }
+    return { gridColumns, showThumbnail, compactGrid, ultraCompactCard, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor, ticketGridClass };
+  }
+
+  getSummaryContext(tickets) {
+    const tasks = this.app.state.tasks;
+    const activeTotalCount = tasks.filter((t) => !t.completed && !t.isDeleted).length;
+    const completedTotalCount = tasks.filter((t) => t.completed && !t.isDeleted).length;
+    const deletedTotalCount = tasks.filter((t) => t.isDeleted).length;
+    const urgentActiveCount = tasks.filter((t) => {
+      if (t.completed || t.isDeleted) return false;
+      const st = getExpiryState(t.expiry, this.app.state.settings.notifyDays);
+      return st === 'expired' || st === 'today' || st === 'soon';
+    }).length;
+    const pinnedVisibleCount = tickets.filter((t) => t.pinned && !t.completed && !t.isDeleted).length;
+    const currentViewTotal = this.view === 'active' ? activeTotalCount : this.view === 'completed' ? completedTotalCount : deletedTotalCount;
+    const viewStatusCaption = this.view === 'active'
+      ? `快到期 ${urgentActiveCount} 張${pinnedVisibleCount ? ` · 優先 ${pinnedVisibleCount} 張` : ''}`
+      : this.view === 'completed'
+        ? `已核銷 ${completedTotalCount} 張`
+        : `待整理 ${deletedTotalCount} 張`;
+    const searchKeyword = this.app.state.ui.search.trim();
+    const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
+      tag === ORIGINAL_IMAGE_FILTER_TAG ? '原圖'
+        : tag === EXPIRY_URGENT_FILTER_TAG ? '到期警示'
+        : tag === DUPLICATE_FILTER_TAG ? '重複票券'
+        : `#${escapeHtml(tag)}`
+    ));
+    const scopeParts = [];
+    if (searchKeyword) scopeParts.push(`關鍵字「${escapeHtml(searchKeyword)}」`);
+    if (activeTagLabels.length) scopeParts.push(`標籤 ${activeTagLabels.join('、')}`);
+    const compactScopeText = scopeParts.length ? `目前範圍：${scopeParts.join('、')}` : '目前範圍：全部票券';
+    return { ticketsCount: tickets.length, currentViewTotal, viewStatusCaption, compactScopeText, hasScope: !!searchKeyword || this.app.state.ui.activeTags.length > 0 };
+  }
+
+  buildSummaryLineHtml(ctx) {
+    return `<span>${ctx.ticketsCount} / ${ctx.currentViewTotal} 張 · ${ctx.viewStatusCaption}</span>${ctx.hasScope ? `<span class="app-summary-line-scope">· ${ctx.compactScopeText}</span><button type="button" data-clear-scope="1" class="app-summary-line-clear">清除篩選</button>` : ''}`;
+  }
+
+  // Typing in the search box must NOT rebuild the whole page: recreating
+  // the input and re-focusing it makes iOS reset the keyboard layout
+  // after every keystroke (digits fall back to the English keyboard).
+  // Update only the summary line and the card grid; the input element
+  // itself is never touched, so the keyboard session survives.
+  async renderSearchResults(focusRestore = null) {
+    if (this.app.state.ui.selectionMode) {
+      await this.render();
+      if (focusRestore) {
+        const input = this.app.getRoot().querySelector('#ticket-search');
+        if (input) {
+          input.focus({ preventScroll: true });
+          const len = input.value.length;
+          const start = Number.isFinite(focusRestore.selectionStart) ? Math.max(0, Math.min(len, focusRestore.selectionStart)) : len;
+          const end = Number.isFinite(focusRestore.selectionEnd) ? Math.max(0, Math.min(len, focusRestore.selectionEnd)) : start;
+          input.setSelectionRange(start, end);
+        }
+      }
+      return;
+    }
+    const root = this.app.getRoot();
+    const grid = root.querySelector('#tickets-grid');
+    if (!grid) { await this.render(); return; }
+    const tickets = this.filterTickets();
+    const opts = this.getCardRenderOptions();
+    grid.className = `${opts.ticketGridClass} ${opts.ultraCompactCard ? 'ticket-grid--ultra' : ''}`;
+    grid.innerHTML = this.buildCards(tickets, opts);
+    const summary = root.querySelector('#tickets-summary-line');
+    if (summary) summary.innerHTML = this.buildSummaryLineHtml(this.getSummaryContext(tickets));
+    const hasKeyword = !!this.app.state.ui.search.trim();
+    const clearBtn = root.querySelector('[data-clear-search]');
+    clearBtn?.classList.toggle('hidden', !hasKeyword);
+    const input = root.querySelector('#ticket-search');
+    input?.classList.toggle('pr-9', hasKeyword);
+    input?.classList.toggle('pr-3', !hasKeyword);
+    this.bindCardEvents(root);
+    this.bindClearScopeButtons(root);
   }
 
   bindEvents() {
@@ -1792,26 +1994,11 @@ export class TicketsPage {
       return before - this.app.state.ui.selectedIds.size;
     };
 
-    const rerenderWithSearchFocus = async (cursorStart = null, cursorEnd = null) => {
-      await this.render();
-      const nextSearchInput = this.app.getRoot().querySelector('#ticket-search');
-      if (!nextSearchInput) return;
-      nextSearchInput.focus({ preventScroll: true });
-      const valueLength = nextSearchInput.value.length;
-      const safeStart = Number.isFinite(cursorStart)
-        ? Math.max(0, Math.min(valueLength, cursorStart))
-        : valueLength;
-      const safeEnd = Number.isFinite(cursorEnd)
-        ? Math.max(0, Math.min(valueLength, cursorEnd))
-        : safeStart;
-      nextSearchInput.setSelectionRange(safeStart, safeEnd);
-    };
-
     const handleSearchValueChange = async (event) => {
       this.app.state.ui.search = event.target.value;
       const pruned = pruneSelectionToVisible();
       if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-      await rerenderWithSearchFocus(event.target.selectionStart, event.target.selectionEnd);
+      await this.renderSearchResults({ selectionStart: event.target.selectionStart, selectionEnd: event.target.selectionEnd });
     };
 
     const searchInput = root.querySelector('#ticket-search');
@@ -1831,18 +2018,19 @@ export class TicketsPage {
       this.app.state.ui.search = '';
       const pruned = pruneSelectionToVisible();
       if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-      await this.render();
+      if (this.app.state.ui.selectionMode) {
+        await this.render();
+      } else {
+        await this.renderSearchResults();
+      }
       const nextSearchInput = this.app.getRoot().querySelector('#ticket-search');
-      nextSearchInput?.focus({ preventScroll: true });
+      if (nextSearchInput) {
+        nextSearchInput.value = '';
+        nextSearchInput.focus({ preventScroll: true });
+      }
     });
 
-    root.querySelector('[data-clear-scope]')?.addEventListener('click', async () => {
-      this.app.state.ui.search = '';
-      this.app.state.ui.activeTags = [];
-      const pruned = pruneSelectionToVisible();
-      if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
-      await this.render();
-    });
+    this.bindClearScopeButtons(root);
 
     root.querySelector('#ticket-sort')?.addEventListener('change', (event) => {
       this.app.state.ui.sort = event.target.value;
@@ -2056,75 +2244,7 @@ export class TicketsPage {
       event.currentTarget.click();
     });
 
-    root.querySelectorAll('[data-select]').forEach((box) => {
-      box.addEventListener('change', () => {
-        const id = box.dataset.select;
-        if (!id) return;
-        if (box.checked) this.app.state.ui.selectedIds.add(id);
-        else this.app.state.ui.selectedIds.delete(id);
-        this.hideContinueBatchHint();
-        this.render();
-      });
-    });
-
-    const toggleCardSelection = (ticketId) => {
-      if (!ticketId || !this.app.state.ui.selectionMode) return;
-      if (this.app.state.ui.selectedIds.has(ticketId)) {
-        this.app.state.ui.selectedIds.delete(ticketId);
-      } else {
-        this.app.state.ui.selectedIds.add(ticketId);
-      }
-      this.hideContinueBatchHint();
-      this.render();
-    };
-
-    root.querySelectorAll('.ticket-card').forEach((card) => {
-      card.addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.closest('button, a, input, textarea, select, label')) return;
-        if (card.dataset.swipeSuppressClick === '1') {
-          card.dataset.swipeSuppressClick = '0';
-          return;
-        }
-        const ticketId = card.dataset.ticketId;
-        if (!ticketId) return;
-
-        if (this.app.state.ui.selectionMode) {
-          toggleCardSelection(ticketId);
-          return;
-        }
-
-        const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
-        if (!ticket || ticket.isDeleted) return;
-        if (ticket.completed) {
-          showToast('此票券已核銷，請至已使用視圖管理', 'success');
-          return;
-        }
-
-        this.openRedeemModeModal(ticket);
-      });
-
-      card.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        const target = event.target;
-        if (target.closest('button, a, input, textarea, select, label')) return;
-        event.preventDefault();
-        toggleCardSelection(card.dataset.ticketId);
-      });
-
-      this.bindCardSwipeGesture(card);
-    });
-
-    root.querySelectorAll('[data-tag]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const tag = btn.dataset.tag;
-        if (!tag) return;
-        if (!this.app.state.ui.activeTags.includes(tag)) {
-          this.app.state.ui.activeTags.push(tag);
-        }
-        this.render();
-      });
-    });
+    this.bindCardEvents(root);
 
     root.querySelectorAll('[data-batch]').forEach((btn) => {
       btn.addEventListener('click', async () => {

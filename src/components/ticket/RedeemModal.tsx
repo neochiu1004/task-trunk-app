@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -88,6 +88,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const autoScannedTicketRef = useRef<string>('');
 
   const isSpecificView = useMemo(() => {
     if (!ticket) return false;
@@ -125,6 +126,30 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setShowFullScreen(false);
     }
   }, [getInitialViewMode, ticket]);
+
+  // 有原圖但還沒有序號時，自動從原圖抓一次序號（每張票只試一次）
+  useEffect(() => {
+    if (!ticket?.originalImage || ticket.serial) return;
+    if (autoScannedTicketRef.current === ticket.id) return;
+    autoScannedTicketRef.current = ticket.id;
+    let cancelled = false;
+    void (async () => {
+      setIsScanning(true);
+      try {
+        const result = await scanBarcodeFromImage(ticket.originalImage as string);
+        if (!cancelled && result) {
+          setEditSerial(result.content);
+          setEditBarcodeFormat(result.format);
+          toast({ title: '已從原圖帶入序號', description: `序號: ${result.content}` });
+        }
+      } catch (error) {
+        console.error('Auto barcode scan failed:', error);
+      } finally {
+        if (!cancelled) setIsScanning(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ticket, toast]);
 
   if (!ticket) return null;
 

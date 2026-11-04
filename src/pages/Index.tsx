@@ -535,6 +535,7 @@ const Index = () => {
                     opacity={currentConfig.cardOpacity}
                     cardBgColor={currentConfig.cardBgColor}
                     cardBorderColor={currentConfig.cardBorderColor}
+                    fullSerial={!isCompact}
                     isCompact={isCompact}
                     gridImageHeight={currentConfig.gridImageHeight}
                     index={index}

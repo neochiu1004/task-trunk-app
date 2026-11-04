@@ -413,6 +413,11 @@ export class AddPage {
       };
       this.app.persistSettings();
     }
+    // 編輯既有票券：有自己的原圖但還沒有序號時，自動從原圖抓一次序號。
+    // 新票券套範本帶入的是範本的圖，不掃，避免抓到範本來源票券的序號。
+    if (editing && originalImage && !(serialInput?.value || '').trim()) {
+      scanAndApplyBarcode(originalImage, { quiet: true });
+    }
 
     // Title rule: when the product name contains 85度C, auto-apply the
     // default template. The typed name and serial are preserved (they are

@@ -47,6 +47,7 @@ interface TicketCardProps {
   cardBgColor?: string;
   cardBorderColor?: string;
   isCompact: boolean;
+  fullSerial?: boolean;
   gridImageHeight?: number;
   index?: number;
   hasHealthIssue?: boolean;
@@ -65,6 +66,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   cardBgColor,
   cardBorderColor,
   isCompact,
+  fullSerial,
   gridImageHeight = 96,
   index = 0,
   hasHealthIssue = false,
@@ -224,8 +226,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           
           {/* Footer with serial and pin toggle */}
           <div className="mt-2 pt-2 border-t border-border/50 flex justify-between items-center">
-            <span className="text-[10px] text-muted-foreground font-mono tracking-wider line-clamp-1">
-              #{ticket.serial?.slice(0, 8) || 'N/A'}
+            <span className={`text-[10px] text-muted-foreground font-mono tracking-wider ${fullSerial ? 'break-all' : 'line-clamp-1'}`}>
+              #{fullSerial ? (ticket.serial || 'N/A') : (ticket.serial?.slice(0, 8) || 'N/A')}
             </span>
             <div className="flex items-center gap-1.5">
               {onTogglePin && !ticket.completed && !ticket.isDeleted && (
