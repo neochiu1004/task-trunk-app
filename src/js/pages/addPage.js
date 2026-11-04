@@ -6,7 +6,8 @@ import {
   parseTags,
   showToast,
   tagsToText,
-  normalizeDateInput,
+  parseExpiryText,
+  formatExpiryText,
   findTitleAutoTemplate,
   TITLE_AUTO_TEMPLATE_KEYWORD,
 } from '../utils.js';
@@ -22,14 +23,6 @@ async function getBarcodeScanner() {
 export class AddPage {
   constructor(app) {
     this.app = app;
-  }
-
-  toDateInputValue(value) {
-    const normalized = normalizeDateInput(value || '').trim();
-    if (!normalized) return '';
-    const [year, month, day] = normalized.split('/');
-    if (!year || !month || !day) return '';
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 
   getDefaultExpiryAfterMonths(months = 6) {
@@ -117,7 +110,7 @@ export class AddPage {
   async render() {
     const editing = this.getEditingTicket();
     const defaultExpiry = this.getDefaultExpiryAfterMonths(6);
-    const defaultExpiryInputValue = this.toDateInputValue(editing?.expiry || defaultExpiry);
+    const defaultExpiryInputValue = formatExpiryText(editing?.expiry || defaultExpiry);
     const quickTags = (this.app.state.settings.quickTags || []).filter(Boolean);
     const selectedQuickTagSet = new Set(editing?.tags || []);
     const selectableTags = [...new Set([...quickTags, ...(editing?.tags || [])])];
@@ -203,7 +196,7 @@ export class AddPage {
             </div>
             <div>
               <label class="block text-sm text-wabi-text-secondary mb-1">到期日</label>
-              <input id="expiry" type="date" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" value="${escapeHtml(defaultExpiryInputValue)}" />
+              <input id="expiry" type="text" inputmode="numeric" autocomplete="off" placeholder="YYYY/MM/DD" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" value="${escapeHtml(defaultExpiryInputValue)}" />
             </div>
           </div>
 
@@ -273,6 +266,23 @@ export class AddPage {
     const originalImagePreview = root.querySelector('#original-image-preview');
     const originalImageWrap = root.querySelector('#original-image-preview-wrap');
     const serialInput = root.querySelector('#serial');
+    const expiryInput = root.querySelector('#expiry');
+    let lastValidExpiry = expiryInput?.value || '';
+    const commitExpiryInput = () => {
+      if (!expiryInput) return true;
+      const raw = expiryInput.value.trim();
+      if (!raw) { lastValidExpiry = ''; return true; }
+      const parsed = parseExpiryText(raw);
+      if (!parsed) {
+        showToast('到期日格式錯誤，請輸入 YYYY/MM/DD', 'error');
+        expiryInput.value = lastValidExpiry;
+        return false;
+      }
+      expiryInput.value = parsed;
+      lastValidExpiry = parsed;
+      return true;
+    };
+    expiryInput?.addEventListener('blur', commitExpiryInput);
     const duplicateWarning = root.querySelector('#serial-duplicate-warning');
     const tagsInput = root.querySelector('#tags');
     const selectedTagsPreview = root.querySelector('#selected-tags-preview');
@@ -352,7 +362,8 @@ export class AddPage {
 
       root.querySelector('#product-name').value = template.productName || '';
       root.querySelector('#serial').value = template.serial || '';
-      root.querySelector('#expiry').value = this.toDateInputValue(template.expiry || defaultExpiry);
+      root.querySelector('#expiry').value = formatExpiryText(template.expiry || defaultExpiry);
+      lastValidExpiry = root.querySelector('#expiry').value;
       root.querySelector('#tags').value = tagsToText(template.tags || []);
       root.querySelector('#barcode-format').value = template.barcodeFormat || '';
       updateDuplicateSerialHint();
@@ -571,7 +582,7 @@ export class AddPage {
         id: `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         label: normalizedLabel,
         productName,
-        expiry: normalizeDateInput(root.querySelector('#expiry').value.trim()),
+        expiry: parseExpiryText(root.querySelector('#expiry').value) || '',
         tags: parseTags(root.querySelector('#tags').value),
         image: imageData,
         originalImage,
@@ -604,7 +615,12 @@ export class AddPage {
       }
 
       const serial = root.querySelector('#serial').value.trim();
-      const expiry = normalizeDateInput(root.querySelector('#expiry').value.trim());
+      const expiryRaw = root.querySelector('#expiry').value.trim();
+      if (expiryRaw && !parseExpiryText(expiryRaw)) {
+        showToast('到期日格式錯誤，請輸入 YYYY/MM/DD', 'error');
+        return;
+      }
+      const expiry = parseExpiryText(expiryRaw) || '';
       const selectedBatchProductImage = batchProductImage || batchProductImagePreview?.src || '';
       if (serial && isDuplicateSerial(serial)) {
         const ok = window.confirm('此序號已存在於其他票券，仍要繼續儲存嗎？');

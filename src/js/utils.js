@@ -86,6 +86,32 @@ export function generateId() {
   return `ticket_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// Parse a user-typed expiry into the canonical stored form YYYY/MM/DD.
+// Accepts YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD and compact YYYYMMDD.
+// Returns null for anything that is not a real calendar date.
+export function parseExpiryText(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  let match = raw.match(/^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})$/);
+  if (!match) {
+    const compact = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compact) match = compact;
+  }
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
+}
+
+// Canonical display form for an expiry value ('' when empty/invalid).
+export function formatExpiryText(value) {
+  return parseExpiryText(value) || '';
+}
+
 export function normalizeDateInput(value) {
   if (!value) return '';
   return value.replace(/[.\-]/g, '/');

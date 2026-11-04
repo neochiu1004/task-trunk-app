@@ -365,7 +365,10 @@ export const AddModal: React.FC<AddModalProps> = ({
 
             <div className="space-y-1">
               <input
-                type="date"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="YYYY/MM/DD"
                 className="w-full p-3.5 glass-card rounded-xl outline-none text-base font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
                 value={manualData.expiry}
                 onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
