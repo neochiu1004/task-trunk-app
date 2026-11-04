@@ -89,6 +89,16 @@ export function generateId() {
 // Parse a user-typed expiry into the canonical stored form YYYY/MM/DD.
 // Accepts YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD and compact YYYYMMDD.
 // Returns null for anything that is not a real calendar date.
+// Live mask for the expiry text field: the numeric keypad has no "/"
+// key, so slashes are inserted automatically as digits are typed
+// (20261231 -> 2026/12/31). Non-digits are stripped, max 8 digits.
+export function formatExpiryMask(value) {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}/${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
+}
+
 export function parseExpiryText(value) {
   const raw = String(value || '').trim();
   if (!raw) return null;

@@ -43,3 +43,21 @@ test('formatExpiryText 正規化或回空字串', () => {
   assert.equal(formatExpiryText(''), '');
   assert.equal(formatExpiryText('garbage'), '');
 });
+
+import { formatExpiryMask } from '../src/js/utils.js';
+
+test('formatExpiryMask 打字時自動補斜線', () => {
+  assert.equal(formatExpiryMask(''), '');
+  assert.equal(formatExpiryMask('2'), '2');
+  assert.equal(formatExpiryMask('2026'), '2026');
+  assert.equal(formatExpiryMask('20261'), '2026/1');
+  assert.equal(formatExpiryMask('202612'), '2026/12');
+  assert.equal(formatExpiryMask('2026123'), '2026/12/3');
+  assert.equal(formatExpiryMask('20261231'), '2026/12/31');
+});
+
+test('formatExpiryMask 接受貼上與多餘字元', () => {
+  assert.equal(formatExpiryMask('2026/12/31'), '2026/12/31');
+  assert.equal(formatExpiryMask('2026-12-31'), '2026/12/31');
+  assert.equal(formatExpiryMask('20261231999'), '2026/12/31');
+});

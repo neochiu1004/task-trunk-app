@@ -400,7 +400,11 @@ export const AddModal: React.FC<AddModalProps> = ({
                 placeholder="YYYY/MM/DD"
                 className="w-full p-3.5 glass-card rounded-xl outline-none text-base font-medium text-foreground focus:ring-2 focus:ring-primary/30 transition-all"
                 value={manualData.expiry}
-                onChange={(e) => setManualData({ ...manualData, expiry: e.target.value })}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  const masked = digits.length <= 4 ? digits : digits.length <= 6 ? `${digits.slice(0, 4)}/${digits.slice(4)}` : `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
+                  setManualData({ ...manualData, expiry: masked });
+                }}
               />
               <div className="pl-1 text-[11px] text-muted-foreground">
                 沒有期限可以留空，之後也能再補。

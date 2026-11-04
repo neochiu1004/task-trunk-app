@@ -7,6 +7,7 @@ import {
   showToast,
   tagsToText,
   parseExpiryText,
+  formatExpiryMask,
   ticketImageGenerationMode,
   formatExpiryText,
   findTitleAutoTemplate,
@@ -284,6 +285,10 @@ export class AddPage {
       return true;
     };
     expiryInput?.addEventListener('blur', commitExpiryInput);
+    expiryInput?.addEventListener('input', () => {
+      const masked = formatExpiryMask(expiryInput.value);
+      if (masked !== expiryInput.value) expiryInput.value = masked;
+    });
     const duplicateWarning = root.querySelector('#serial-duplicate-warning');
     const tagsInput = root.querySelector('#tags');
     const selectedTagsPreview = root.querySelector('#selected-tags-preview');
