@@ -1,5 +1,5 @@
 import { DataService } from './services/dataService.js';
-import { refreshBatchTicketImages } from './services/batchImportService.js';
+import { refreshBatchTicketImages, personalizeBorrowedTemplateImages } from './services/batchImportService.js';
 import { Router } from './router.js';
 import {
   checkIsExpiringSoon,
@@ -105,6 +105,23 @@ class TicketTrunkJijunApp {
       }
     } catch (error) {
       console.warn('[TaskTrunk] title template backfill failed:', error);
+    }
+
+    // Borrowed template screenshots show the template voucher's serial
+    // and expiry inside the picture; re-render them per ticket.
+    try {
+      const personalized = await personalizeBorrowedTemplateImages(
+        this.state.tasks,
+        this.state.templates,
+        this.state.settings.defaultTemplateId,
+      );
+      if (personalized.changed > 0) {
+        this.state.tasks = personalized.tasks;
+        await this.persistTasks();
+        console.info('[TaskTrunk] personalized borrowed template images:', personalized.changed);
+      }
+    } catch (error) {
+      console.warn('[TaskTrunk] personalize borrowed template images failed:', error);
     }
 
     const refreshedBatchImages = await refreshBatchTicketImages(this.state.tasks);

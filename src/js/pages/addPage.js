@@ -290,6 +290,14 @@ export class AddPage {
     let imageData = editing?.image || '';
     let originalImage = editing?.originalImage || '';
     let batchProductImage = editing?.batchProductImage || '';
+    // True while the original image is a borrowed template screenshot:
+    // the serial/QR/expiry printed inside it belong to the template's
+    // source voucher, so on save the picture is re-rendered from this
+    // ticket's own serial/expiry instead of keeping the borrowed one.
+    let originalImageFromTemplate = !!(
+      editing?.originalImage
+      && (this.app.state.templates || []).some((tpl) => tpl.originalImage && tpl.originalImage === editing.originalImage)
+    );
 
     const isDuplicateSerial = (serial) => this.app.state.tasks.some((ticket) => {
         if (ticket.isDeleted) return false;
@@ -357,7 +365,7 @@ export class AddPage {
       return true;
     };
 
-    const applyTemplate = (template, { showAppliedToast = true } = {}) => {
+    const applyTemplate = (template, { showAppliedToast = true, preserveMedia = false } = {}) => {
       if (!template) return;
 
       root.querySelector('#product-name').value = template.productName || '';
@@ -368,13 +376,14 @@ export class AddPage {
       root.querySelector('#barcode-format').value = template.barcodeFormat || '';
       updateDuplicateSerialHint();
       syncQuickTagState();
-      if (template.image) {
+      if (template.image && !(preserveMedia && imageData)) {
         imageData = template.image;
         if (thumbImagePreview) thumbImagePreview.src = template.image;
         thumbImageWrap?.classList.remove('hidden');
       }
-      if (template.originalImage) {
+      if (template.originalImage && !(preserveMedia && originalImage)) {
         originalImage = template.originalImage;
+        originalImageFromTemplate = true;
         if (originalImagePreview) originalImagePreview.src = template.originalImage;
         originalImageWrap?.classList.remove('hidden');
       }
@@ -449,7 +458,7 @@ export class AddPage {
       titleTemplateApplied = true;
       const typedName = productNameInput.value;
       const typedSerial = root.querySelector('#serial')?.value || '';
-      applyTemplate(template, { showAppliedToast: false });
+      applyTemplate(template, { showAppliedToast: false, preserveMedia: true });
       productNameInput.value = typedName;
       const serialInput = root.querySelector('#serial');
       if (serialInput) serialInput.value = typedSerial;
@@ -498,6 +507,7 @@ export class AddPage {
       if (!file) return;
       try {
         originalImage = await compressImage(file, 'original');
+        originalImageFromTemplate = false;
         if (originalImagePreview) originalImagePreview.src = originalImage;
         originalImageWrap?.classList.remove('hidden');
         await scanAndApplyBarcode(originalImage);
@@ -542,6 +552,7 @@ export class AddPage {
 
     root.querySelector('#original-image-clear-btn')?.addEventListener('click', () => {
       originalImage = '';
+      originalImageFromTemplate = false;
       if (originalImageInput) originalImageInput.value = '';
       if (originalImagePreview) originalImagePreview.src = '';
       originalImageWrap?.classList.add('hidden');
@@ -633,6 +644,14 @@ export class AddPage {
         } catch (error) {
           showToast(`兌換圖片重新產生失敗：${error.message}`, 'error');
           return;
+        }
+      }
+
+      if (originalImageFromTemplate && serial && !(editing?.tags || []).includes('批量生成')) {
+        try {
+          originalImage = await renderBatchTicketImage(undefined, productName, serial, expiry, '');
+        } catch (error) {
+          console.warn('個人化票券圖片產生失敗，沿用範本原圖', error);
         }
       }
 

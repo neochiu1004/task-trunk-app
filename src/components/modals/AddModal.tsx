@@ -9,6 +9,7 @@ import { TagSelectInput } from '../ticket/TagSelectInput';
 import { RedeemUrlPresetSelect } from '../ticket/RedeemUrlPresetSelect';
 import { DraggableTemplateList } from '../ticket/DraggableTemplateList';
 import { scanMultipleBarcodesFromImage, ScanResult } from '@/lib/barcodeScanner';
+import { renderBatchTicketImage } from '@/lib/batchTicketImage';
 import { useToast } from '@/hooks/use-toast';
 import { WebImageSearch } from '@/components/ui/web-image-search';
 import { BarcodeSelectModal } from '../ticket/BarcodeSelectModal';
@@ -66,6 +67,9 @@ export const AddModal: React.FC<AddModalProps> = ({
   const [manualTags, setManualTags] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [originalImage, setOriginalImage] = useState('');
+  // True while the original image is a borrowed template screenshot;
+  // on save it is re-rendered from this ticket's own serial/expiry.
+  const originalImageFromTemplateRef = useRef(false);
   const [barcodeFormat, setBarcodeFormat] = useState<string | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
@@ -111,7 +115,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       redeemUrl: resolvedUrl || prev.redeemUrl
     }));
     if (tpl.image) setImages([tpl.image]);
-    if (tpl.originalImage) setOriginalImage(tpl.originalImage);
+    if (tpl.originalImage) { setOriginalImage(tpl.originalImage); originalImageFromTemplateRef.current = true; }
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
     setHasAppliedTemplate(true);
   };
@@ -140,7 +144,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       redeemUrl: resolvedUrl || prev.redeemUrl,
     }));
     if (tpl.image) setImages([tpl.image]);
-    if (tpl.originalImage) setOriginalImage(tpl.originalImage);
+    if (tpl.originalImage) { setOriginalImage(tpl.originalImage); originalImageFromTemplateRef.current = true; }
     if (tpl.tags && tpl.tags.length > 0) setManualTags(tpl.tags);
     if (tpl.barcodeFormat) setBarcodeFormat(tpl.barcodeFormat);
     setHasAppliedTemplate(true);
@@ -163,6 +167,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   };
 
   const handleOriginalImageChange = async (base64: string) => {
+    originalImageFromTemplateRef.current = false;
     setOriginalImage(base64);
     
     if (base64) {
@@ -222,10 +227,18 @@ export const AddModal: React.FC<AddModalProps> = ({
     }
   };
 
-  const handleManualSubmit = () => {
+  const handleManualSubmit = async () => {
     if (!manualData.name.trim()) {
       alert('請輸入票券名稱');
       return;
+    }
+    let finalOriginalImage = originalImage;
+    if (originalImageFromTemplateRef.current && originalImage && manualData.serial.trim()) {
+      try {
+        finalOriginalImage = await renderBatchTicketImage(originalImage, manualData.name.trim(), manualData.serial.trim(), manualData.expiry.replace(/-/g, '/'));
+      } catch (error) {
+        console.warn('Personalized ticket image render failed, keeping template image', error);
+      }
     }
     const newTicket = {
       id: generateId(),
@@ -233,7 +246,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       serial: manualData.serial.trim(),
       expiry: manualData.expiry.replace(/-/g, '/'),
       image: images[0] || '',
-      originalImage: originalImage,
+      originalImage: finalOriginalImage,
       images: images,
       tags: manualTags,
       barcodeFormat: barcodeFormat,
@@ -428,6 +441,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                       value={originalImage}
                       onChange={handleOriginalImageChange}
                       onClear={() => {
+                        originalImageFromTemplateRef.current = false;
                         setOriginalImage('');
                         setBarcodeFormat(undefined);
                       }}

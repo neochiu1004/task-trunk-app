@@ -339,6 +339,17 @@ export function findTitleAutoTemplate(templates, defaultTemplateId, keyword = TI
 // (e.g. a JSON-imported ticket), then fill every matching ticket that
 // lacks an originalImage (and a thumbnail when the template has one).
 // Mutates the passed arrays; returns what changed.
+// True when a ticket's original image is the shared template screenshot
+// itself (borrowed via template application / backfill), meaning the
+// serial, QR code and expiry printed inside the picture belong to the
+// template's source voucher, not to this ticket.
+export function ticketUsesTemplateImage(ticket, templateImage) {
+  if (!ticket || !templateImage) return false;
+  if (ticket.isDeleted || !ticket.serial) return false;
+  if ((ticket.tags || []).includes('批量生成')) return false;
+  return ticket.originalImage === templateImage;
+}
+
 export function backfillTitleTemplateImages(tasks, templates, defaultTemplateId, keyword = TITLE_AUTO_TEMPLATE_KEYWORD) {
   const list = Array.isArray(tasks) ? tasks : [];
   const template = findTitleAutoTemplate(templates, defaultTemplateId, keyword);

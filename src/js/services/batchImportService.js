@@ -1,5 +1,5 @@
 import QRious from 'qrious';
-import { generateId, normalizeDateInput } from '../utils.js';
+import { generateId, normalizeDateInput, findTitleAutoTemplate, ticketUsesTemplateImage } from '../utils.js';
 import batchTemplateImage from '../../assets/batch-ticket-template.png';
 
 const BATCH_TAG = '批量生成';
@@ -154,4 +154,25 @@ export async function refreshBatchTicketImages(tasks) {
     }
   }));
   return { tasks: refreshedTasks, changed };
+}
+
+// Tickets that borrowed the title template's original screenshot carry
+// the template voucher's serial/QR/expiry inside the picture. Re-render
+// each such ticket's image from its own serial/expiry (same renderer
+// as batch tickets) so the picture matches the ticket data.
+export async function personalizeBorrowedTemplateImages(tasks, templates, defaultTemplateId) {
+  const template = findTitleAutoTemplate(templates || [], defaultTemplateId);
+  if (!template?.originalImage) return { tasks, changed: 0 };
+  let changed = 0;
+  const next = await Promise.all((tasks || []).map(async (ticket) => {
+    if (!ticketUsesTemplateImage(ticket, template.originalImage)) return ticket;
+    try {
+      const image = await renderBatchTicketImage(undefined, ticket.productName || '', ticket.serial, ticket.expiry || '', '');
+      changed += 1;
+      return { ...ticket, originalImage: image };
+    } catch (_error) {
+      return ticket;
+    }
+  }));
+  return { tasks: next, changed };
 }
