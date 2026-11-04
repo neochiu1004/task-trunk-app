@@ -5,6 +5,7 @@ export interface Ticket {
   expiry: string;
   image: string;
   originalImage?: string;
+  originalImageGenerated?: boolean;
   images?: string[];
   tags: string[];
   note?: string;

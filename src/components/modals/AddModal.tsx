@@ -10,6 +10,7 @@ import { RedeemUrlPresetSelect } from '../ticket/RedeemUrlPresetSelect';
 import { DraggableTemplateList } from '../ticket/DraggableTemplateList';
 import { scanMultipleBarcodesFromImage, ScanResult } from '@/lib/barcodeScanner';
 import { renderBatchTicketImage } from '@/lib/batchTicketImage';
+import batchTemplateImage from '@/assets/batch-ticket-template.png';
 import { useToast } from '@/hooks/use-toast';
 import { WebImageSearch } from '@/components/ui/web-image-search';
 import { BarcodeSelectModal } from '../ticket/BarcodeSelectModal';
@@ -233,9 +234,22 @@ export const AddModal: React.FC<AddModalProps> = ({
       return;
     }
     let finalOriginalImage = originalImage;
-    if (originalImageFromTemplateRef.current && originalImage && manualData.serial.trim()) {
+    let generatedOriginalImage = false;
+    const trimmedSerial = manualData.serial.trim();
+    const shouldGenerate = !!trimmedSerial && (
+      originalImageFromTemplateRef.current
+        ? !!originalImage
+        : !originalImage && manualData.name.includes('85度C')
+    );
+    if (shouldGenerate) {
       try {
-        finalOriginalImage = await renderBatchTicketImage(originalImage, manualData.name.trim(), manualData.serial.trim(), manualData.expiry.replace(/-/g, '/'));
+        finalOriginalImage = await renderBatchTicketImage(
+          originalImageFromTemplateRef.current ? originalImage : batchTemplateImage,
+          manualData.name.trim(),
+          trimmedSerial,
+          manualData.expiry.replace(/-/g, '/'),
+        );
+        generatedOriginalImage = true;
       } catch (error) {
         console.warn('Personalized ticket image render failed, keeping template image', error);
       }
@@ -247,6 +261,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       expiry: manualData.expiry.replace(/-/g, '/'),
       image: images[0] || '',
       originalImage: finalOriginalImage,
+      originalImageGenerated: generatedOriginalImage || undefined,
       images: images,
       tags: manualTags,
       barcodeFormat: barcodeFormat,

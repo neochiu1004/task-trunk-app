@@ -343,6 +343,22 @@ export function findTitleAutoTemplate(templates, defaultTemplateId, keyword = TI
 // itself (borrowed via template application / backfill), meaning the
 // serial, QR code and expiry printed inside the picture belong to the
 // template's source voucher, not to this ticket.
+// Decide whether saving a ticket should (re)generate its ticket image
+// from its own serial/expiry. Modes:
+// - 'borrowed': the original image is a template screenshot; re-render
+//   so the picture carries this ticket's data, not the template's.
+// - 'keyword': no original image at all, but the product name hits the
+//   title-template keyword (85度C); generate the template-layout image
+//   from the typed name/serial/expiry.
+// Batch-tagged tickets have their own regeneration path (image field),
+// and tickets without a serial cannot be rendered.
+export function ticketImageGenerationMode({ borrowed = false, hasOriginalImage = false, serial = '', productName = '', isBatchEditing = false } = {}) {
+  if (isBatchEditing || !serial) return null;
+  if (borrowed) return 'borrowed';
+  if (!hasOriginalImage && String(productName || '').includes(TITLE_AUTO_TEMPLATE_KEYWORD)) return 'keyword';
+  return null;
+}
+
 export function ticketUsesTemplateImage(ticket, templateImage) {
   if (!ticket || !templateImage) return false;
   if (ticket.isDeleted || !ticket.serial) return false;

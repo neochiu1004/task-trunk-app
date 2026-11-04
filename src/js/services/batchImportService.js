@@ -169,7 +169,7 @@ export async function personalizeBorrowedTemplateImages(tasks, templates, defaul
     try {
       const image = await renderBatchTicketImage(undefined, ticket.productName || '', ticket.serial, ticket.expiry || '', '');
       changed += 1;
-      return { ...ticket, originalImage: image };
+      return { ...ticket, originalImage: image, originalImageGenerated: true };
     } catch (_error) {
       return ticket;
     }

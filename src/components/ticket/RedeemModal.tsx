@@ -30,6 +30,8 @@ import { DraggableTemplateList } from './DraggableTemplateList';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { WebImageSearch } from '@/components/ui/web-image-search';
 import { scanBarcodeFromImage } from '@/lib/barcodeScanner';
+import { renderBatchTicketImage } from '@/lib/batchTicketImage';
+import batchTemplateImage from '@/assets/batch-ticket-template.png';
 import { useToast } from '@/hooks/use-toast';
 import { validateRedeemUrl } from '@/lib/validation';
 
@@ -196,7 +198,21 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setEditOriginalImage(tempThumbnail);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    let finalOriginalImage = editOriginalImage;
+    let stillGenerated = !!ticket.originalImageGenerated;
+    // Images we generated carry the ticket's serial/expiry; when the
+    // user edits those fields (and did not replace the image), render
+    // the picture again so it stays in sync.
+    if (ticket.originalImageGenerated && editSerial && editOriginalImage && editOriginalImage === ticket.originalImage) {
+      try {
+        finalOriginalImage = await renderBatchTicketImage(batchTemplateImage, editName, editSerial, editExpiry.replace(/-/g, '/'));
+      } catch (error) {
+        console.warn('Ticket image re-render failed, keeping previous image', error);
+      }
+    } else if (editOriginalImage !== ticket.originalImage) {
+      stillGenerated = false;
+    }
     onUpdate({
       ...ticket,
       productName: editName,
@@ -204,7 +220,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       expiry: editExpiry.replace(/-/g, '/'),
       tags: editTags,
       image: editImage,
-      originalImage: editOriginalImage,
+      originalImage: finalOriginalImage,
+      originalImageGenerated: stillGenerated || undefined,
       images: editImage ? [editImage] : [],
       barcodeFormat: editBarcodeFormat,
       redeemUrl: editRedeemUrl,

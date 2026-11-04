@@ -7,6 +7,7 @@ import {
   showToast,
   tagsToText,
   parseExpiryText,
+  ticketImageGenerationMode,
   formatExpiryText,
   findTitleAutoTemplate,
   TITLE_AUTO_TEMPLATE_KEYWORD,
@@ -296,7 +297,10 @@ export class AddPage {
     // ticket's own serial/expiry instead of keeping the borrowed one.
     let originalImageFromTemplate = !!(
       editing?.originalImage
-      && (this.app.state.templates || []).some((tpl) => tpl.originalImage && tpl.originalImage === editing.originalImage)
+      && (
+        editing.originalImageGenerated === true
+        || (this.app.state.templates || []).some((tpl) => tpl.originalImage && tpl.originalImage === editing.originalImage)
+      )
     );
 
     const isDuplicateSerial = (serial) => this.app.state.tasks.some((ticket) => {
@@ -597,6 +601,7 @@ export class AddPage {
         tags: parseTags(root.querySelector('#tags').value),
         image: imageData,
         originalImage,
+        originalImageGenerated: generatedOriginalImage || (originalImageFromTemplate ? !!editing?.originalImageGenerated : false),
         barcodeFormat: root.querySelector('#barcode-format').value || '',
         redeemUrlPresetId: root.querySelector('#redeem-url-preset').value || '',
       };
@@ -647,9 +652,18 @@ export class AddPage {
         }
       }
 
-      if (originalImageFromTemplate && serial && !(editing?.tags || []).includes('批量生成')) {
+      let generatedOriginalImage = false;
+      const generationMode = ticketImageGenerationMode({
+        borrowed: originalImageFromTemplate,
+        hasOriginalImage: !!originalImage,
+        serial,
+        productName,
+        isBatchEditing: (editing?.tags || []).includes('批量生成'),
+      });
+      if (generationMode) {
         try {
           originalImage = await renderBatchTicketImage(undefined, productName, serial, expiry, '');
+          generatedOriginalImage = true;
         } catch (error) {
           console.warn('個人化票券圖片產生失敗，沿用範本原圖', error);
         }
