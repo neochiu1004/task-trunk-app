@@ -1257,6 +1257,7 @@ export class TicketsPage {
         ? getExpiryCountdownLabel(ticket.expiry)
         : '';
       const isDuplicateSerial = duplicateSerials.has(ticket.serial);
+      const thumbnailImage = typeof ticket.image === 'string' ? ticket.image.trim() : '';
       const hasOriginalImage = !!ticket.originalImage;
       const selected = this.app.state.ui.selectedIds.has(ticket.id);
       const selectedVisual = this.app.state.ui.selectionMode && selected;
@@ -1363,6 +1364,9 @@ export class TicketsPage {
           </div>
         `
         : '';
+      const compactMetaRow = statusBadge
+        ? `<div class="ticket-card-compact-status mt-1">${statusBadge}</div>`
+        : '';
 
       const primaryAction = ticket.isDeleted
         ? '<button data-action="restore" class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs">還原</button>'
@@ -1430,13 +1434,16 @@ export class TicketsPage {
       const swipeAttrs = swipeConfig
         ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
         : '';
-      const hasActiveThumbnail = showThumbnail && ticket.image && this.view === 'active';
+      // 2/3-column layouts are summary cards: hide media and secondary details
+      // so the title and expiry state remain readable on narrow cards.
+      const hasActiveThumbnail = showThumbnail && thumbnailImage && this.view === 'active' && !compactGrid;
+      const displayedMetaRow = compactGrid ? compactMetaRow : metaRow;
 
       return `
-          <article class="ticket-card ${originalFrameClass} ${duplicateCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+          <article class="ticket-card ticket-card--grid-${gridColumns} ${originalFrameClass} ${duplicateCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
           <div class="flex items-start gap-3 ${headerMarginClass}">
             ${hasActiveThumbnail
-              ? `<div class="app-card-thumb"><img src="${ticket.image}" alt="ticket thumbnail" /></div>`
+              ? `<div class="app-card-thumb"><img src="${escapeHtml(thumbnailImage)}" alt="ticket thumbnail" /></div>`
               : ''}
             <div class="flex items-start gap-3 min-w-0 flex-1">
               ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-1 h-4 w-4 shrink-0">` : ''}
@@ -1455,13 +1462,13 @@ export class TicketsPage {
             </div>
           </div>
 
-          ${showThumbnail && ticket.image && this.view !== 'active' ? (
+          ${showThumbnail && thumbnailImage && this.view !== 'active' && !compactGrid ? (
             compactGrid
-              ? `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
-              : `<img src="${ticket.image}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
+              ? `<img src="${escapeHtml(thumbnailImage)}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
+              : `<img src="${escapeHtml(thumbnailImage)}" alt="ticket thumbnail" class="${imageClass}"${imageStyle} />`
           ) : ''}
 
-          ${metaRow}
+          ${displayedMetaRow}
 
           <div class="ticket-card-actions flex flex-wrap gap-2" data-no-swipe="1">
             ${editButton}
@@ -1680,6 +1687,21 @@ export class TicketsPage {
               <input id="ticket-search" value="${escapeHtml(this.app.state.ui.search)}" placeholder="搜尋票券、標籤或序號" class="app-search-input w-full pl-9 ${searchKeyword ? 'pr-9' : 'pr-3'}" />
               <button type="button" data-clear-search="1" class="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-slate-400 hover:text-slate-700 ${searchKeyword ? '' : 'hidden'}" aria-label="清除搜尋"><i class="fa-solid fa-xmark text-xs"></i></button>
             </label>
+          </div>
+
+          <div class="app-summary-cards" aria-label="票券摘要">
+            <div class="app-summary-card">
+              <span class="app-summary-card__label">目前顯示</span>
+              <strong class="app-summary-card__value">${tickets.length}</strong>
+            </div>
+            <div class="app-summary-card app-summary-card--warning">
+              <span class="app-summary-card__label">到期警示</span>
+              <strong class="app-summary-card__value">${urgentActiveCount}</strong>
+            </div>
+            <div class="app-summary-card app-summary-card--success">
+              <span class="app-summary-card__label">已核銷</span>
+              <strong class="app-summary-card__value">${completedTotalCount}</strong>
+            </div>
           </div>
 
           <p id="tickets-summary-line" class="app-summary-line mb-1.5">${this.buildSummaryLineHtml({ ticketsCount: tickets.length, currentViewTotal, viewStatusCaption, compactScopeText, hasScope: !!searchKeyword || this.app.state.ui.activeTags.length > 0 })}</p>

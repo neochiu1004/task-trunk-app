@@ -109,7 +109,9 @@
   body {
     @apply overflow-x-hidden;
     width: 100%;
-    max-width: 100vw;
+    max-width: 100%;
+    height: 100%;
+    overflow: hidden;
     overscroll-behavior: none;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -137,6 +139,8 @@
     -moz-osx-font-smoothing: grayscale;
     position: fixed;
     inset: 0;
+    min-height: 100dvh;
+    height: 100dvh;
     letter-spacing: 0;
     background-image:
       radial-gradient(circle at 5% 0%, rgba(56, 161, 242, 0.3), transparent 34%),
@@ -150,6 +154,7 @@
     max-width: 100vw;
     height: 100%;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     -webkit-overflow-scrolling: touch;
   }
 }

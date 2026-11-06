@@ -228,7 +228,7 @@ export class AddPage {
           </div>`}
 
           <div>
-            <label class="block text-sm text-wabi-text-secondary mb-1">標籤（預設快速選取）</label>
+            <label class="block text-sm text-wabi-text-secondary mb-1">標籤</label>
             <input id="tags" type="hidden" value="${escapeHtml(tagsToText(editing?.tags || []))}" />
             ${selectableTags.length ? `
               <div class="mt-2 flex flex-wrap gap-2">
@@ -237,7 +237,11 @@ export class AddPage {
                 `).join('')}
               </div>
             ` : '<p class="text-xs text-wabi-text-secondary">尚未設定預設標籤，請先到「設定」填寫快速標籤。</p>'}
-            <p id="selected-tags-preview" class="mt-2 text-xs text-wabi-text-secondary"></p>
+            <div class="mt-3 flex gap-2">
+              <input id="custom-tag-input" type="text" placeholder="輸入新標籤" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
+              <button id="add-custom-tag" type="button" class="shrink-0 rounded-lg bg-wabi-primary/10 px-3 py-2 text-sm font-semibold text-wabi-primary">新增標籤</button>
+            </div>
+            <div id="selected-tags-preview" class="mt-2 flex flex-wrap gap-2"></div>
           </div>
 
           <div class="ticket-form-actions -mx-2 mt-2 rounded-2xl border border-wabi-border bg-white/95 p-2 shadow-lg backdrop-blur">
@@ -292,6 +296,8 @@ export class AddPage {
     const duplicateWarning = root.querySelector('#serial-duplicate-warning');
     const tagsInput = root.querySelector('#tags');
     const selectedTagsPreview = root.querySelector('#selected-tags-preview');
+    const customTagInput = root.querySelector('#custom-tag-input');
+    const addCustomTagButton = root.querySelector('#add-custom-tag');
 
     let imageData = editing?.image || '';
     let originalImage = editing?.originalImage || '';
@@ -339,7 +345,9 @@ export class AddPage {
       });
       if (selectedTagsPreview) {
         const selected = [...selectedTags];
-        selectedTagsPreview.textContent = selected.length ? `已選標籤：${selected.map((tag) => `#${tag}`).join('、')}` : '尚未選擇標籤';
+        selectedTagsPreview.innerHTML = selected.length
+          ? selected.map((tag) => `<span class="inline-flex items-center gap-1 rounded-full border border-wabi-primary/20 bg-wabi-primary/10 px-2.5 py-1 text-xs font-semibold text-wabi-primary">#${escapeHtml(tag)}<button type="button" data-remove-tag="${escapeHtml(tag)}" class="ml-0.5 leading-none text-wabi-primary" aria-label="移除標籤 ${escapeHtml(tag)}">×</button></span>`).join('')
+          : '<span class="text-xs text-wabi-text-secondary">尚未選擇標籤</span>';
       }
     };
 
@@ -389,12 +397,6 @@ export class AddPage {
         imageData = template.image;
         if (thumbImagePreview) thumbImagePreview.src = template.image;
         thumbImageWrap?.classList.remove('hidden');
-      }
-      if (template.originalImage && !(preserveMedia && originalImage)) {
-        originalImage = template.originalImage;
-        originalImageFromTemplate = true;
-        if (originalImagePreview) originalImagePreview.src = template.originalImage;
-        originalImageWrap?.classList.remove('hidden');
       }
       if (template.redeemUrlPresetId) {
         root.querySelector('#redeem-url-preset').value = template.redeemUrlPresetId;
@@ -497,6 +499,32 @@ export class AddPage {
         }
         syncQuickTagState();
       });
+    });
+
+    const addCustomTag = () => {
+      const tag = (customTagInput?.value || '').trim();
+      if (!tag) return;
+      const tags = new Set(parseTags(tagsInput?.value || ''));
+      tags.add(tag);
+      if (tagsInput) tagsInput.value = tagsToText([...tags]);
+      if (customTagInput) customTagInput.value = '';
+      syncQuickTagState();
+    };
+
+    addCustomTagButton?.addEventListener('click', addCustomTag);
+    customTagInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addCustomTag();
+      }
+    });
+    selectedTagsPreview?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-remove-tag]');
+      if (!button) return;
+      const tag = button.dataset.removeTag;
+      const tags = parseTags(tagsInput?.value || '').filter((item) => item !== tag);
+      if (tagsInput) tagsInput.value = tagsToText(tags);
+      syncQuickTagState();
     });
 
     thumbImageInput?.addEventListener('change', async (event) => {
@@ -605,9 +633,6 @@ export class AddPage {
         expiry: parseExpiryText(root.querySelector('#expiry').value) || '',
         tags: parseTags(root.querySelector('#tags').value),
         image: imageData,
-        originalImage,
-        originalImageGenerated: generatedOriginalImage || (originalImageFromTemplate ? !!editing?.originalImageGenerated : false),
-        generatedImageVersion: generatedOriginalImage ? BATCH_IMAGE_VERSION : (originalImageFromTemplate ? (editing?.generatedImageVersion || 0) : 0),
         barcodeFormat: root.querySelector('#barcode-format').value || '',
         redeemUrlPresetId: root.querySelector('#redeem-url-preset').value || '',
       };
