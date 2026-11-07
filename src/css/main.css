@@ -136,8 +136,17 @@ body.keyboard-open #bottom-nav {
     padding-bottom: calc(96px + var(--safe-bottom) + var(--keyboard-inset-height));
   }
 
-  .ticket-form-actions {
+  .add-ticket-page {
+    padding-bottom: calc(220px + var(--safe-bottom) + var(--keyboard-inset-height)) !important;
+  }
+
+  .ticket-form-actions--bottom {
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
     bottom: calc(68px + var(--safe-bottom) + var(--keyboard-inset-height));
+    margin: 0 !important;
+    z-index: 35;
   }
 }
 
@@ -1134,7 +1143,7 @@ textarea:focus {
 /* Stable dashboard header: it stays visible while retaining normal document flow. */
 #tickets-top-bar {
   position: sticky;
-  top: var(--safe-top);
+  top: 0;
   left: auto;
   right: auto;
   margin-top: 0;

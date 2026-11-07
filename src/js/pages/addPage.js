@@ -129,7 +129,7 @@ export class AddPage {
     const defaultTemplateLabel = defaultTemplate?.label || defaultTemplate?.productName || '';
 
     this.app.mount(`
-      <section class="page active p-4 pb-24 md:pb-8 max-w-3xl mx-auto">
+      <section class="page add-ticket-page active p-4 pb-24 md:pb-8 max-w-3xl mx-auto">
         <div class="omni-page-head flex items-center justify-between mb-4">
           <div>
             <h1 class="text-2xl font-bold text-wabi-primary">${editing ? '編輯票券' : '新增票券'}</h1>
