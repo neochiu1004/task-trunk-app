@@ -1541,9 +1541,8 @@ export class TicketsPage {
       // 置頂只適用於未使用票券：只有待使用視圖才讓置頂票券排到前面。
       if (this.view === 'active' && a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       if (this.view === 'completed') {
-        if (sortType === 'redeemed-oldest') return (a.completedAt || 0) - (b.completedAt || 0);
-        if (sortType === 'newest') return (b.createdAt || 0) - (a.createdAt || 0);
-        if (sortType === 'oldest') return (a.createdAt || 0) - (b.createdAt || 0);
+        // Completed tickets always ignore pinning and stay ordered by the
+        // actual redemption time, newest first.
         return (b.completedAt || 0) - (a.completedAt || 0);
       }
       if (this.view === 'active') {
@@ -1563,7 +1562,9 @@ export class TicketsPage {
     this.showSwipeHintIfNeeded();
     const meta = VIEW_META[this.view];
     const tickets = this.filterTickets();
-    const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
+    // All ticket views share one layout configuration. This keeps the
+    // active, completed, and recycle-bin screens visually consistent.
+    const viewConfig = this.app.state.settings.viewConfigs?.active || {};
     const { gridColumns, showThumbnail, compactGrid, ultraCompactCard, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor, ticketGridClass } = this.getCardRenderOptions();
     const backgroundImage = viewConfig.backgroundImage || '';
     const backgroundImages = Array.isArray(viewConfig.backgroundImages)
@@ -1701,7 +1702,7 @@ export class TicketsPage {
               <span class="app-summary-card__label">到期警示</span>
               <strong class="app-summary-card__value">${urgentActiveCount}</strong>
             </div>
-            <div class="app-summary-card app-summary-card--success">
+            <div class="app-summary-card app-summary-card--success cursor-pointer hover:border-emerald-400" data-dashboard-view="completed" role="button" tabindex="0" title="查看已核銷票券">
               <span class="app-summary-card__label">已核銷</span>
               <strong class="app-summary-card__value">${completedTotalCount}</strong>
             </div>
@@ -1889,7 +1890,7 @@ export class TicketsPage {
   }
 
   getCardRenderOptions() {
-    const viewConfig = this.app.state.settings.viewConfigs?.[this.view] || {};
+    const viewConfig = this.app.state.settings.viewConfigs?.active || {};
     const gridColumns = [1, 2, 3].includes(Number(viewConfig.gridColumns)) ? Number(viewConfig.gridColumns) : 2;
     const showThumbnail = viewConfig.showThumbnail !== false;
     const cardOpacity = clamp(viewConfig.cardOpacity, 0, 1, GLASS_CARD_OPACITY);
@@ -2103,6 +2104,15 @@ export class TicketsPage {
         window.location.hash = 'settings';
       }
     });
+
+    const completedSummaryCard = root.querySelector('[data-dashboard-view="completed"]');
+    const openCompletedView = (event) => {
+      if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      window.location.hash = 'completed';
+    };
+    completedSummaryCard?.addEventListener('click', openCompletedView);
+    completedSummaryCard?.addEventListener('keydown', openCompletedView);
 
     root.querySelector('#quick-grid-columns')?.addEventListener('click', async () => {
       const prevViewConfigs = this.app.state.settings.viewConfigs || {};

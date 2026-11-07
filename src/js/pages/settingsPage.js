@@ -358,7 +358,8 @@ export class SettingsPage {
             </div>
           </div>
           <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
-            <h3 class="text-sm font-semibold text-wabi-primary">待使用視圖版面</h3>
+            <h3 class="text-sm font-semibold text-wabi-primary">票券版面與背景（共用）</h3>
+            <p class="text-xs text-wabi-text-secondary">這組設定同時套用於待使用、已核銷與回收桶，三個頁面不再分開設定。</p>
             <div class="grid md:grid-cols-2 gap-3">
               <div>
                 <label class="block text-sm text-wabi-text-secondary mb-1">票券排列欄數</label>
@@ -432,7 +433,7 @@ export class SettingsPage {
               </div>
             </div>
           </div>
-          <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
+          <div class="hidden rounded-xl border border-wabi-border/70 p-3 space-y-3">
             <h3 class="text-sm font-semibold text-wabi-primary">已使用視圖版面與背景</h3>
             <div class="grid md:grid-cols-2 gap-3">
               <div>
@@ -498,7 +499,7 @@ export class SettingsPage {
               </div>
             </div>
           </div>
-          <div class="rounded-xl border border-wabi-border/70 p-3 space-y-3">
+          <div class="hidden rounded-xl border border-wabi-border/70 p-3 space-y-3">
             <h3 class="text-sm font-semibold text-wabi-primary">回收桶視圖版面與背景</h3>
             <div class="grid md:grid-cols-2 gap-3">
               <div>
@@ -1007,24 +1008,12 @@ export class SettingsPage {
       const prevDeletedViewConfig = prevViewConfigs.deleted || {};
       const bgOpacityRaw = Number(activeBgOpacityInput?.value);
       const cardTransparencyRaw = Number(activeCardTransparencyInput?.value);
-      const completedBgOpacityRaw = Number(completedBgOpacityInput?.value);
-      const completedCardTransparencyRaw = Number(completedCardTransparencyInput?.value);
-      const deletedBgOpacityRaw = Number(deletedBgOpacityInput?.value);
-      const deletedCardTransparencyRaw = Number(deletedCardTransparencyInput?.value);
       const cardHeightRaw = Number(activeCardHeightInput?.value);
-      const completedCardHeightRaw = Number(completedCardHeightInput?.value);
-      const deletedCardHeightRaw = Number(deletedCardHeightInput?.value);
       const thumbnailScaleRaw = Number(activeThumbnailScaleInput?.value);
       const swipeTriggerDistanceRaw = Number(swipeTriggerDistanceInput?.value);
       const bgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(bgOpacityRaw) ? bgOpacityRaw : 100));
       const cardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(cardTransparencyRaw) ? cardTransparencyRaw : 5));
-      const completedBgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(completedBgOpacityRaw) ? completedBgOpacityRaw : 100));
-      const completedCardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(completedCardTransparencyRaw) ? completedCardTransparencyRaw : 5));
-      const deletedBgOpacityPercent = Math.max(0, Math.min(100, Number.isFinite(deletedBgOpacityRaw) ? deletedBgOpacityRaw : 100));
-      const deletedCardTransparencyPercent = Math.max(0, Math.min(100, Number.isFinite(deletedCardTransparencyRaw) ? deletedCardTransparencyRaw : 5));
       const cardHeight = Math.max(0, Math.min(360, Number.isFinite(cardHeightRaw) ? cardHeightRaw : 0));
-      const completedCardHeight = Math.max(0, Math.min(360, Number.isFinite(completedCardHeightRaw) ? completedCardHeightRaw : 0));
-      const deletedCardHeight = Math.max(0, Math.min(360, Number.isFinite(deletedCardHeightRaw) ? deletedCardHeightRaw : 0));
       const thumbnailScale = Math.max(10, Math.min(100, Number.isFinite(thumbnailScaleRaw) ? thumbnailScaleRaw : 100));
       const swipeTriggerDistance = Math.max(40, Math.min(120, Number.isFinite(swipeTriggerDistanceRaw) ? swipeTriggerDistanceRaw : 72));
       const nextActiveViewConfig = {
@@ -1042,27 +1031,11 @@ export class SettingsPage {
       };
       const nextCompletedViewConfig = {
         ...prevCompletedViewConfig,
-        gridColumns: Math.max(1, Math.min(3, Number(root.querySelector('#completed-grid-columns')?.value || 2))),
-        showThumbnail: !(root.querySelector('#completed-hide-thumbnail')?.checked),
-        ultraCompactCard: root.querySelector('#completed-ultra-compact')?.checked === true,
-        backgroundImage: '',
-        backgroundImages: [...completedBackgroundImages],
-        showBackground: completedShowBackgroundInput?.checked !== false,
-        bgOpacity: completedBgOpacityPercent / 100,
-        cardOpacity: 1 - (completedCardTransparencyPercent / 100),
-        cardHeight: completedCardHeight,
+        ...nextActiveViewConfig,
       };
       const nextDeletedViewConfig = {
         ...prevDeletedViewConfig,
-        gridColumns: Math.max(1, Math.min(3, Number(root.querySelector('#deleted-grid-columns')?.value || 2))),
-        showThumbnail: !(root.querySelector('#deleted-hide-thumbnail')?.checked),
-        ultraCompactCard: root.querySelector('#deleted-ultra-compact')?.checked === true,
-        backgroundImage: '',
-        backgroundImages: [...deletedBackgroundImages],
-        showBackground: deletedShowBackgroundInput?.checked !== false,
-        bgOpacity: deletedBgOpacityPercent / 100,
-        cardOpacity: 1 - (deletedCardTransparencyPercent / 100),
-        cardHeight: deletedCardHeight,
+        ...nextActiveViewConfig,
       };
       const settings = {
         ...this.app.state.settings,
