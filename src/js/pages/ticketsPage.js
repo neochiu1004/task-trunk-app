@@ -1071,7 +1071,7 @@ export class TicketsPage {
           }
         }
 
-        showToast('票券已核銷', 'success');
+        showToast('票券已核銷，可到「已使用票券」取消核銷', 'success', 4200);
         cleanup();
         this.render();
       } finally {
@@ -1664,6 +1664,9 @@ export class TicketsPage {
                 <button id="toggle-ultra-compact-btn" title="${ultraCompactCard ? '切換標準卡片' : '切換超精簡卡片'}" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent">
                   <i class="fa-solid ${ultraCompactCard ? 'fa-expand' : 'fa-compress'} mr-2 text-xs"></i>${ultraCompactCard ? '標準卡片' : '超精簡卡片'}
                 </button>
+                <a href="#completed" title="管理已核銷票券" class="w-full block px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent ${completedTotalCount > 0 ? '' : 'text-slate-400'}">
+                  <i class="fa-solid fa-circle-check mr-2 text-xs"></i>已使用票券${completedTotalCount > 0 ? `（${completedTotalCount}）` : ''}
+                </a>
                 ${backgroundImages.length > 0
                   ? `<button id="toggle-view-background" title="${showBackground ? '隱藏背景' : '顯示背景'}" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent"><i class="fa-solid ${showBackground ? 'fa-eye-slash' : 'fa-image'} mr-2 text-xs"></i>${showBackground ? '隱藏背景' : '顯示背景'}</button>`
                   : ''}
