@@ -244,7 +244,7 @@ export class AddPage {
             <div id="selected-tags-preview" class="mt-2 flex flex-wrap gap-2"></div>
           </div>
 
-          <div class="ticket-form-actions -mx-2 mt-2 rounded-2xl border border-wabi-border bg-white/95 p-2 shadow-lg backdrop-blur">
+          <div class="ticket-form-actions ticket-form-actions--bottom -mx-2 mt-2 rounded-2xl border border-wabi-border bg-white/95 p-2 shadow-lg backdrop-blur">
             <div class="grid grid-cols-2 gap-2">
               <button id="scan-barcode-btn" type="button" class="min-h-11 rounded-xl bg-wabi-primary/10 px-3 py-2 text-sm font-semibold text-wabi-primary">從原圖讀取條碼</button>
               <button id="save-template-btn" type="button" class="min-h-11 rounded-xl bg-wabi-accent/40 px-3 py-2 text-sm font-semibold text-wabi-primary">儲存為範本</button>

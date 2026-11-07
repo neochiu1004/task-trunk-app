@@ -126,8 +126,9 @@ body.keyboard-open #bottom-nav {
 
 .ticket-form-actions {
   position: sticky;
-  bottom: 16px;
+  bottom: calc(16px + var(--keyboard-inset-height));
   z-index: 20;
+  scroll-margin-bottom: calc(96px + var(--safe-bottom) + var(--keyboard-inset-height));
 }
 
 @media (max-width: 767px) {
@@ -136,7 +137,7 @@ body.keyboard-open #bottom-nav {
   }
 
   .ticket-form-actions {
-    bottom: calc(88px + var(--safe-bottom) + var(--keyboard-inset-height));
+    bottom: calc(68px + var(--safe-bottom) + var(--keyboard-inset-height));
   }
 }
 
@@ -1133,15 +1134,26 @@ textarea:focus {
 /* Stable dashboard header: it stays visible while retaining normal document flow. */
 #tickets-top-bar {
   position: sticky;
-  top: calc(var(--safe-top) + 12px);
+  top: var(--safe-top);
   left: auto;
   right: auto;
-  margin-top: 12px;
+  margin-top: 0;
   z-index: 30;
 }
 
 @media (min-width: 768px) {
   #tickets-top-bar {
-    top: 12px;
+    top: 0;
+  }
+}
+
+/* The ticket dashboard belongs to the top edge on phones. Keep the safe-area
+   inset supplied by #app-container, while removing the card's side/top gap. */
+@media (max-width: 767px) {
+  #tickets-top-bar {
+    margin-top: 0 !important;
+    margin-left: -1rem !important;
+    margin-right: -1rem !important;
+    border-radius: 0 0 16px 16px;
   }
 }
