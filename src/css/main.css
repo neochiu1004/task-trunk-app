@@ -176,6 +176,18 @@ body.keyboard-open #bottom-nav {
   display: none !important;
 }
 
+/* iPhone layout: the bottom bar is the single entry point for adding a
+   ticket, while completed tickets are managed from the recycle-bin actions. */
+@media (max-width: 767px) {
+  #bottom-nav .completed-nav-item {
+    display: none !important;
+  }
+
+  #tickets-top-bar .app-add-button {
+    display: none !important;
+  }
+}
+
 .add-nav-item .add-nav-pill {
   transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }

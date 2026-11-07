@@ -1652,7 +1652,7 @@ export class TicketsPage {
                 : ''}
             </div>
             <div class="flex items-center gap-1.5 shrink-0 relative">
-              <a href="#add" title="新增票券" class="app-add-button"><i class="fa-solid fa-plus text-xs"></i><span>新增</span></a>
+              <a href="#add" title="新增票券" class="app-add-button hidden md:inline-flex"><i class="fa-solid fa-plus text-xs"></i><span>新增</span></a>
               <button id="toggle-toolbar-menu" aria-expanded="false" title="更多功能" class="app-icon-button"><i class="fa-solid fa-ellipsis"></i></button>
               <div id="toolbar-more-menu" class="hidden absolute right-10 top-11 w-48 rounded-xl border border-wabi-border bg-white shadow-xl p-2 space-y-1 z-40">
                 <button id="quick-grid-columns" title="切換欄數（目前 ${gridColumns} 欄）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent">
@@ -1670,8 +1670,8 @@ export class TicketsPage {
                 ${backgroundImages.length > 1
                   ? `<button id="cycle-view-background" title="切換下一張背景" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent"><i class="fa-solid fa-images mr-2 text-xs"></i>下一張背景</button>`
                   : ''}
-                ${this.view === 'completed'
-                  ? `<button id="quick-clear-completed-to-trash" title="全部移到回收桶（${completedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive mr-2 text-xs"></i>全部移到回收桶</button>`
+                ${this.view === 'completed' || this.view === 'deleted'
+                  ? `<button id="quick-clear-completed-to-trash" title="一鍵全部回收（${completedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive mr-2 text-xs"></i>一鍵全部回收</button>`
                   : ''}
                 ${this.view === 'deleted'
                   ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can mr-2 text-xs"></i>全部永久刪除</button>`
@@ -2140,14 +2140,16 @@ export class TicketsPage {
       this.render();
     });
 
-    root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', async () => {
-      if (this.view !== 'completed') return;
+    root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.view !== 'completed' && this.view !== 'deleted') return;
       const targets = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted);
       if (!targets.length) {
-        showToast('已使用區沒有可回收票券', 'error');
+        showToast('沒有可回收的已使用票券', 'error');
         return;
       }
-      const ok = window.confirm(`確定將已使用區 ${targets.length} 張票券全部移到回收桶？`);
+      const ok = window.confirm(`確定將 ${targets.length} 張已使用票券全部移到回收桶？`);
       if (!ok) return;
 
       const deletedAt = Date.now();
@@ -2487,7 +2489,9 @@ export class TicketsPage {
     });
 
     root.querySelectorAll('[data-action]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         const article = btn.closest('[data-ticket-id]');
         const ticketId = article?.dataset.ticketId;
         if (!ticketId) return;
