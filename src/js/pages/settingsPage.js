@@ -121,6 +121,17 @@ export class SettingsPage {
     `).join('');
   }
 
+  quickTagsHtml() {
+    const tags = [...new Set(this.app.state.settings.quickTags || [])].filter(Boolean);
+    if (!tags.length) return '<p class="text-xs text-wabi-text-secondary">尚未建立快速標籤</p>';
+    return `<div class="flex flex-wrap gap-2">${tags.map((tag) => `
+      <span class="inline-flex items-center gap-1 rounded-full border border-wabi-primary/20 bg-wabi-primary/10 px-2.5 py-1 text-xs font-semibold text-wabi-primary">
+        #${escapeHtml(tag)}
+        <button type="button" data-remove-quick-tag="${escapeHtml(tag)}" class="leading-none text-wabi-primary" aria-label="移除快速標籤 ${escapeHtml(tag)}">×</button>
+      </span>
+    `).join('')}</div>`;
+  }
+
   healthHtml() {
     if (!this.health) {
       return '<p class="text-sm text-wabi-text-secondary">尚未執行檢查</p>';
@@ -330,6 +341,11 @@ export class SettingsPage {
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">新增票券快速標籤（逗號分隔）</label>
             <input id="quick-tags" value="${escapeHtml(quickTagsText)}" placeholder="例如：超商,咖啡,餐券" class="w-full rounded-lg border border-wabi-border px-3 py-2" />
+            <div id="quick-tags-list" class="mt-2">${this.quickTagsHtml()}</div>
+            <div class="mt-2 flex gap-2">
+              <input id="quick-tag-add-input" placeholder="新增一個標籤" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
+              <button id="quick-tag-add-button" type="button" class="rounded-lg bg-wabi-primary/10 px-3 py-2 text-sm font-semibold text-wabi-primary">新增</button>
+            </div>
           </div>
           <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
             <div class="flex items-start justify-between gap-3">
@@ -1765,6 +1781,37 @@ export class SettingsPage {
       showToast(granted ? '已啟用持久化儲存' : '瀏覽器未授權持久化儲存', granted ? 'success' : 'error');
       this.health = await this.app.dataService.checkDataHealth();
       this.render();
+    });
+
+    root.querySelector('#quick-tag-add-button')?.addEventListener('click', async () => {
+      const input = root.querySelector('#quick-tag-add-input');
+      const tag = (input?.value || '').trim();
+      if (!tag) return;
+      const quickTags = [...new Set([...(this.app.state.settings.quickTags || []), ...parseTags(tag)])];
+      this.app.state.settings = { ...this.app.state.settings, quickTags };
+      await this.app.persistSettings();
+      showToast('快速標籤已新增', 'success', 900);
+      this.render();
+    });
+
+    root.querySelector('#quick-tag-add-input')?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      root.querySelector('#quick-tag-add-button')?.click();
+    });
+
+    root.querySelectorAll('[data-remove-quick-tag]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const tag = btn.dataset.removeQuickTag;
+        if (!tag) return;
+        this.app.state.settings = {
+          ...this.app.state.settings,
+          quickTags: (this.app.state.settings.quickTags || []).filter((item) => item !== tag),
+        };
+        await this.app.persistSettings();
+        showToast('快速標籤已移除', 'success', 900);
+        this.render();
+      });
     });
 
     root.querySelectorAll('[data-delete-tag]').forEach((btn) => {

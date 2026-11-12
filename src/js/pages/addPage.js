@@ -295,6 +295,7 @@ export class AddPage {
         || (this.app.state.templates || []).some((tpl) => tpl.originalImage && tpl.originalImage === editing.originalImage)
       )
     );
+    let noTemplateSelected = false;
 
     const isDuplicateSerial = (serial) => this.app.state.tasks.some((ticket) => {
         if (ticket.isDeleted) return false;
@@ -390,6 +391,30 @@ export class AddPage {
       if (showAppliedToast) showToast('已套用範本', 'success');
     };
 
+    const clearTemplateDefaults = () => {
+      root.querySelector('#product-name').value = '';
+      root.querySelector('#serial').value = '';
+      root.querySelector('#expiry').value = '';
+      lastValidExpiry = '';
+      root.querySelector('#tags').value = '';
+      root.querySelector('#barcode-format').value = '';
+      root.querySelector('#redeem-url').value = '';
+      root.querySelector('#redeem-url-preset').value = '';
+      if (root.querySelector('#ticket-pinned')) root.querySelector('#ticket-pinned').checked = false;
+      imageData = '';
+      originalImage = '';
+      batchProductImage = '';
+      originalImageFromTemplate = false;
+      if (thumbImageInput) thumbImageInput.value = '';
+      if (originalImageInput) originalImageInput.value = '';
+      if (thumbImagePreview) thumbImagePreview.src = '';
+      if (originalImagePreview) originalImagePreview.src = '';
+      thumbImageWrap?.classList.add('hidden');
+      originalImageWrap?.classList.add('hidden');
+      updateDuplicateSerialHint();
+      syncQuickTagState();
+    };
+
     root.querySelector('#template-id')?.addEventListener('change', async (event) => {
       const id = event.target.value;
       this.app.state.settings = {
@@ -399,9 +424,13 @@ export class AddPage {
       await this.app.persistSettings();
 
       if (!id) {
-        showToast('已改為不套用預設範本', 'success');
+        noTemplateSelected = true;
+        clearTemplateDefaults();
+        showToast('已清空範本資料', 'success');
         return;
       }
+
+      noTemplateSelected = false;
 
       const tpl = this.app.state.templates.find((t) => t.id === id);
       if (!tpl) {
@@ -445,6 +474,7 @@ export class AddPage {
         titleTemplateApplied = false;
         return;
       }
+      if (noTemplateSelected) return;
       if (titleTemplateApplied) return;
       const template = findTitleAutoTemplate(this.app.state.templates, this.app.state.settings.defaultTemplateId);
       if (!template) return;
