@@ -121,19 +121,13 @@ export class AddPage {
       this.app.state.ui.editingFromRoute = null;
     }
     const backRoute = editing ? (this.app.state.ui.editingFromRoute || 'active') : 'active';
-    const routeLabel = backRoute === 'completed' ? '已使用' : backRoute === 'deleted' ? '回收桶' : '待使用';
     const defaultTemplateId = editing ? '' : this.app.state.settings.defaultTemplateId || '';
-    const defaultTemplate = defaultTemplateId
-      ? this.app.state.templates.find((tpl) => tpl.id === defaultTemplateId)
-      : null;
-    const defaultTemplateLabel = defaultTemplate?.label || defaultTemplate?.productName || '';
 
     this.app.mount(`
       <section class="page add-ticket-page active p-4 pb-24 md:pb-8 max-w-3xl mx-auto">
         <div class="omni-page-head flex items-center justify-between mb-4">
           <div>
             <h1 class="text-2xl font-bold text-wabi-primary">${editing ? '編輯票券' : '新增票券'}</h1>
-            ${editing ? `<p class="text-xs text-wabi-text-secondary mt-1">來源視圖：${routeLabel}</p>` : ''}
           </div>
           <a id="add-back-link" href="#${backRoute}" class="px-3 py-2 rounded-lg bg-white border border-wabi-border text-sm">${editing ? '返回來源' : '返回'}</a>
         </div>
@@ -142,14 +136,6 @@ export class AddPage {
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">範本快速套用</label>
             <select id="template-id" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white">${this.buildTemplateOptions(defaultTemplateId)}</select>
-            <p class="mt-1 text-[11px] text-wabi-text-secondary">
-              ${editing
-                ? '編輯票券時不會自動套用預設範本。'
-                : defaultTemplateLabel
-                  ? `目前預設：${escapeHtml(defaultTemplateLabel)}。手動改選後會記住新的預設。`
-                  : '手動選擇範本後會記住為下次新增的預設。'
-              }
-            </p>
           </div>
 
           <div>
@@ -184,9 +170,6 @@ export class AddPage {
                   <button id="batch-product-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除自訂商品圖</button>
                 </div>
               </div>
-              <p class="text-xs text-purple-700 rounded-lg border border-purple-100 bg-purple-50 px-3 py-2">
-                這是批量生成票券。上傳照片後，只會替換預設版面中的「咖啡＋85 度 C LOGO」圖片區，其他版面內容會保留。
-              </p>
             ` : ''}
           </div>
 
@@ -224,7 +207,6 @@ export class AddPage {
               <input id="ticket-pinned" type="checkbox" ${editing?.pinned ? 'checked' : ''} />
               設為置頂票券
             </label>
-            <p class="text-xs text-wabi-text-secondary mt-1">置頂只適用於未使用票券，會優先顯示在待使用清單前面；票券一旦核銷或移至回收桶會自動取消置頂。</p>
           </div>`}
 
           <div>
@@ -236,7 +218,7 @@ export class AddPage {
                   <button type="button" data-quick-tag="${escapeHtml(tag)}" class="px-2.5 py-1 rounded-full text-xs border ${selectedQuickTagSet.has(tag) ? 'bg-wabi-primary text-white border-wabi-primary' : 'bg-white border-wabi-border text-wabi-primary'}">#${escapeHtml(tag)}</button>
                 `).join('')}
               </div>
-            ` : '<p class="text-xs text-wabi-text-secondary">尚未設定預設標籤，請先到「設定」填寫快速標籤。</p>'}
+            ` : ''}
             <div class="mt-3 flex gap-2">
               <input id="custom-tag-input" type="text" placeholder="輸入新標籤" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
               <button id="add-custom-tag" type="button" class="shrink-0 rounded-lg bg-wabi-primary/10 px-3 py-2 text-sm font-semibold text-wabi-primary">新增標籤</button>

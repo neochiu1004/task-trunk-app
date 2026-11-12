@@ -1156,6 +1156,52 @@ textarea:focus {
   }
 }
 
+/* Minimal product surface: content first, decoration second. */
+body {
+  background: #f7f8fa;
+}
+
+#bottom-nav {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.app-top-bar {
+  top: var(--safe-top);
+  margin-top: 0;
+  border: 0;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.omni-page-head {
+  border: 0;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.omni-page-head h1 {
+  color: var(--wabi-text-primary);
+}
+
+.app-summary-line,
+.ticket-empty-state-text,
+.continue-batch-hint {
+  color: transparent;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
 /* The ticket dashboard belongs to the top edge on phones. Keep the safe-area
    inset supplied by #app-container, while removing the card's side/top gap. */
 @media (max-width: 767px) {

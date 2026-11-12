@@ -1231,18 +1231,10 @@ export class TicketsPage {
         : this.view === 'active'
           ? '<a href="#add" class="mt-4 inline-flex rounded-lg bg-wabi-primary px-4 py-2 text-sm font-semibold text-white">新增第一張票券</a>'
           : '<a href="#active" class="ticket-empty-state-action mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold">回待使用票券</a>';
-      const helperText = hasScope
-        ? '目前搜尋或標籤篩選沒有符合的票券。'
-        : this.view === 'active'
-          ? '新增票券後會出現在這裡，可用標籤、原圖與到期提醒快速整理。'
-          : this.view === 'completed'
-            ? '核銷完成的票券會集中在這裡，方便日後查找。'
-            : '刪除的票券會先放在回收桶，確認後再永久刪除。';
       return `
         <div class="ticket-empty-state col-span-full">
           <i class="fa-solid ${meta.icon} ticket-empty-state-icon"></i>
           <p class="ticket-empty-state-title">${meta.empty}</p>
-          <p class="ticket-empty-state-text">${helperText}</p>
           ${actionHtml}
         </div>
       `;
@@ -1559,7 +1551,6 @@ export class TicketsPage {
   async render() {
     this.clearBackgroundRotationTimer();
     this.clearBackgroundInsetHandler();
-    this.showSwipeHintIfNeeded();
     const meta = VIEW_META[this.view];
     const tickets = this.filterTickets();
     // All ticket views share one layout configuration. This keeps the
@@ -1596,15 +1587,6 @@ export class TicketsPage {
     const activeTotalCount = this.app.state.tasks.filter((ticket) => !ticket.completed && !ticket.isDeleted).length;
     const completedTotalCount = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted).length;
     const deletedTotalCount = this.app.state.tasks.filter((ticket) => ticket.isDeleted).length;
-    const activeTagLabels = this.app.state.ui.activeTags.map((tag) => (
-      tag === ORIGINAL_IMAGE_FILTER_TAG
-        ? '原圖'
-        : tag === EXPIRY_URGENT_FILTER_TAG
-          ? '到期警示'
-          : tag === DUPLICATE_FILTER_TAG
-            ? '重複票券'
-          : `#${escapeHtml(tag)}`
-    ));
     const selectedCount = this.app.state.ui.selectedIds.size;
     const visibleTicketIds = new Set(tickets.map((ticket) => ticket.id));
     const selectedVisibleCount = [...this.app.state.ui.selectedIds].filter((id) => visibleTicketIds.has(id)).length;
@@ -1614,11 +1596,7 @@ export class TicketsPage {
     this.lastSelectedCount = selectedCount;
     const isCompactBatchBar = !hasSelection && !this.app.state.ui.keepSelectionMode;
     const searchKeyword = this.app.state.ui.search.trim();
-    const tagScope = activeTagLabels.join('、');
-    const scopeParts = [];
-    if (searchKeyword) scopeParts.push(`關鍵字「${escapeHtml(searchKeyword)}」`);
-    if (tagScope) scopeParts.push(`標籤 ${tagScope}`);
-    const compactScopeText = scopeParts.length ? `目前範圍：${scopeParts.join('、')}` : '目前範圍：全部票券';
+    const compactScopeText = searchKeyword ? `搜尋：${escapeHtml(searchKeyword)}` : '全部票券';
     const batchButton = (action, label, baseClass, enabled = hasSelection) => `
       <button type="button" data-batch="${action}" class="${baseClass} ${enabled ? '' : 'opacity-50 cursor-not-allowed'}" ${enabled ? '' : 'disabled aria-disabled="true"'}>${label}</button>
     `;
@@ -1632,12 +1610,6 @@ export class TicketsPage {
       : this.view === 'completed'
         ? completedTotalCount
         : deletedTotalCount;
-    const pinnedVisibleCount = tickets.filter((ticket) => ticket.pinned && !ticket.completed && !ticket.isDeleted).length;
-    const viewStatusCaption = this.view === 'active'
-      ? `快到期 ${urgentActiveCount} 張${pinnedVisibleCount ? ` · 優先 ${pinnedVisibleCount} 張` : ''}`
-      : this.view === 'completed'
-        ? `已核銷 ${completedTotalCount} 張`
-        : `待整理 ${deletedTotalCount} 張`;
 
     this.app.mount(`
       ${backgroundLayerHtml}
@@ -1647,10 +1619,7 @@ export class TicketsPage {
           <header class="flex items-center justify-between mb-2 gap-3">
             <div class="min-w-0 flex items-baseline gap-2">
               <h1 class="text-xl leading-tight font-black text-wabi-primary truncate tracking-normal">${escapeHtml(this.app.state.settings.appTitle)}</h1>
-              <span class="text-[11px] text-wabi-text-secondary font-semibold shrink-0">${meta.title}</span>
-              ${!this.app.state.ui.selectionMode && this.app.state.ui.keepSelectionMode && selectedCount > 0
-                ? `<span class="text-[11px] text-amber-700 shrink-0">已保留 ${selectedCount} 張選取</span>`
-                : ''}
+              <span class="text-[11px] text-wabi-text-secondary font-semibold shrink-0">${meta.title} · ${currentViewTotal}</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0 relative">
               <a href="#add" title="新增票券" class="app-add-button hidden md:inline-flex"><i class="fa-solid fa-plus text-xs"></i><span>新增</span></a>
@@ -1693,32 +1662,13 @@ export class TicketsPage {
             </label>
           </div>
 
-          <div class="app-summary-cards" aria-label="票券摘要">
-            <div class="app-summary-card">
-              <span class="app-summary-card__label">目前顯示</span>
-              <strong class="app-summary-card__value">${tickets.length}</strong>
-            </div>
-            <div class="app-summary-card app-summary-card--warning">
-              <span class="app-summary-card__label">到期警示</span>
-              <strong class="app-summary-card__value">${urgentActiveCount}</strong>
-            </div>
-            <div class="app-summary-card app-summary-card--success cursor-pointer hover:border-emerald-400" data-dashboard-view="completed" role="button" tabindex="0" title="查看已核銷票券">
-              <span class="app-summary-card__label">已核銷</span>
-              <strong class="app-summary-card__value">${completedTotalCount}</strong>
-            </div>
-          </div>
-
-          <p id="tickets-summary-line" class="app-summary-line mb-1.5">${this.buildSummaryLineHtml({ ticketsCount: tickets.length, currentViewTotal, viewStatusCaption, compactScopeText, hasScope: !!searchKeyword || this.app.state.ui.activeTags.length > 0 })}</p>
-
           <div class="flex items-center gap-2">
-            <div class="app-chip-row flex-1 min-w-0" role="group" aria-label="標籤篩選">
-              <button type="button" data-tag-filter="" class="app-filter-chip ${this.app.state.ui.activeTags.length === 0 ? 'app-filter-chip--active' : ''}">全部</button>
-              ${this.view === 'active'
-                ? `<button type="button" data-tag-filter="${EXPIRY_URGENT_FILTER_TAG}" class="app-filter-chip app-filter-chip--warning ${(this.app.state.ui.activeTags || []).includes(EXPIRY_URGENT_FILTER_TAG) ? 'app-filter-chip--active' : ''}">到期警示 ${urgentActiveCount}</button><button type="button" data-tag-filter="${DUPLICATE_FILTER_TAG}" class="app-filter-chip app-filter-chip--duplicate ${(this.app.state.ui.activeTags || []).includes(DUPLICATE_FILTER_TAG) ? 'app-filter-chip--active' : ''}">重複 ${duplicateActiveCount}</button>`
-                : ''}
-              <button type="button" data-tag-filter="${ORIGINAL_IMAGE_FILTER_TAG}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'app-filter-chip--active' : ''}">原圖</button>
-              ${allTags.map((tag) => `<button type="button" data-tag-filter="${escapeHtml(tag)}" class="app-filter-chip ${(this.app.state.ui.activeTags || []).includes(tag) ? 'app-filter-chip--active' : ''}">#${escapeHtml(tag)}</button>`).join('')}
-            </div>
+            <select id="ticket-tag-filter" class="app-sort-select flex-1 min-w-0" aria-label="篩選標籤">
+              <option value="" ${this.app.state.ui.activeTags.length === 0 ? 'selected' : ''}>所有票券</option>
+              ${this.view === 'active' ? `<option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
+              <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>有原圖</option>
+              ${allTags.map((tag) => `<option value="${escapeHtml(tag)}" ${this.app.state.ui.activeTags.includes(tag) ? 'selected' : ''}>#${escapeHtml(tag)}</option>`).join('')}
+            </select>
             <select id="ticket-sort" class="app-sort-select app-sort-select--slim shrink-0" aria-label="排序">
               ${this.view === 'completed'
                 ? `
@@ -2244,6 +2194,14 @@ export class TicketsPage {
       if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
       this.render();
     }));
+
+    root.querySelector('#ticket-tag-filter')?.addEventListener('change', (event) => {
+      const selectedValue = event.target.value || '';
+      this.app.state.ui.activeTags = selectedValue ? [selectedValue] : [];
+      const pruned = pruneSelectionToVisible();
+      if (pruned > 0) showToast(`已移除 ${pruned} 張不可見選取`, 'success');
+      this.render();
+    });
 
     root.querySelector('[data-tag-clear]')?.addEventListener('click', () => {
       this.app.state.ui.activeTags = [];

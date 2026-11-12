@@ -168,7 +168,6 @@ class TicketTrunkJijunApp {
       if (this.startupCleanupReport.removedOrphanExpiryNotified > 0) hints.push(`殘留提醒 ${this.startupCleanupReport.removedOrphanExpiryNotified} 筆`);
       showToast(`已清理：${hints.join('、')}`, 'success', 2600);
     }
-    showToast('票夾已就緒', 'success');
   }
 
   getRoot() {
