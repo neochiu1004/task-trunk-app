@@ -217,7 +217,7 @@ export class TicketsPage {
     if (!ticket) return false;
 
     if (this.view === 'active') {
-      if (ticket.isDeleted || ticket.completed) return false;
+      if (ticket.isDeleted) return false;
 
       if (direction === 'left') {
         this.openRedeemModeModal(ticket);
@@ -277,10 +277,12 @@ export class TicketsPage {
         if (!ok) return false;
         ticket.isDeleted = false;
         ticket.deletedAt = undefined;
+        ticket.completed = false;
+        ticket.completedAt = undefined;
         ticket.pinned = false;
         await this.app.persistTasks();
         this.triggerHapticFeedback(14);
-        showToast('已還原票券', 'success');
+        showToast('已還原票券，並改回待使用', 'success');
         this.render();
         return true;
       }
@@ -766,10 +768,6 @@ export class TicketsPage {
 
         <div id="redeem-preview-wrap" class="flex-1 min-h-0 rounded-lg border border-wabi-border bg-slate-100 p-0 flex items-center justify-center overflow-hidden"></div>
 
-        <div id="redeem-original-actions" data-redeem-keepopen="1" class="hidden fixed right-4 bottom-4 z-[96]">
-          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2 rounded-full bg-white/92 text-wabi-primary text-sm font-semibold border border-wabi-border shadow-lg backdrop-blur-sm">下載票券圖片</button>
-        </div>
-
         <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 grid grid-cols-3 gap-2 border-t border-wabi-border pt-3">
           <button type="button" data-redeem-exit data-redeem-keepopen="1" class="min-h-11 rounded-lg border border-wabi-border bg-white text-sm md:text-base">離開</button>
           <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="min-h-11 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>標記核銷</button>
@@ -786,8 +784,6 @@ export class TicketsPage {
     const modeSwitch = modal.querySelector('#redeem-mode-switch');
     const barcodeVariantSwitch = modal.querySelector('#barcode-variant-switch');
     const footer = modal.querySelector('#redeem-footer');
-    const originalActions = modal.querySelector('#redeem-original-actions');
-    const downloadSource = ticket.image || ticket.originalImage || '';
 
     const updateModeButtonState = () => {
       modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
@@ -802,7 +798,6 @@ export class TicketsPage {
       header?.classList.toggle('hidden', immersiveOriginal);
       modeSwitch?.classList.toggle('hidden', immersiveOriginal);
       footer?.classList.remove('hidden');
-      originalActions?.classList.toggle('hidden', !(immersiveOriginal && downloadSource));
 
       if (shell) {
         shell.classList.toggle('p-0', immersiveOriginal);
@@ -1013,24 +1008,6 @@ export class TicketsPage {
       if (event.key === 'Escape') cleanup();
     };
 
-    const triggerImageDownload = () => {
-      if (!downloadSource) {
-        showToast('此票券沒有可下載圖片', 'error');
-        return;
-      }
-
-      const baseName = (ticket.productName || 'ticket').trim().replace(/[\\/:*?"<>|]+/g, '-').slice(0, 40) || 'ticket';
-      const fileName = `${baseName}-${ticket.id || 'image'}.jpg`;
-      const link = document.createElement('a');
-      link.href = downloadSource;
-      link.download = fileName;
-      link.rel = 'noopener';
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    };
-
     let redeeming = false;
     let suppressNextModalClick = false;
     let suppressPreviewClick = false;
@@ -1049,7 +1026,7 @@ export class TicketsPage {
       this.openRedeemModeModal(nextTicket);
     };
 
-    const redeemTicket = async ({ requireRedeemConfirm = true, confirmBeforeOpenUrl = true, closeOnCancel = false } = {}) => {
+    const redeemTicket = async ({ requireRedeemConfirm = true, closeOnCancel = false } = {}) => {
       if (redeeming) return;
       if (ticket.completed) {
         showToast('此票券已核銷，無法再次核銷', 'error');
@@ -1075,17 +1052,7 @@ export class TicketsPage {
         await this.app.persistTasks();
         await this.app.sendRedeemNotification(ticket);
 
-        if (ticket.redeemUrl) {
-          let shouldOpen = true;
-          if (confirmBeforeOpenUrl) {
-            shouldOpen = window.confirm('核銷完成，是否前往兌換網址？');
-          }
-          if (shouldOpen) {
-            window.open(ticket.redeemUrl, '_blank', 'noopener');
-          }
-        }
-
-        showToast('票券已核銷，可到「已使用票券」取消核銷', 'success', 4200);
+        showToast('已標記核銷，票券仍保留在目前清單；可再移至回收桶', 'success', 4200);
         cleanup();
         this.render();
       } finally {
@@ -1119,21 +1086,13 @@ export class TicketsPage {
     });
 
     modal.querySelector('[data-confirm-redeem]')?.addEventListener('click', () => {
-      redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true });
+      redeemTicket({ requireRedeemConfirm: true });
     });
 
     modal.querySelector('[data-open-redeem-url]')?.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       if (ticket.redeemUrl) window.open(ticket.redeemUrl, '_blank', 'noopener');
-    });
-
-    modal.querySelectorAll('[data-download-image]').forEach((btn) => {
-      btn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        triggerImageDownload();
-      });
     });
 
     previewWrap?.addEventListener('click', () => {
@@ -1364,14 +1323,14 @@ export class TicketsPage {
         : '';
 
       const primaryAction = ticket.isDeleted
-        ? '<button data-action="restore" class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs">還原</button>'
+        ? '<button data-action="restore" class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs">還原待使用</button>'
         : ticket.completed
           ? '<button data-action="toggle-complete" class="px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs">取消已用</button>'
           : '';
 
       const secondaryAction = ticket.isDeleted
         ? '<button data-action="purge" class="px-3 py-1 rounded-lg bg-red-100 text-red-700 text-xs">永久刪除</button>'
-        : this.view === 'active'
+        : this.view === 'active' && !ticket.completed
           ? ''
           : '<button data-action="delete" class="px-3 py-1 rounded-lg bg-red-100 text-red-700 text-xs">移至回收桶</button>';
 
@@ -1484,7 +1443,7 @@ export class TicketsPage {
     const duplicateSerials = getDuplicateSerialSet(this.app.state.tasks);
 
     let list = this.app.state.tasks.filter((ticket) => {
-      if (this.view === 'active' && (ticket.completed || ticket.isDeleted)) return false;
+      if (this.view === 'active' && ticket.isDeleted) return false;
       if (this.view === 'completed' && (!ticket.completed || ticket.isDeleted)) return false;
       if (this.view === 'deleted' && !ticket.isDeleted) return false;
 
@@ -1587,7 +1546,8 @@ export class TicketsPage {
       const state = getExpiryState(ticket.expiry, this.app.state.settings.notifyDays);
       return state === 'expired' || state === 'today' || state === 'soon';
     }).length;
-    const activeTotalCount = this.app.state.tasks.filter((ticket) => !ticket.completed && !ticket.isDeleted).length;
+    // 已核銷票券仍留在主清單，直到使用者明確移至回收桶。
+    const activeTotalCount = this.app.state.tasks.filter((ticket) => !ticket.isDeleted).length;
     const completedTotalCount = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted).length;
     const deletedTotalCount = this.app.state.tasks.filter((ticket) => ticket.isDeleted).length;
     const selectedCount = this.app.state.ui.selectedIds.size;
@@ -1785,11 +1745,6 @@ export class TicketsPage {
 
         const ticket = this.app.state.tasks.find((item) => item.id === ticketId);
         if (!ticket || ticket.isDeleted) return;
-        if (ticket.completed) {
-          showToast('此票券已核銷，請至已使用視圖管理', 'success');
-          return;
-        }
-
         this.openRedeemModeModal(ticket);
       });
 
@@ -1872,7 +1827,7 @@ export class TicketsPage {
 
   getSummaryContext(tickets) {
     const tasks = this.app.state.tasks;
-    const activeTotalCount = tasks.filter((t) => !t.completed && !t.isDeleted).length;
+    const activeTotalCount = tasks.filter((t) => !t.isDeleted).length;
     const completedTotalCount = tasks.filter((t) => t.completed && !t.isDeleted).length;
     const deletedTotalCount = tasks.filter((t) => t.isDeleted).length;
     const urgentActiveCount = tasks.filter((t) => {
@@ -2535,6 +2490,8 @@ export class TicketsPage {
         if (action === 'restore') {
           ticket.isDeleted = false;
           ticket.deletedAt = undefined;
+          ticket.completed = false;
+          ticket.completedAt = undefined;
           ticket.pinned = false;
           await this.app.persistTasks();
           this.render();
