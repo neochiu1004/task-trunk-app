@@ -715,6 +715,9 @@ export class TicketsPage {
   }
 
   openRedeemModeModal(ticket) {
+    const filteredTickets = this.filterTickets();
+    const currentTicketIndex = Math.max(0, filteredTickets.findIndex((item) => item.id === ticket.id));
+    const ticketCount = filteredTickets.length;
     const originalImage = ticket.originalImage || '';
     const isBatchTicket = (ticket.tags || []).includes('批量生成');
     const displayImage = isBatchTicket ? (ticket.image || originalImage) : originalImage;
@@ -745,13 +748,14 @@ export class TicketsPage {
           <div class="min-w-0">
             <h3 class="text-xl md:text-2xl font-semibold text-wabi-primary">核銷模式</h3>
             <p class="text-base md:text-xl text-wabi-text-primary mt-1 break-words">${escapeHtml(ticket.productName || '未命名票券')}</p>
+            <p class="text-xs text-wabi-text-secondary mt-1">${currentTicketIndex + 1} / ${ticketCount}</p>
           </div>
         </div>
 
         <div id="redeem-mode-switch" data-redeem-keepopen="1" class="flex flex-wrap gap-2 mb-2 md:mb-3">
           <button type="button" data-redeem-mode="original" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasOriginalImage ? '' : 'opacity-45 cursor-not-allowed'}" ${hasOriginalImage ? '' : 'disabled aria-disabled="true"'}>票券圖片</button>
           <button type="button" data-redeem-mode="barcode" data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-border ${hasBarcodeSource ? '' : 'opacity-45 cursor-not-allowed'}" ${hasBarcodeSource ? '' : 'disabled aria-disabled="true"'}>條碼模式</button>
-          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">票券圖片優先，無圖片時自動切換條碼</span>
+          <span class="text-xs md:text-sm text-wabi-text-secondary self-center">左右滑動切換票卡</span>
           ${hasOriginalImage && !hasBarcodeSource ? '<button type="button" data-scan-serial data-redeem-keepopen="1" class="px-4 py-2 rounded-lg text-sm md:text-base border border-wabi-primary text-wabi-primary bg-wabi-primary/10">從原圖掃描序號</button>' : ''}
         </div>
 
@@ -766,10 +770,10 @@ export class TicketsPage {
           <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2 rounded-full bg-white/92 text-wabi-primary text-sm font-semibold border border-wabi-border shadow-lg backdrop-blur-sm">下載票券圖片</button>
         </div>
 
-        <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 flex justify-end gap-2">
-          <button type="button" data-download-image data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg border border-wabi-border bg-white text-sm md:text-base">${hasOriginalImage ? '下載票券圖片' : '下載圖片'}</button>
-          ${ticket.redeemUrl ? '<button type="button" data-open-redeem-url data-redeem-keepopen="1" class="px-4 py-2.5 rounded-lg bg-wabi-accent/30 text-wabi-primary text-sm md:text-base">開啟支付</button>' : ''}
-          <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>確認核銷</button>
+        <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 grid grid-cols-3 gap-2 border-t border-wabi-border pt-3">
+          <button type="button" data-redeem-exit data-redeem-keepopen="1" class="min-h-11 rounded-lg border border-wabi-border bg-white text-sm md:text-base">離開</button>
+          <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="min-h-11 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>標記核銷</button>
+          <button type="button" data-open-redeem-url data-redeem-keepopen="1" class="min-h-11 rounded-lg bg-wabi-accent/30 text-wabi-primary text-sm md:text-base ${ticket.redeemUrl ? '' : 'opacity-50 cursor-not-allowed'}" ${ticket.redeemUrl ? '' : 'disabled aria-disabled="true"'}>前往行動支付</button>
         </div>
       </div>
     `;
@@ -797,7 +801,7 @@ export class TicketsPage {
       const immersiveOriginal = mode === 'original' && hasOriginalImage;
       header?.classList.toggle('hidden', immersiveOriginal);
       modeSwitch?.classList.toggle('hidden', immersiveOriginal);
-      footer?.classList.toggle('hidden', immersiveOriginal);
+      footer?.classList.remove('hidden');
       originalActions?.classList.toggle('hidden', !(immersiveOriginal && downloadSource));
 
       if (shell) {
@@ -898,7 +902,7 @@ export class TicketsPage {
         return;
       }
       previewWrap.innerHTML = `
-        <div class="w-full h-full flex flex-col items-center justify-center gap-4 p-3 md:p-5 cursor-pointer" data-redeem-tap-trigger="1">
+        <div class="w-full h-full flex flex-col items-center justify-center gap-4 p-3 md:p-5">
           <div class="w-full max-w-4xl bg-white border border-wabi-border rounded-xl p-2 shadow-sm">
             <canvas id="redeem-barcode-canvas" class="w-full"></canvas>
           </div>
@@ -925,7 +929,7 @@ export class TicketsPage {
         return;
       }
       previewWrap.innerHTML = `
-        <div class="w-full h-full p-2 md:p-4 cursor-pointer" data-redeem-tap-trigger="1">
+        <div class="w-full h-full p-2 md:p-4">
           <div class="w-full h-full flex flex-col bg-white border border-wabi-border rounded-2xl overflow-hidden shadow-xl">
             <div class="bg-pink-500 px-4 py-2.5 flex justify-between items-center text-white shrink-0">
               <span class="text-[11px] font-black tracking-widest opacity-95">電子票券明細</span>
@@ -989,7 +993,7 @@ export class TicketsPage {
           return;
         }
         previewWrap.innerHTML = `
-          <img src="${displayImage}" alt="替換後票券圖片" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-contain bg-black cursor-pointer" />
+          <img src="${displayImage}" alt="替換後票券圖片" data-redeem-keepopen="1" class="h-full w-full object-contain bg-black" />
         `;
         updateModeButtonState();
         return;
@@ -1034,6 +1038,15 @@ export class TicketsPage {
     const cleanup = () => {
       window.removeEventListener('keydown', onKeydown);
       modal.remove();
+    };
+
+    const switchRedeemTicket = (offset) => {
+      if (ticketCount < 2) return;
+      const nextIndex = (currentTicketIndex + offset + ticketCount) % ticketCount;
+      const nextTicket = filteredTickets[nextIndex];
+      if (!nextTicket) return;
+      cleanup();
+      this.openRedeemModeModal(nextTicket);
     };
 
     const redeemTicket = async ({ requireRedeemConfirm = true, confirmBeforeOpenUrl = true, closeOnCancel = false } = {}) => {
@@ -1123,16 +1136,8 @@ export class TicketsPage {
       });
     });
 
-    previewWrap?.addEventListener('click', (event) => {
-      if (suppressPreviewClick) {
-        suppressPreviewClick = false;
-        return;
-      }
-      const trigger = event.target.closest('[data-original-redeem-trigger], [data-redeem-tap-trigger]');
-      if (!trigger) return;
-      event.preventDefault();
-      event.stopPropagation();
-      redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true, closeOnCancel: true });
+    previewWrap?.addEventListener('click', () => {
+      suppressPreviewClick = false;
     });
 
     if (shell) {
@@ -1195,16 +1200,13 @@ export class TicketsPage {
           suppressPreviewClick = false;
         }, 320);
 
-        if (dx < 0) {
-          showToast('已取消核銷', 'success', 700);
-          cleanup();
-          this.render();
-          return;
-        }
-
-        redeemTicket({ requireRedeemConfirm: true, confirmBeforeOpenUrl: true });
+        switchRedeemTicket(dx < 0 ? 1 : -1);
       }, { passive: true });
     }
+
+    modal.querySelector('[data-redeem-exit]')?.addEventListener('click', cleanup);
+    modal.querySelector('[data-redeem-prev]')?.addEventListener('click', () => switchRedeemTicket(-1));
+    modal.querySelector('[data-redeem-next]')?.addEventListener('click', () => switchRedeemTicket(1));
 
     document.body.appendChild(modal);
     window.addEventListener('keydown', onKeydown);
@@ -1644,9 +1646,7 @@ export class TicketsPage {
                 ${backgroundImages.length > 1
                   ? `<button id="cycle-view-background" title="切換下一張背景" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent"><i class="fa-solid fa-images mr-2 text-xs"></i>下一張背景</button>`
                   : ''}
-                ${this.view === 'completed' || this.view === 'deleted'
-                  ? `<button id="quick-clear-completed-to-trash" title="一鍵全部回收（${completedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive mr-2 text-xs"></i>一鍵全部回收</button>`
-                  : ''}
+                <button id="quick-clear-completed-to-trash" title="將已核銷票券移至回收桶（${completedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive mr-2 text-xs"></i>一鍵回收已核銷（${completedTotalCount}）</button>
                 ${this.view === 'deleted'
                   ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can mr-2 text-xs"></i>全部永久刪除</button>`
                   : ''}
@@ -2107,7 +2107,6 @@ export class TicketsPage {
     root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', async (event) => {
       event.preventDefault();
       event.stopPropagation();
-      if (this.view !== 'completed' && this.view !== 'deleted') return;
       const targets = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted);
       if (!targets.length) {
         showToast('沒有可回收的已使用票券', 'error');
