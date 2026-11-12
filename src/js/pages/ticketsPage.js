@@ -7,6 +7,7 @@ import {
   normalizeDateInput,
   GLASS_CARD_OPACITY,
 } from '../utils.js';
+const APP_VERSION = __APP_VERSION__;
 // bwip-js／qrious 體積大，只在核銷模式真的要畫條碼／QR 時才動態載入（各自拆成獨立 chunk、由 SW 快取），
 // 不要綁進 ticketsPage 主 chunk 拖慢首屏。
 let bwipjsPromise = null;
@@ -1619,7 +1620,7 @@ export class TicketsPage {
           <header class="flex items-center justify-between mb-2 gap-3">
             <div class="min-w-0 flex items-baseline gap-2">
               <h1 class="text-xl leading-tight font-black text-wabi-primary truncate tracking-normal">${escapeHtml(this.app.state.settings.appTitle)}</h1>
-              <span class="text-[11px] text-wabi-text-secondary font-semibold shrink-0">${meta.title} · ${currentViewTotal}</span>
+              <span class="text-[11px] text-wabi-text-secondary font-semibold shrink-0">${meta.title} · ${currentViewTotal} · v${APP_VERSION}</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0 relative">
               <a href="#add" title="新增票券" class="app-add-button hidden md:inline-flex"><i class="fa-solid fa-plus text-xs"></i><span>新增</span></a>
