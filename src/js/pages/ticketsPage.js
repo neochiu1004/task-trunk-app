@@ -23,6 +23,7 @@ const VIEW_META = {
 const ORIGINAL_IMAGE_FILTER_TAG = '__has_original_image__';
 const EXPIRY_URGENT_FILTER_TAG = '__expiry_urgent__';
 const DUPLICATE_FILTER_TAG = '__duplicate_serial__';
+const COMPLETED_FILTER_TAG = '__completed__';
 const SWIPE_HINT_STORAGE_KEY = 'wallet_swipe_hint_seen_v1';
 let swipeHintShownInSession = false;
 
@@ -716,7 +717,7 @@ export class TicketsPage {
     });
   }
 
-  openRedeemModeModal(ticket) {
+  openRedeemModeModal(ticket, { enterFrom = 0 } = {}) {
     const filteredTickets = this.filterTickets();
     const currentTicketIndex = Math.max(0, filteredTickets.findIndex((item) => item.id === ticket.id));
     const ticketCount = filteredTickets.length;
@@ -745,7 +746,8 @@ export class TicketsPage {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 z-[95] bg-black/72 backdrop-blur-sm flex items-center justify-center p-0';
     modal.innerHTML = `
-      <div id="redeem-shell" class="w-full h-full rounded-none border-0 bg-white shadow-2xl p-3 md:p-4 flex flex-col">
+      <div id="redeem-shell" class="w-full h-full rounded-none border-0 bg-white shadow-2xl p-3 md:p-4 flex flex-col relative">
+        <div id="redeemed-stamp" class="${ticket.completed ? '' : 'hidden'} pointer-events-none absolute right-5 top-5 z-20 rotate-[-12deg] rounded-lg border-4 border-emerald-600 px-3 py-1 text-2xl font-black tracking-widest text-emerald-600 opacity-90">已核銷</div>
         <div id="redeem-header" data-redeem-keepopen="1" class="flex items-start justify-between gap-3 mb-2 md:mb-3">
           <div class="min-w-0">
             <h3 class="text-xl md:text-2xl font-semibold text-wabi-primary">核銷模式</h3>
@@ -770,7 +772,7 @@ export class TicketsPage {
 
         <div id="redeem-footer" data-redeem-keepopen="1" class="mt-3 md:mt-4 grid grid-cols-3 gap-2 border-t border-wabi-border pt-3">
           <button type="button" data-redeem-exit data-redeem-keepopen="1" class="min-h-11 rounded-lg border border-wabi-border bg-white text-sm md:text-base">離開</button>
-          <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="min-h-11 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>標記核銷</button>
+          <button type="button" data-confirm-redeem data-redeem-keepopen="1" class="min-h-11 rounded-lg bg-emerald-600 text-white text-sm md:text-base ${ticket.completed ? 'opacity-50 cursor-not-allowed' : ''}" ${ticket.completed ? 'disabled aria-disabled="true"' : ''}>${ticket.completed ? '已標記核銷' : '標記核銷'}</button>
           <button type="button" data-open-redeem-url data-redeem-keepopen="1" class="min-h-11 rounded-lg bg-wabi-accent/30 text-wabi-primary text-sm md:text-base ${ticket.redeemUrl ? '' : 'opacity-50 cursor-not-allowed'}" ${ticket.redeemUrl ? '' : 'disabled aria-disabled="true"'}>前往行動支付</button>
         </div>
       </div>
@@ -784,6 +786,8 @@ export class TicketsPage {
     const modeSwitch = modal.querySelector('#redeem-mode-switch');
     const barcodeVariantSwitch = modal.querySelector('#barcode-variant-switch');
     const footer = modal.querySelector('#redeem-footer');
+    const redeemedStamp = modal.querySelector('#redeemed-stamp');
+    const confirmRedeemButton = modal.querySelector('[data-confirm-redeem]');
 
     const updateModeButtonState = () => {
       modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
@@ -1017,13 +1021,28 @@ export class TicketsPage {
       modal.remove();
     };
 
+    let switching = false;
     const switchRedeemTicket = (offset) => {
       if (ticketCount < 2) return;
+      if (switching) return;
       const nextIndex = (currentTicketIndex + offset + ticketCount) % ticketCount;
       const nextTicket = filteredTickets[nextIndex];
       if (!nextTicket) return;
-      cleanup();
-      this.openRedeemModeModal(nextTicket);
+      switching = true;
+      const direction = offset > 0 ? -1 : 1;
+      const outgoing = shell?.animate(
+        [{ transform: 'translate3d(0, 0, 0)', opacity: 1 }, { transform: `translate3d(${direction * 100}%, 0, 0)`, opacity: 0 }],
+        { duration: 180, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' },
+      );
+      if (!outgoing) {
+        cleanup();
+        this.openRedeemModeModal(nextTicket, { enterFrom: direction * -1 });
+        return;
+      }
+      setTimeout(() => {
+        cleanup();
+        this.openRedeemModeModal(nextTicket, { enterFrom: direction * -1 });
+      }, 180);
     };
 
     const redeemTicket = async ({ requireRedeemConfirm = true, closeOnCancel = false } = {}) => {
@@ -1052,9 +1071,13 @@ export class TicketsPage {
         await this.app.persistTasks();
         await this.app.sendRedeemNotification(ticket);
 
-        showToast('已標記核銷，票券仍保留在目前清單；可再移至回收桶', 'success', 4200);
-        cleanup();
-        this.render();
+        redeemedStamp?.classList.remove('hidden');
+        if (confirmRedeemButton) {
+          confirmRedeemButton.disabled = true;
+          confirmRedeemButton.textContent = '已標記核銷';
+          confirmRedeemButton.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+        showToast('已標記核銷，票券仍保留在核銷畫面；可再移至回收桶', 'success', 4200);
       } finally {
         redeeming = false;
       }
@@ -1170,6 +1193,12 @@ export class TicketsPage {
     document.body.appendChild(modal);
     window.addEventListener('keydown', onKeydown);
     renderPreview();
+    if (enterFrom && shell) {
+      shell.animate(
+        [{ transform: `translate3d(${enterFrom * 100}%, 0, 0)`, opacity: 0 }, { transform: 'translate3d(0, 0, 0)', opacity: 1 }],
+        { duration: 180, easing: 'cubic-bezier(.4,0,.2,1)' },
+      );
+    }
   }
 
   buildCards(tickets, options = {}) {
@@ -1230,7 +1259,7 @@ export class TicketsPage {
       const statusBadge = ticket.isDeleted
         ? ''
         : ticket.completed
-          ? `<span class="text-xs rounded-full px-2 py-1 bg-emerald-100 text-emerald-700">已使用 ${formatDateTime(ticket.completedAt)}</span>`
+          ? '<span class="ticket-completed-stamp inline-flex items-center rounded-md border-2 border-emerald-600 px-2 py-0.5 text-xs font-black tracking-wider text-emerald-700">已核銷</span>'
           : isExpiring
             ? '<span class="text-xs rounded-full px-2 py-1 bg-amber-100 text-amber-700">即將到期</span>'
             : this.view === 'active'
@@ -1291,6 +1320,7 @@ export class TicketsPage {
                 </div>
               </div>
               <div class="flex items-center gap-1">
+                ${ticket.completed ? '<span class="ticket-completed-stamp inline-flex items-center rounded-md border-2 border-emerald-600 px-1.5 py-0.5 text-[10px] font-black tracking-wider text-emerald-700">已核銷</span>' : ''}
                 ${ticket.pinned && !ticket.completed && !ticket.isDeleted ? '<span class="ticket-card-pin-pill text-[10px] rounded-full px-1.5 py-0.5 bg-amber-100 text-amber-700 whitespace-nowrap" title="置頂票券"><i class="fa-solid fa-thumbtack"></i></span>' : ''}
                 ${hasOriginalImage ? '<span class="ticket-card-original-pill text-[10px] rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700 whitespace-nowrap"><i class="fa-regular fa-image mr-1"></i>原圖</span>' : ''}
               </div>
@@ -1449,6 +1479,7 @@ export class TicketsPage {
 
       if (activeTags.length > 0 && !activeTags.some((tag) => {
         if (tag === ORIGINAL_IMAGE_FILTER_TAG) return !!ticket.originalImage;
+        if (tag === COMPLETED_FILTER_TAG) return !!ticket.completed && !ticket.isDeleted;
         if (tag === EXPIRY_URGENT_FILTER_TAG) {
           if (this.view !== 'active') return false;
           const state = getExpiryState(ticket.expiry, notifyDays);
@@ -1626,7 +1657,7 @@ export class TicketsPage {
           <div class="flex items-center gap-2">
             <select id="ticket-tag-filter" class="app-sort-select flex-1 min-w-0" aria-label="篩選標籤">
               <option value="" ${this.app.state.ui.activeTags.length === 0 ? 'selected' : ''}>所有票券</option>
-              ${this.view === 'active' ? `<option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
+              ${this.view === 'active' ? `<option value="${COMPLETED_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? 'selected' : ''}>已核銷（${completedTotalCount}）</option><option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
               <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>有原圖</option>
               ${allTags.map((tag) => `<option value="${escapeHtml(tag)}" ${this.app.state.ui.activeTags.includes(tag) ? 'selected' : ''}>#${escapeHtml(tag)}</option>`).join('')}
             </select>
@@ -1847,6 +1878,7 @@ export class TicketsPage {
       tag === ORIGINAL_IMAGE_FILTER_TAG ? '原圖'
         : tag === EXPIRY_URGENT_FILTER_TAG ? '到期警示'
         : tag === DUPLICATE_FILTER_TAG ? '重複票券'
+          : tag === COMPLETED_FILTER_TAG ? '已核銷'
         : `#${escapeHtml(tag)}`
     ));
     const scopeParts = [];

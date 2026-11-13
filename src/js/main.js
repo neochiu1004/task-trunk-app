@@ -205,6 +205,12 @@ class TicketTrunkJijunApp {
       this.state.ui.editingTicketId = null;
       this.state.ui.editingFromRoute = null;
     });
+
+    const settingsNav = document.querySelector('.nav-settings-item');
+    settingsNav?.addEventListener('dblclick', (event) => {
+      event.preventDefault();
+      window.location.hash = 'deleted';
+    });
   }
 
   bindMobileViewportHandlers() {

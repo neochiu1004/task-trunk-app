@@ -210,7 +210,10 @@ export class AddPage {
           </div>`}
 
           <div>
-            <label class="block text-sm text-wabi-text-secondary mb-1">標籤</label>
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <label class="block text-sm text-wabi-text-secondary">標籤</label>
+              <button id="match-name-tags" type="button" class="rounded-lg bg-wabi-primary/10 px-3 py-1.5 text-xs font-semibold text-wabi-primary">依名稱檢查標籤</button>
+            </div>
             <input id="tags" type="hidden" value="${escapeHtml(tagsToText(editing?.tags || []))}" />
             ${selectableTags.length ? `
               <div class="mt-2 flex flex-wrap gap-2">
@@ -280,6 +283,7 @@ export class AddPage {
     const selectedTagsPreview = root.querySelector('#selected-tags-preview');
     const customTagInput = root.querySelector('#custom-tag-input');
     const addCustomTagButton = root.querySelector('#add-custom-tag');
+    const matchNameTagsButton = root.querySelector('#match-name-tags');
 
     let imageData = editing?.image || '';
     let originalImage = editing?.originalImage || '';
@@ -524,6 +528,25 @@ export class AddPage {
     };
 
     addCustomTagButton?.addEventListener('click', addCustomTag);
+    matchNameTagsButton?.addEventListener('click', () => {
+      const productName = (productNameInput?.value || '').trim();
+      if (!productName) {
+        showToast('請先輸入票券名稱', 'error');
+        productNameInput?.focus();
+        return;
+      }
+      const existingTags = [...new Set([
+        ...(this.app.state.settings.quickTags || []),
+        ...this.app.state.tasks.flatMap((ticket) => ticket.tags || []),
+      ])].filter(Boolean);
+      const nameForMatch = productName.toLocaleLowerCase();
+      const matchedTags = existingTags.filter((tag) => nameForMatch.includes(String(tag).toLocaleLowerCase()));
+      const currentTags = new Set(parseTags(tagsInput?.value || ''));
+      matchedTags.forEach((tag) => currentTags.add(tag));
+      if (tagsInput) tagsInput.value = tagsToText([...currentTags]);
+      syncQuickTagState();
+      showToast(matchedTags.length ? `已加入 ${matchedTags.length} 個符合名稱的標籤` : '沒有找到符合名稱的現有標籤', matchedTags.length ? 'success' : 'error');
+    });
     customTagInput?.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
