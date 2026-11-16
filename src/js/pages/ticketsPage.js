@@ -1701,6 +1701,10 @@ export class TicketsPage {
             <button type="button" data-tag-filter="${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? '' : COMPLETED_FILTER_TAG}" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold border ${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-700 border-red-300'}">已核銷（${completedTotalCount}）</button>
             ${completedTotalCount > 0 ? `<button type="button" id="quick-recycle-completed-visible" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-700 border border-red-200">一鍵回收已核銷（${completedTotalCount}）</button>` : ''}
           </div>` : ''}
+        ${this.view === 'deleted' && deletedTotalCount > 0 ? `
+          <div class="flex items-center gap-2 mt-2">
+            <button type="button" id="quick-purge-deleted-visible" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white border border-red-600">一鍵清空回收桶（${deletedTotalCount}）</button>
+          </div>` : ''}
         </div>
         </div>
 
@@ -2242,7 +2246,7 @@ export class TicketsPage {
     root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', handleQuickClearCompleted);
     root.querySelector('#quick-recycle-completed-visible')?.addEventListener('click', handleQuickClearCompleted);
 
-    root.querySelector('#quick-purge-deleted')?.addEventListener('click', async () => {
+    const handleQuickPurgeDeleted = async () => {
       if (this.view !== 'deleted') return;
       const targets = this.app.state.tasks.filter((ticket) => ticket.isDeleted);
       if (!targets.length) {
@@ -2257,7 +2261,9 @@ export class TicketsPage {
       await this.app.persistTasks();
       showToast(`已永久刪除 ${targets.length} 張票券`, 'success');
       this.render();
-    });
+    };
+    root.querySelector('#quick-purge-deleted')?.addEventListener('click', handleQuickPurgeDeleted);
+    root.querySelector('#quick-purge-deleted-visible')?.addEventListener('click', handleQuickPurgeDeleted);
 
     root.querySelector('#toggle-view-background')?.addEventListener('click', async () => {
       const prevViewConfigs = this.app.state.settings.viewConfigs || {};
