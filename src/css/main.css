@@ -1218,7 +1218,6 @@ body {
   color: var(--wabi-text-primary);
 }
 
-.app-summary-line,
 .ticket-empty-state-text,
 .continue-batch-hint {
   color: transparent;
@@ -1274,6 +1273,6 @@ body {
 
   #tickets-top-bar .app-summary-line {
     margin-bottom: 0.25rem !important;
-    font-size: 10px;
+    font-size: 12px;
   }
 }

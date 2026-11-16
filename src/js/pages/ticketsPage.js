@@ -1589,6 +1589,13 @@ export class TicketsPage {
       ? `<div class="ticket-view-bg-layer" style="background-image: url('${escapeHtml(initialBackgroundImage)}'); opacity: ${bgOpacity};"></div>`
       : '';
     const allTags = [...new Set(this.app.state.tasks.flatMap((t) => t.tags || []))].sort();
+    const viewBaseTickets = this.app.state.tasks.filter((ticket) => {
+      if (this.view === 'active') return !ticket.isDeleted;
+      if (this.view === 'completed') return !!ticket.completed && !ticket.isDeleted;
+      return !!ticket.isDeleted;
+    });
+    const tagCountByTag = new Map(allTags.map((tag) => [tag, viewBaseTickets.filter((ticket) => (ticket.tags || []).includes(tag)).length]));
+    const originalImageCount = viewBaseTickets.filter((ticket) => !!ticket.originalImage).length;
     const duplicateSerials = getDuplicateSerialSet(this.app.state.tasks);
     const duplicateActiveCount = this.app.state.tasks.filter((ticket) => !ticket.completed && !ticket.isDeleted && duplicateSerials.has(ticket.serial)).length;
     const urgentActiveCount = this.app.state.tasks.filter((ticket) => {
@@ -1675,10 +1682,10 @@ export class TicketsPage {
 
           <div class="flex items-center gap-2">
             <select id="ticket-tag-filter" class="app-sort-select flex-1 min-w-0" aria-label="篩選標籤">
-              <option value="" ${this.app.state.ui.activeTags.length === 0 ? 'selected' : ''}>所有票券</option>
+              <option value="" ${this.app.state.ui.activeTags.length === 0 ? 'selected' : ''}>所有票券（${currentViewTotal}）</option>
               ${this.view === 'active' ? `<option value="${COMPLETED_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? 'selected' : ''}>已核銷（${completedTotalCount}）</option><option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
-              <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>有原圖</option>
-              ${allTags.map((tag) => `<option value="${escapeHtml(tag)}" ${this.app.state.ui.activeTags.includes(tag) ? 'selected' : ''}>#${escapeHtml(tag)}</option>`).join('')}
+              <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>有原圖（${originalImageCount}）</option>
+              ${allTags.map((tag) => `<option value="${escapeHtml(tag)}" ${this.app.state.ui.activeTags.includes(tag) ? 'selected' : ''}>#${escapeHtml(tag)}（${tagCountByTag.get(tag) || 0}）</option>`).join('')}
             </select>
             <select id="ticket-sort" class="app-sort-select app-sort-select--slim shrink-0" aria-label="排序">
               ${this.view === 'completed'
@@ -2011,7 +2018,10 @@ export class TicketsPage {
   }
 
   buildSummaryLineHtml(ctx) {
-    return `<span>${ctx.ticketsCount} / ${ctx.currentViewTotal} 張 · ${ctx.viewStatusCaption}</span>${ctx.hasScope ? `<span class="app-summary-line-scope">· ${ctx.compactScopeText}</span><button type="button" data-clear-scope="1" class="app-summary-line-clear">清除篩選</button>` : ''}`;
+    const mainText = ctx.hasScope
+      ? `篩選後 ${ctx.ticketsCount} 張（共 ${ctx.currentViewTotal} 張）`
+      : `共 ${ctx.currentViewTotal} 張`;
+    return `<span>${mainText} · ${ctx.viewStatusCaption}</span>${ctx.hasScope ? `<span class="app-summary-line-scope">· ${ctx.compactScopeText}</span><button type="button" data-clear-scope="1" class="app-summary-line-clear">清除篩選</button>` : ''}`;
   }
 
   // Typing in the search box must NOT rebuild the whole page: recreating
