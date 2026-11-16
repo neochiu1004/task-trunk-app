@@ -1844,16 +1844,41 @@ export class SettingsPage {
     });
 
     root.querySelector('#collect-ticket-tags')?.addEventListener('click', async () => {
+      // 第一步：把全部票卡在用的標籤補進快速標籤選單。
       const existing = new Set((this.app.state.settings.quickTags || []).filter(Boolean));
-      const allTags = [...new Set(this.app.state.tasks.flatMap((ticket) => ticket.tags || []))].filter(Boolean);
-      const newTags = allTags.filter((tag) => !existing.has(tag));
-      if (!newTags.length) {
-        showToast('全部票卡標籤都已在選單中', 'success');
+      const ticketTags = [...new Set(this.app.state.tasks.flatMap((ticket) => ticket.tags || []))].filter(Boolean);
+      const newMenuTags = ticketTags.filter((tag) => !existing.has(tag));
+      const menuTags = [...existing, ...newMenuTags];
+      if (newMenuTags.length) {
+        this.app.state.settings = { ...this.app.state.settings, quickTags: menuTags };
+        await this.app.persistSettings();
+      }
+
+      // 第二步：逐張比對票券名稱，把名稱有出現、票卡還沒掛的標籤自動補上
+      // （規則同新增票卡的「依名稱檢查標籤」：不分大小寫，名稱包含標籤文字即符合）。
+      const pool = [...new Set([...menuTags, ...ticketTags])].filter(Boolean);
+      let touchedTickets = 0;
+      let addedTagCount = 0;
+      this.app.state.tasks = this.app.state.tasks.map((ticket) => {
+        const nameForMatch = (ticket.productName || '').toLocaleLowerCase();
+        if (!nameForMatch) return ticket;
+        const current = new Set(ticket.tags || []);
+        const matched = pool.filter((tag) => !current.has(tag) && nameForMatch.includes(String(tag).toLocaleLowerCase()));
+        if (!matched.length) return ticket;
+        touchedTickets += 1;
+        addedTagCount += matched.length;
+        return { ...ticket, tags: [...current, ...matched] };
+      });
+      if (touchedTickets) await this.app.persistTasks();
+
+      if (!newMenuTags.length && !touchedTickets) {
+        showToast('標籤已是最新，沒有需要加入的標籤', 'success');
         return;
       }
-      this.app.state.settings = { ...this.app.state.settings, quickTags: [...existing, ...newTags] };
-      await this.app.persistSettings();
-      showToast(`已加入 ${newTags.length} 個新標籤到選單`, 'success');
+      const parts = [];
+      if (newMenuTags.length) parts.push(`選單新增 ${newMenuTags.length} 個標籤`);
+      if (touchedTickets) parts.push(`${touchedTickets} 張票卡共補上 ${addedTagCount} 個標籤`);
+      showToast(`檢查完成：${parts.join('、')}`, 'success');
       this.render();
     });
 
