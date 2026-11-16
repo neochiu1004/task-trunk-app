@@ -310,6 +310,31 @@ body.keyboard-open #bottom-nav {
   box-shadow: inset 0 0 0 2px rgba(234, 88, 12, 0.22), 0 14px 30px -20px rgba(194, 65, 12, 0.55);
 }
 
+/* Redeemed-marked tickets stay on the main list with a red frame and a
+   centred stamp, until the user recycles them to the trash. */
+.ticket-card--redeemed {
+  border-color: rgba(220, 38, 38, 0.85) !important;
+  box-shadow: inset 0 0 0 2px rgba(220, 38, 38, 0.35), 0 14px 30px -20px rgba(185, 28, 28, 0.55);
+}
+
+.ticket-card-redeemed-stamp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  z-index: 5;
+  padding: 2px 12px;
+  border: 3px solid rgba(220, 38, 38, 0.85);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #dc2626;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .ticket-card[data-swipe-enabled='1']::before,
 .ticket-card[data-swipe-enabled='1']::after {
   position: absolute;

@@ -747,7 +747,7 @@ export class TicketsPage {
     modal.className = 'fixed inset-0 z-[95] bg-black/72 backdrop-blur-sm flex items-center justify-center p-0';
     modal.innerHTML = `
       <div id="redeem-shell" class="w-full h-full rounded-none border-0 bg-white shadow-2xl p-3 md:p-4 flex flex-col relative">
-        <div id="redeemed-stamp" class="${ticket.completed ? '' : 'hidden'} pointer-events-none absolute right-5 top-5 z-20 rotate-[-12deg] rounded-lg border-4 border-emerald-600 px-3 py-1 text-2xl font-black tracking-widest text-emerald-600 opacity-90">已核銷</div>
+        <div id="redeemed-stamp" class="${ticket.completed ? '' : 'hidden'} pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rotate-[-12deg] rounded-lg border-4 border-red-600 bg-white/75 px-4 py-1.5 text-3xl font-black tracking-widest text-red-600 opacity-90">已核銷</div>
         <div id="redeem-header" data-redeem-keepopen="1" class="flex items-start justify-between gap-3 mb-2 md:mb-3">
           <div class="min-w-0">
             <h3 class="text-xl md:text-2xl font-semibold text-wabi-primary">核銷模式</h3>
@@ -1259,7 +1259,7 @@ export class TicketsPage {
       const statusBadge = ticket.isDeleted
         ? ''
         : ticket.completed
-          ? '<span class="ticket-completed-stamp inline-flex items-center rounded-md border-2 border-emerald-600 px-2 py-0.5 text-xs font-black tracking-wider text-emerald-700">已核銷</span>'
+          ? ''
           : isExpiring
             ? '<span class="text-xs rounded-full px-2 py-1 bg-amber-100 text-amber-700">即將到期</span>'
             : this.view === 'active'
@@ -1274,6 +1274,8 @@ export class TicketsPage {
       const isActiveDuplicate = this.view === 'active' && isDuplicateSerial;
       const originalFrameClass = hasOriginalImage ? 'ticket-card--has-original' : '';
       const duplicateCardClass = isActiveDuplicate ? 'ticket-card--duplicate' : '';
+      const redeemedCardClass = ticket.completed && !ticket.isDeleted ? 'ticket-card--redeemed' : '';
+      const redeemedStampOverlay = ticket.completed && !ticket.isDeleted ? '<div class="ticket-card-redeemed-stamp" aria-hidden="true">已核銷</div>' : '';
       if (ultraCompactCard) {
         const compactPaddingClass = compactGrid ? 'p-2.5' : 'p-3';
         const cardStyle = `style="background-color: ${hexToRgba(cardBgColor, cardOpacity)}; border-color: ${hexToRgba(cardBorderColor, 0.55)};${isCardFullyTransparent ? ' box-shadow: none;' : ''}${cardHeight > 0 ? ` min-height: ${cardHeight}px;` : ''}"`;
@@ -1309,7 +1311,8 @@ export class TicketsPage {
           ? `data-swipe-enabled="1" data-swipe-left-label="${swipeConfig.left}" data-swipe-right-label="${swipeConfig.right}"`
           : '';
         return `
-          <article class="ticket-card ticket-card--ultra ${originalFrameClass} ${duplicateCardClass} ${compactExpiryCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${compactPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+          <article class="ticket-card ticket-card--ultra ${originalFrameClass} ${duplicateCardClass} ${redeemedCardClass} ${compactExpiryCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${compactPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+            ${redeemedStampOverlay}
             <div class="flex items-start justify-between gap-1.5">
               <div class="flex items-start gap-2 min-w-0">
                 ${this.app.state.ui.selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${selected ? 'checked' : ''} class="mt-0.5 h-3.5 w-3.5">` : ''}
@@ -1320,11 +1323,11 @@ export class TicketsPage {
                 </div>
               </div>
               <div class="flex items-center gap-1">
-                ${ticket.completed ? '<span class="ticket-completed-stamp inline-flex items-center rounded-md border-2 border-emerald-600 px-1.5 py-0.5 text-[10px] font-black tracking-wider text-emerald-700">已核銷</span>' : ''}
                 ${ticket.pinned && !ticket.completed && !ticket.isDeleted ? '<span class="ticket-card-pin-pill text-[10px] rounded-full px-1.5 py-0.5 bg-amber-100 text-amber-700 whitespace-nowrap" title="置頂票券"><i class="fa-solid fa-thumbtack"></i></span>' : ''}
                 ${hasOriginalImage ? '<span class="ticket-card-original-pill text-[10px] rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700 whitespace-nowrap"><i class="fa-regular fa-image mr-1"></i>原圖</span>' : ''}
               </div>
             </div>
+            ${this.view === 'completed' || this.view === 'deleted' ? '' : '<div class="ticket-card-actions flex flex-wrap gap-2 mt-2" data-no-swipe="1"><button data-action="edit" class="flex-1 min-h-11 px-5 py-2.5 rounded-lg bg-wabi-primary/10 text-wabi-primary text-sm font-semibold">編輯</button></div>'}
           </article>
         `;
       }
@@ -1373,7 +1376,7 @@ export class TicketsPage {
         : '';
       const editButton = this.view === 'completed' || this.view === 'deleted'
         ? ''
-        : '<button data-action="edit" class="px-3 py-1 rounded-lg bg-wabi-primary/10 text-wabi-primary text-xs">編輯</button>';
+        : '<button data-action="edit" class="flex-1 min-h-11 px-5 py-2.5 rounded-lg bg-wabi-primary/10 text-wabi-primary text-sm font-semibold">編輯</button>';
       const standardExpiryClass = expiryState === 'expired'
         ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--expired'
         : expiryState === 'today'
@@ -1424,7 +1427,8 @@ export class TicketsPage {
       const displayedMetaRow = compactGrid ? compactMetaRow : metaRow;
 
       return `
-          <article class="ticket-card ticket-card--grid-${gridColumns} ${originalFrameClass} ${duplicateCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+          <article class="ticket-card ticket-card--grid-${gridColumns} ${originalFrameClass} ${duplicateCardClass} ${redeemedCardClass} ${selectedVisual ? 'ticket-card--selected' : ''} rounded-2xl border ${cardPaddingClass} shadow-sm" data-ticket-id="${ticket.id}" ${selectionA11yAttrs} ${swipeAttrs} ${cardStyle}>
+          ${redeemedStampOverlay}
           <div class="flex items-start gap-3 ${headerMarginClass}">
             ${hasActiveThumbnail
               ? `<div class="app-card-thumb"><img src="${escapeHtml(thumbnailImage)}" alt="ticket thumbnail" /></div>`
@@ -1463,6 +1467,21 @@ export class TicketsPage {
         </article>
       `;
     }).join('');
+  }
+
+  buildDeletedList(tickets) {
+    const selectionMode = this.app.state.ui.selectionMode;
+    return tickets.map((ticket) => `
+      <div class="deleted-ticket-row flex items-center gap-3 rounded-xl border border-wabi-border bg-white px-3 py-2.5" data-ticket-id="${ticket.id}">
+        ${selectionMode ? `<input type="checkbox" data-select="${ticket.id}" ${this.app.state.ui.selectedIds.has(ticket.id) ? 'checked' : ''} class="h-4 w-4 shrink-0">` : ''}
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold text-wabi-primary truncate">${escapeHtml(ticket.productName || '未命名票券')}</p>
+          <p class="text-xs text-wabi-text-secondary font-mono break-all mt-0.5">序號：${escapeHtml(ticket.serial || '—')}</p>
+          <p class="text-xs text-wabi-text-secondary mt-0.5">到期日：${escapeHtml(ticket.expiry || '無期限')} · 核銷時間：${ticket.completedAt ? escapeHtml(formatDateTime(ticket.completedAt)) : '—'}</p>
+        </div>
+        <button type="button" data-action="restore" class="min-h-11 px-4 py-2.5 rounded-lg bg-emerald-100 text-emerald-700 text-sm font-semibold shrink-0">回復未核銷</button>
+      </div>
+    `).join('');
   }
 
   filterTickets() {
@@ -1677,6 +1696,11 @@ export class TicketsPage {
               }
             </select>
           </div>
+          ${this.view === 'active' ? `
+          <div class="flex items-center gap-2 mt-2">
+            <button type="button" data-tag-filter="${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? '' : COMPLETED_FILTER_TAG}" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold border ${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-700 border-red-300'}">已核銷（${completedTotalCount}）</button>
+            ${completedTotalCount > 0 ? `<button type="button" id="quick-recycle-completed-visible" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-700 border border-red-200">一鍵回收已核銷（${completedTotalCount}）</button>` : ''}
+          </div>` : ''}
         </div>
         </div>
 
@@ -1716,7 +1740,7 @@ export class TicketsPage {
           </div>
         ` : ''}
 
-        <div id="tickets-grid" class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor })}</div>
+        ${this.view === 'deleted' ? `<div id="tickets-grid" class="flex flex-col gap-2">${this.buildDeletedList(tickets)}</div>` : `<div id="tickets-grid" class="${ticketGridClass} ${ultraCompactCard ? 'ticket-grid--ultra' : ''}">${this.buildCards(tickets, { showThumbnail, compactGrid, ultraCompactCard, gridColumns, cardOpacity, cardHeight, thumbnailScale, cardBgColor, cardBorderColor })}</div>`}
       </section>
     `);
 
@@ -1798,6 +1822,99 @@ export class TicketsPage {
           this.app.state.ui.activeTags.push(tag);
         }
         this.render();
+      });
+    });
+
+    root.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const article = btn.closest('[data-ticket-id]');
+        const ticketId = article?.dataset.ticketId;
+        if (!ticketId) return;
+
+        const ticket = this.app.state.tasks.find((t) => t.id === ticketId);
+        if (!ticket) return;
+
+        const action = btn.dataset.action;
+        if (action === 'edit') {
+          this.app.state.ui.selectionMode = false;
+          this.app.state.ui.selectedIds.clear();
+          this.app.state.ui.editingTicketId = ticketId;
+          this.app.state.ui.editingFromRoute = this.view;
+          window.location.hash = 'add';
+          return;
+        }
+
+        if (action === 'toggle-pin') {
+          // 置頂只適用於未使用票券：已使用／回收桶中的票券不可置頂，並順手清除殘留標記。
+          if (ticket.completed || ticket.isDeleted) {
+            if (ticket.pinned) {
+              ticket.pinned = false;
+              await this.app.persistTasks();
+              this.render();
+            }
+            return;
+          }
+          ticket.pinned = !ticket.pinned;
+          await this.app.persistTasks();
+          this.render();
+          return;
+        }
+
+        if (action === 'redeem-mode') {
+          if (ticket.completed) {
+            showToast('此票券已核銷，無法再次核銷', 'error');
+            return;
+          }
+          this.openRedeemModeModal(ticket);
+          return;
+        }
+
+        if (action === 'redeem') {
+          if (!ticket.redeemUrl) return;
+          window.open(ticket.redeemUrl, '_blank', 'noopener');
+          return;
+        }
+
+        if (action === 'toggle-complete') {
+          ticket.completed = !ticket.completed;
+          ticket.completedAt = ticket.completed ? Date.now() : undefined;
+          ticket.pinned = false;
+          await this.app.persistTasks();
+          if (ticket.completed) {
+            await this.app.sendRedeemNotification(ticket);
+          }
+          this.render();
+          return;
+        }
+
+        if (action === 'delete') {
+          ticket.isDeleted = true;
+          ticket.deletedAt = Date.now();
+          ticket.pinned = false;
+          await this.app.persistTasks();
+          this.render();
+          return;
+        }
+
+        if (action === 'restore') {
+          ticket.isDeleted = false;
+          ticket.deletedAt = undefined;
+          ticket.completed = false;
+          ticket.completedAt = undefined;
+          ticket.pinned = false;
+          await this.app.persistTasks();
+          this.render();
+          return;
+        }
+
+        if (action === 'purge') {
+          if (!window.confirm('確定永久刪除？')) return;
+          this.app.state.tasks = this.app.state.tasks.filter((t) => t.id !== ticketId);
+          await this.app.persistTasks();
+          this.render();
+        }
       });
     });
 
@@ -1917,8 +2034,13 @@ export class TicketsPage {
     if (!grid) { await this.render(); return; }
     const tickets = this.filterTickets();
     const opts = this.getCardRenderOptions();
-    grid.className = `${opts.ticketGridClass} ${opts.ultraCompactCard ? 'ticket-grid--ultra' : ''}`;
-    grid.innerHTML = this.buildCards(tickets, opts);
+    if (this.view === 'deleted') {
+      grid.className = 'flex flex-col gap-2';
+      grid.innerHTML = this.buildDeletedList(tickets);
+    } else {
+      grid.className = `${opts.ticketGridClass} ${opts.ultraCompactCard ? 'ticket-grid--ultra' : ''}`;
+      grid.innerHTML = this.buildCards(tickets, opts);
+    }
     const summary = root.querySelector('#tickets-summary-line');
     if (summary) summary.innerHTML = this.buildSummaryLineHtml(this.getSummaryContext(tickets));
     const hasKeyword = !!this.app.state.ui.search.trim();
@@ -2091,7 +2213,7 @@ export class TicketsPage {
       this.render();
     });
 
-    root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', async (event) => {
+    const handleQuickClearCompleted = async (event) => {
       event.preventDefault();
       event.stopPropagation();
       const targets = this.app.state.tasks.filter((ticket) => ticket.completed && !ticket.isDeleted);
@@ -2116,7 +2238,9 @@ export class TicketsPage {
       await this.app.persistTasks();
       showToast(`已將 ${targets.length} 張票券移至回收桶`, 'success');
       this.render();
-    });
+    };
+    root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', handleQuickClearCompleted);
+    root.querySelector('#quick-recycle-completed-visible')?.addEventListener('click', handleQuickClearCompleted);
 
     root.querySelector('#quick-purge-deleted')?.addEventListener('click', async () => {
       if (this.view !== 'deleted') return;
@@ -2446,97 +2570,5 @@ export class TicketsPage {
       });
     });
 
-    root.querySelectorAll('[data-action]').forEach((btn) => {
-      btn.addEventListener('click', async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const article = btn.closest('[data-ticket-id]');
-        const ticketId = article?.dataset.ticketId;
-        if (!ticketId) return;
-
-        const ticket = this.app.state.tasks.find((t) => t.id === ticketId);
-        if (!ticket) return;
-
-        const action = btn.dataset.action;
-        if (action === 'edit') {
-          this.app.state.ui.selectionMode = false;
-          this.app.state.ui.selectedIds.clear();
-          this.app.state.ui.editingTicketId = ticketId;
-          this.app.state.ui.editingFromRoute = this.view;
-          window.location.hash = 'add';
-          return;
-        }
-
-        if (action === 'toggle-pin') {
-          // 置頂只適用於未使用票券：已使用／回收桶中的票券不可置頂，並順手清除殘留標記。
-          if (ticket.completed || ticket.isDeleted) {
-            if (ticket.pinned) {
-              ticket.pinned = false;
-              await this.app.persistTasks();
-              this.render();
-            }
-            return;
-          }
-          ticket.pinned = !ticket.pinned;
-          await this.app.persistTasks();
-          this.render();
-          return;
-        }
-
-        if (action === 'redeem-mode') {
-          if (ticket.completed) {
-            showToast('此票券已核銷，無法再次核銷', 'error');
-            return;
-          }
-          this.openRedeemModeModal(ticket);
-          return;
-        }
-
-        if (action === 'redeem') {
-          if (!ticket.redeemUrl) return;
-          window.open(ticket.redeemUrl, '_blank', 'noopener');
-          return;
-        }
-
-        if (action === 'toggle-complete') {
-          ticket.completed = !ticket.completed;
-          ticket.completedAt = ticket.completed ? Date.now() : undefined;
-          ticket.pinned = false;
-          await this.app.persistTasks();
-          if (ticket.completed) {
-            await this.app.sendRedeemNotification(ticket);
-          }
-          this.render();
-          return;
-        }
-
-        if (action === 'delete') {
-          ticket.isDeleted = true;
-          ticket.deletedAt = Date.now();
-          ticket.pinned = false;
-          await this.app.persistTasks();
-          this.render();
-          return;
-        }
-
-        if (action === 'restore') {
-          ticket.isDeleted = false;
-          ticket.deletedAt = undefined;
-          ticket.completed = false;
-          ticket.completedAt = undefined;
-          ticket.pinned = false;
-          await this.app.persistTasks();
-          this.render();
-          return;
-        }
-
-        if (action === 'purge') {
-          if (!window.confirm('確定永久刪除？')) return;
-          this.app.state.tasks = this.app.state.tasks.filter((t) => t.id !== ticketId);
-          await this.app.persistTasks();
-          this.render();
-        }
-      });
-    });
   }
 }
