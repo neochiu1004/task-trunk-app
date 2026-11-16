@@ -112,7 +112,9 @@ export class AddPage {
   async render() {
     const editing = this.getEditingTicket();
     const defaultExpiry = this.getDefaultExpiryAfterMonths(6);
-    const defaultExpiryInputValue = formatExpiryText(editing?.expiry || defaultExpiry);
+    // 期限預設規則：只有名稱含「85」才預設現在 + 6 個月，否則不預設期限；
+    // 編輯既有票券時優先用票券自己的期限。
+    const defaultExpiryInputValue = formatExpiryText(editing?.expiry || ((editing?.productName || '').includes('85') ? defaultExpiry : ''));
     const quickTags = (this.app.state.settings.quickTags || []).filter(Boolean);
     const selectedQuickTagSet = new Set(editing?.tags || []);
     const selectableTags = [...new Set([...quickTags, ...(editing?.tags || [])])];
@@ -374,7 +376,8 @@ export class AddPage {
 
       root.querySelector('#product-name').value = template.productName || '';
       root.querySelector('#serial').value = template.serial || '';
-      root.querySelector('#expiry').value = formatExpiryText(template.expiry || defaultExpiry);
+      // 套用範本不帶入範本原本的期限：名稱含「85」才預設現在 + 6 個月，否則不預設期限。
+      root.querySelector('#expiry').value = (template.productName || '').includes('85') ? formatExpiryText(defaultExpiry) : '';
       lastValidExpiry = root.querySelector('#expiry').value;
       root.querySelector('#tags').value = tagsToText(template.tags || []);
       root.querySelector('#barcode-format').value = template.barcodeFormat || '';
@@ -489,6 +492,14 @@ export class AddPage {
       productNameInput.value = typedName;
       const serialInput = root.querySelector('#serial');
       if (serialInput) serialInput.value = typedSerial;
+      // 名稱規則以最後留在表單上的名稱為準：使用者輸入的名稱含「85」時，期限預設現在 + 6 個月。
+      if (typedName.includes('85')) {
+        const expiryInput = root.querySelector('#expiry');
+        if (expiryInput) {
+          expiryInput.value = formatExpiryText(defaultExpiry);
+          lastValidExpiry = expiryInput.value;
+        }
+      }
       const templateSelect = root.querySelector('#template-id');
       if (templateSelect) templateSelect.value = template.id;
       showToast('標題含 85度C，已自動套用預設範本', 'success');
