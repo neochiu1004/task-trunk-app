@@ -776,6 +776,14 @@ export class AddPage {
       }
 
       await this.app.persistTasks();
+
+      // 票卡上的新標籤自動加入快速標籤選單，之後新增票卡時可以直接點選。
+      const menuTags = [...new Set([...(this.app.state.settings.quickTags || []), ...payload.tags])].filter(Boolean);
+      if (menuTags.length !== (this.app.state.settings.quickTags || []).filter(Boolean).length) {
+        this.app.state.settings = { ...this.app.state.settings, quickTags: menuTags };
+        await this.app.persistSettings();
+      }
+
       this.app.state.ui.editingTicketId = null;
       const nextRoute = editing ? (this.app.state.ui.editingFromRoute || 'active') : 'active';
       const nextRouteLabel = nextRoute === 'completed' ? '已使用' : nextRoute === 'deleted' ? '回收桶' : '待使用';

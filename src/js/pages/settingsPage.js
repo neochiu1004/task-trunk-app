@@ -675,6 +675,18 @@ export class SettingsPage {
 
         <section class="bg-white border border-wabi-border rounded-2xl p-4 space-y-3">
           <h2 class="font-semibold text-wabi-primary">標籤管理</h2>
+          <div class="space-y-2">
+            <p class="text-xs text-wabi-text-secondary">快速標籤選單（新增／編輯票卡時可直接點選）</p>
+            <div>${this.quickTagsHtml()}</div>
+            <div class="flex gap-2">
+              <input id="tag-menu-add-input" placeholder="新增一個標籤" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
+              <button type="button" id="tag-menu-add-button" class="px-4 py-2 rounded-lg bg-wabi-primary text-white text-sm">新增</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="collect-ticket-tags" class="px-3 py-2 rounded-lg bg-wabi-primary/10 text-wabi-primary text-sm">一鍵檢查全部票卡標籤並加入選單</button>
+            <button type="button" id="remove-all-ticket-tags" class="px-3 py-2 rounded-lg bg-red-100 text-red-700 text-sm">一鍵移除全部票卡標籤</button>
+          </div>
           <div>${this.tagsHtml()}</div>
         </section>
 
@@ -1812,6 +1824,50 @@ export class SettingsPage {
         showToast('快速標籤已移除', 'success', 900);
         this.render();
       });
+    });
+
+    const addTagMenuTag = async () => {
+      const input = root.querySelector('#tag-menu-add-input');
+      const tag = (input?.value || '').trim();
+      if (!tag) return;
+      const quickTags = [...new Set([...(this.app.state.settings.quickTags || []), ...parseTags(tag)])];
+      this.app.state.settings = { ...this.app.state.settings, quickTags };
+      await this.app.persistSettings();
+      showToast('快速標籤已新增', 'success', 900);
+      this.render();
+    };
+    root.querySelector('#tag-menu-add-button')?.addEventListener('click', addTagMenuTag);
+    root.querySelector('#tag-menu-add-input')?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addTagMenuTag();
+    });
+
+    root.querySelector('#collect-ticket-tags')?.addEventListener('click', async () => {
+      const existing = new Set((this.app.state.settings.quickTags || []).filter(Boolean));
+      const allTags = [...new Set(this.app.state.tasks.flatMap((ticket) => ticket.tags || []))].filter(Boolean);
+      const newTags = allTags.filter((tag) => !existing.has(tag));
+      if (!newTags.length) {
+        showToast('全部票卡標籤都已在選單中', 'success');
+        return;
+      }
+      this.app.state.settings = { ...this.app.state.settings, quickTags: [...existing, ...newTags] };
+      await this.app.persistSettings();
+      showToast(`已加入 ${newTags.length} 個新標籤到選單`, 'success');
+      this.render();
+    });
+
+    root.querySelector('#remove-all-ticket-tags')?.addEventListener('click', async () => {
+      const taggedCount = this.app.state.tasks.filter((ticket) => (ticket.tags || []).length > 0).length;
+      if (!taggedCount) {
+        showToast('目前沒有任何票卡標籤', 'error');
+        return;
+      }
+      if (!window.confirm(`確定移除全部 ${taggedCount} 張票卡上的所有標籤？快速標籤選單會保留。`)) return;
+      this.app.state.tasks = this.app.state.tasks.map((ticket) => ({ ...ticket, tags: [] }));
+      await this.app.persistTasks();
+      showToast('已移除全部票卡標籤', 'success');
+      this.render();
     });
 
     root.querySelectorAll('[data-delete-tag]').forEach((btn) => {
