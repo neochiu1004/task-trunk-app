@@ -1705,6 +1705,7 @@ export class TicketsPage {
           <div class="flex items-center gap-2 mt-2">
             <button type="button" id="quick-purge-deleted-visible" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white border border-red-600">一鍵清空回收桶（${deletedTotalCount}）</button>
           </div>` : ''}
+          <div id="tickets-summary-line" class="app-summary-line mt-2">${this.buildSummaryLineHtml(this.getSummaryContext(tickets))}</div>
         </div>
         </div>
 

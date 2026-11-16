@@ -293,7 +293,6 @@ export class SettingsPage {
       : Number.isFinite(Number(activeViewConfig.gridImageHeight))
         ? Math.max(10, Math.min(100, Math.round((Number(activeViewConfig.gridImageHeight) / 84) * 100)))
         : 100;
-    const quickTagsText = (settings.quickTags || []).join(', ');
     const swipeTriggerDistancePx = Number.isFinite(Number(settings.swipeTriggerDistance))
       ? Math.max(40, Math.min(120, Number(settings.swipeTriggerDistance)))
       : 72;
@@ -337,15 +336,6 @@ export class SettingsPage {
           <div>
             <label class="block text-sm text-wabi-text-secondary mb-1">本機備份檔名</label>
             <input id="backup-file-name" value="${escapeHtml(settings.localBackupFileName || 'ticket_backup')}" class="w-full rounded-lg border border-wabi-border px-3 py-2" />
-          </div>
-          <div>
-            <label class="block text-sm text-wabi-text-secondary mb-1">新增票券快速標籤（逗號分隔）</label>
-            <input id="quick-tags" value="${escapeHtml(quickTagsText)}" placeholder="例如：超商,咖啡,餐券" class="w-full rounded-lg border border-wabi-border px-3 py-2" />
-            <div id="quick-tags-list" class="mt-2">${this.quickTagsHtml()}</div>
-            <div class="mt-2 flex gap-2">
-              <input id="quick-tag-add-input" placeholder="新增一個標籤" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
-              <button id="quick-tag-add-button" type="button" class="rounded-lg bg-wabi-primary/10 px-3 py-2 text-sm font-semibold text-wabi-primary">新增</button>
-            </div>
           </div>
           <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
             <div class="flex items-start justify-between gap-3">
@@ -732,9 +722,9 @@ export class SettingsPage {
       const versionSection = topLevelSections.find((element) => !element.querySelector('h2') && element.textContent?.includes('版本時間'));
 
       const formChildren = Array.from(settingsForm.children);
-      const generalIndexes = new Set([0, 1, 2, 3, 4, 6, 10]);
-      const viewIndexes = new Set([7, 8, 9]);
-      const aboutIndexes = new Set([5]);
+      const generalIndexes = new Set([0, 1, 2, 3, 5, 9]);
+      const viewIndexes = new Set([6, 7, 8]);
+      const aboutIndexes = new Set([4]);
       const generalNodes = formChildren.filter((_, index) => generalIndexes.has(index));
       const viewNodes = formChildren.filter((_, index) => viewIndexes.has(index));
       const aboutNodes = formChildren.filter((_, index) => aboutIndexes.has(index));
@@ -1072,7 +1062,7 @@ export class SettingsPage {
         tgToken: root.querySelector('#tg-token').value.trim(),
         tgChatId: root.querySelector('#tg-chat-id').value.trim(),
         localBackupFileName: root.querySelector('#backup-file-name').value.trim() || 'ticket_backup',
-        quickTags: parseTags(root.querySelector('#quick-tags')?.value || ''),
+        quickTags: this.app.state.settings.quickTags || [],
         swipeGesturesEnabled: root.querySelector('#swipe-gestures-enabled')?.checked !== false,
         swipeTriggerDistance,
         viewConfigs: {
@@ -1793,23 +1783,6 @@ export class SettingsPage {
       showToast(granted ? '已啟用持久化儲存' : '瀏覽器未授權持久化儲存', granted ? 'success' : 'error');
       this.health = await this.app.dataService.checkDataHealth();
       this.render();
-    });
-
-    root.querySelector('#quick-tag-add-button')?.addEventListener('click', async () => {
-      const input = root.querySelector('#quick-tag-add-input');
-      const tag = (input?.value || '').trim();
-      if (!tag) return;
-      const quickTags = [...new Set([...(this.app.state.settings.quickTags || []), ...parseTags(tag)])];
-      this.app.state.settings = { ...this.app.state.settings, quickTags };
-      await this.app.persistSettings();
-      showToast('快速標籤已新增', 'success', 900);
-      this.render();
-    });
-
-    root.querySelector('#quick-tag-add-input')?.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      root.querySelector('#quick-tag-add-button')?.click();
     });
 
     root.querySelectorAll('[data-remove-quick-tag]').forEach((btn) => {
