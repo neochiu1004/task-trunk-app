@@ -2497,7 +2497,6 @@ export class TicketsPage {
           if (!template) return;
           const impactedFields = ['票券名稱'];
           if (template.serial) impactedFields.push('序號');
-          if (template.expiry) impactedFields.push('到期日');
           if (template.image) impactedFields.push('圖片');
           if (Array.isArray(template.tags) && template.tags.length > 0) impactedFields.push('標籤');
           if (template.redeemUrlPresetId || template.redeemUrl) impactedFields.push('兌換網址');
@@ -2519,7 +2518,6 @@ export class TicketsPage {
               ...ticket,
               productName: template.productName || ticket.productName,
               serial: template.serial || ticket.serial,
-              expiry: template.expiry || ticket.expiry,
               image: template.image || ticket.image,
               tags: Array.isArray(template.tags) && template.tags.length > 0 ? [...template.tags] : ticket.tags,
               redeemUrl: resolvedRedeemUrl || ticket.redeemUrl,
