@@ -156,12 +156,13 @@ export class AddPage {
             </div>
 
             <div>
-              <label class="block text-sm text-wabi-text-secondary mb-1">原圖模式（核銷畫面）</label>
-              <input id="original-image-file" type="file" accept="image/*" class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
+              <label class="block text-sm text-wabi-text-secondary mb-1">原圖模式（核銷畫面）${editing ? '' : '，可一次選多張照片批量建卡'}</label>
+              <input id="original-image-file" type="file" accept="image/*" ${editing ? '' : 'multiple'} class="w-full rounded-lg border border-wabi-border px-3 py-2 bg-white" />
               <div id="original-image-preview-wrap" class="mt-2 ${editing?.originalImage ? '' : 'hidden'}">
                 <img id="original-image-preview" src="${escapeHtml(editing?.originalImage || '')}" class="w-full max-h-56 object-contain rounded-xl border border-wabi-border bg-slate-50" />
                 <button id="original-image-clear-btn" type="button" class="mt-2 px-3 py-1.5 rounded-lg border border-wabi-border text-xs">清除原圖</button>
               </div>
+              <div id="original-batch-preview" class="mt-2 hidden"></div>
             </div>
             ${editing?.tags?.includes('批量生成') ? `
               <div>
@@ -290,6 +291,9 @@ export class AddPage {
     let imageData = editing?.image || '';
     let originalImage = editing?.originalImage || '';
     let batchProductImage = editing?.batchProductImage || '';
+    // 新增模式一次選多張原圖照片時的批量建卡資料，每張照片一份
+    // { thumb, original, serial, format }；serial/format 由照片中的條碼自動辨識。
+    let batchPhotos = [];
     // True while the original image is a borrowed template screenshot:
     // the serial/QR/expiry printed inside it belong to the template's
     // source voucher, so on save the picture is re-rendered from this
@@ -411,6 +415,7 @@ export class AddPage {
       imageData = '';
       originalImage = '';
       batchProductImage = '';
+      clearBatchPhotos();
       originalImageFromTemplate = false;
       if (thumbImageInput) thumbImageInput.value = '';
       if (originalImageInput) originalImageInput.value = '';
@@ -573,6 +578,32 @@ export class AddPage {
       syncQuickTagState();
     });
 
+    const renderBatchPreview = () => {
+      const wrap = root.querySelector('#original-batch-preview');
+      if (!wrap) return;
+      if (!batchPhotos.length) {
+        wrap.classList.add('hidden');
+        wrap.innerHTML = '';
+        return;
+      }
+      const withSerial = batchPhotos.filter((photo) => photo.serial).length;
+      wrap.innerHTML = `
+        <p class="text-xs text-wabi-text-secondary mb-1.5">已選 ${batchPhotos.length} 張照片，送出後每張建立一張票卡；序號各自自動辨識（已帶入 ${withSerial} 張），表單的序號欄不會套用。</p>
+        <div class="flex gap-1.5 overflow-x-auto pb-1">
+          ${batchPhotos.map((photo) => `
+            <div class="shrink-0 w-16">
+              <img src="${photo.thumb}" class="w-16 h-16 object-cover rounded-lg border border-wabi-border" alt="" />
+              <p class="text-[10px] mt-0.5 truncate ${photo.serial ? 'text-emerald-700' : 'text-slate-400'}">${photo.serial ? escapeHtml(photo.serial) : '未辨識序號'}</p>
+            </div>`).join('')}
+        </div>`;
+      wrap.classList.remove('hidden');
+    };
+
+    const clearBatchPhotos = () => {
+      batchPhotos = [];
+      renderBatchPreview();
+    };
+
     thumbImageInput?.addEventListener('change', async (event) => {
       const file = event.target.files?.[0];
       if (!file) return;
@@ -586,9 +617,47 @@ export class AddPage {
     });
 
     originalImageInput?.addEventListener('change', async (event) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+      const files = [...(event.target.files || [])];
+      if (!files.length) return;
+      // 新增模式選到 2 張以上照片：進入批量建卡，逐張壓縮並辨識條碼序號。
+      if (!editing && files.length > 1) {
+        try {
+          showToast(`正在處理 ${files.length} 張照片並辨識序號...`);
+          const preferredFormat = root.querySelector('#barcode-format')?.value || '';
+          const { scanMultipleBarcodesFromImage } = await getBarcodeScanner();
+          const photos = [];
+          for (const file of files) {
+            const original = await compressImage(file, 'original');
+            const thumb = await compressImage(file, 'thumbnail');
+            let serial = '';
+            let format = '';
+            try {
+              const results = await scanMultipleBarcodesFromImage(original, { preferredFormat });
+              if (results.length) {
+                serial = results[0].content || '';
+                format = results[0].format || '';
+              }
+            } catch (scanError) {
+              console.warn('批量照片序號辨識失敗', scanError);
+            }
+            photos.push({ thumb, original, serial, format });
+          }
+          batchPhotos = photos;
+          originalImage = '';
+          originalImageFromTemplate = false;
+          if (originalImagePreview) originalImagePreview.src = '';
+          originalImageWrap?.classList.add('hidden');
+          renderBatchPreview();
+          const withSerial = photos.filter((photo) => photo.serial).length;
+          showToast(`已載入 ${photos.length} 張照片，序號辨識帶入 ${withSerial} 張`, 'success');
+        } catch (error) {
+          showToast(`照片處理失敗：${error.message}`, 'error');
+        }
+        return;
+      }
+      const file = files[0];
       try {
+        clearBatchPhotos();
         originalImage = await compressImage(file, 'original');
         originalImageFromTemplate = false;
         if (originalImagePreview) originalImagePreview.src = originalImage;
@@ -636,6 +705,7 @@ export class AddPage {
     root.querySelector('#original-image-clear-btn')?.addEventListener('click', () => {
       originalImage = '';
       originalImageFromTemplate = false;
+      clearBatchPhotos();
       if (originalImageInput) originalImageInput.value = '';
       if (originalImagePreview) originalImagePreview.src = '';
       originalImageWrap?.classList.add('hidden');
@@ -714,6 +784,52 @@ export class AddPage {
         return;
       }
       const expiry = parseExpiryText(expiryRaw) || '';
+
+      // 批量建卡：一次選了多張原圖照片時，每張照片建立一張票卡，
+      // 共用表單的名稱/到期日/標籤/兌換網址，序號用各照片辨識到的條碼。
+      if (!editing && batchPhotos.length > 1) {
+        const batchTags = parseTags(root.querySelector('#tags').value);
+        const formBarcodeFormat = root.querySelector('#barcode-format').value || '';
+        const batchPinned = !!root.querySelector('#ticket-pinned')?.checked;
+        const now = Date.now();
+        const payloads = batchPhotos.map((photo, index) => ({
+          id: generateId(),
+          productName,
+          serial: photo.serial || '',
+          expiry,
+          image: photo.thumb,
+          originalImage: photo.original,
+          images: photo.thumb ? [photo.thumb] : [],
+          batchProductImage: '',
+          batchImageVersion: 0,
+          tags: batchTags,
+          note: '',
+          barcodeFormat: photo.format || formBarcodeFormat,
+          completed: false,
+          completedAt: undefined,
+          isDeleted: false,
+          deletedAt: undefined,
+          createdAt: now + index,
+          redeemUrl,
+          pinned: batchPinned,
+        }));
+        this.app.state.tasks = [...payloads, ...this.app.state.tasks];
+        await this.app.persistTasks();
+
+        const menuTags = [...new Set([...(this.app.state.settings.quickTags || []), ...batchTags])].filter(Boolean);
+        if (menuTags.length !== (this.app.state.settings.quickTags || []).filter(Boolean).length) {
+          this.app.state.settings = { ...this.app.state.settings, quickTags: menuTags };
+          await this.app.persistSettings();
+        }
+
+        this.app.state.ui.editingTicketId = null;
+        this.app.state.ui.editingFromRoute = null;
+        const withSerial = payloads.filter((payload) => payload.serial).length;
+        showToast(`已建立 ${payloads.length} 張票券（序號自動帶入 ${withSerial} 張）`, 'success');
+        window.location.hash = 'active';
+        return;
+      }
+
       const selectedBatchProductImage = batchProductImage || batchProductImagePreview?.src || '';
       if (serial && isDuplicateSerial(serial)) {
         const ok = window.confirm('此序號已存在於其他票券，仍要繼續儲存嗎？');

@@ -1563,6 +1563,10 @@ export class TicketsPage {
   async render() {
     this.clearBackgroundRotationTimer();
     this.clearBackgroundInsetHandler();
+    // 已核銷篩選入口已移除：若先前狀態還殘留此篩選，自動清掉回到所有票券。
+    if (this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG)) {
+      this.app.state.ui.activeTags = this.app.state.ui.activeTags.filter((tag) => tag !== COMPLETED_FILTER_TAG);
+    }
     const meta = VIEW_META[this.view];
     const tickets = this.filterTickets();
     // All ticket views share one layout configuration. This keeps the
@@ -1663,7 +1667,6 @@ export class TicketsPage {
                 ${backgroundImages.length > 1
                   ? `<button id="cycle-view-background" title="切換下一張背景" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-white hover:bg-slate-50 border border-transparent"><i class="fa-solid fa-images mr-2 text-xs"></i>下一張背景</button>`
                   : ''}
-                <button id="quick-clear-completed-to-trash" title="將已核銷票券移至回收桶（${completedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${completedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${completedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-box-archive mr-2 text-xs"></i>一鍵回收已核銷（${completedTotalCount}）</button>
                 ${this.view === 'deleted'
                   ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can mr-2 text-xs"></i>全部永久刪除</button>`
                   : ''}
@@ -1683,7 +1686,7 @@ export class TicketsPage {
           <div class="flex items-center gap-2">
             <select id="ticket-tag-filter" class="app-sort-select flex-1 min-w-0" aria-label="篩選標籤">
               <option value="" ${this.app.state.ui.activeTags.length === 0 ? 'selected' : ''}>所有票券（${currentViewTotal}）</option>
-              ${this.view === 'active' ? `<option value="${COMPLETED_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? 'selected' : ''}>已核銷（${completedTotalCount}）</option><option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
+              ${this.view === 'active' ? `<option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
               <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>有原圖（${originalImageCount}）</option>
               ${allTags.map((tag) => `<option value="${escapeHtml(tag)}" ${this.app.state.ui.activeTags.includes(tag) ? 'selected' : ''}>#${escapeHtml(tag)}（${tagCountByTag.get(tag) || 0}）</option>`).join('')}
             </select>
@@ -1703,10 +1706,9 @@ export class TicketsPage {
               }
             </select>
           </div>
-          ${this.view === 'active' ? `
+          ${this.view === 'active' && completedTotalCount > 0 ? `
           <div class="flex items-center gap-2 mt-2">
-            <button type="button" data-tag-filter="${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? '' : COMPLETED_FILTER_TAG}" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold border ${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-700 border-red-300'}">已核銷（${completedTotalCount}）</button>
-            ${completedTotalCount > 0 ? `<button type="button" id="quick-recycle-completed-visible" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-700 border border-red-200">一鍵回收已核銷（${completedTotalCount}）</button>` : ''}
+            <button type="button" id="quick-recycle-completed-visible" class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-700 border border-red-200">一鍵回收已核銷（${completedTotalCount}）</button>
           </div>` : ''}
         ${this.view === 'deleted' && deletedTotalCount > 0 ? `
           <div class="flex items-center gap-2 mt-2">
@@ -2254,7 +2256,6 @@ export class TicketsPage {
       showToast(`已將 ${targets.length} 張票券移至回收桶`, 'success');
       this.render();
     };
-    root.querySelector('#quick-clear-completed-to-trash')?.addEventListener('click', handleQuickClearCompleted);
     root.querySelector('#quick-recycle-completed-visible')?.addEventListener('click', handleQuickClearCompleted);
 
     const handleQuickPurgeDeleted = async () => {
