@@ -1548,18 +1548,21 @@ export class TicketsPage {
       });
     }
 
+    // 依建立日期排序（最新/最早建立）時完全照建立時間排：
+    // 置頂、重複序號、到期緊急度都不優先。
+    const pureCreatedSort = sortType === 'newest' || sortType === 'oldest';
     list.sort((a, b) => {
-      if (this.view === 'active' && duplicateSerials.has(a.serial) !== duplicateSerials.has(b.serial)) {
+      if (!pureCreatedSort && this.view === 'active' && duplicateSerials.has(a.serial) !== duplicateSerials.has(b.serial)) {
         return duplicateSerials.has(a.serial) ? -1 : 1;
       }
       // 置頂只適用於未使用票券：只有待使用視圖才讓置頂票券排到前面。
-      if (this.view === 'active' && a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      if (!pureCreatedSort && this.view === 'active' && a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       if (this.view === 'completed') {
         // Completed tickets always ignore pinning and stay ordered by the
         // actual redemption time, newest first.
         return (b.completedAt || 0) - (a.completedAt || 0);
       }
-      if (this.view === 'active') {
+      if (!pureCreatedSort && this.view === 'active') {
         const rankA = expiryRankById.get(a.id) ?? 3;
         const rankB = expiryRankById.get(b.id) ?? 3;
         if (rankA !== rankB) return rankA - rankB;
