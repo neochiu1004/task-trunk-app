@@ -156,6 +156,15 @@ export function formatDateTime(timestamp) {
   return `${date} ${time}`;
 }
 
+export function formatDateTimeWithSeconds(timestamp) {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return '';
+  const date = formatDate(timestamp);
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+  return `${date} ${time}`;
+}
+
 export function escapeHtml(text) {
   if (text == null) return '';
   return String(text)

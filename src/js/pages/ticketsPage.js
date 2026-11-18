@@ -1,8 +1,7 @@
 import {
   checkIsExpiringSoon,
   escapeHtml,
-  formatDate,
-  formatDateTime,
+  formatDateTimeWithSeconds,
   parseTags,
   showToast,
   normalizeDateInput,
@@ -1240,8 +1239,8 @@ export class TicketsPage {
       const expiryCountdown = !ticket.completed && !ticket.isDeleted
         ? getExpiryCountdownLabel(ticket.expiry)
         : '';
-      // 已核銷票卡改顯示核銷日期（有記錄核銷時間時），不再顯示到期日。
-      const redeemedDateDisplay = ticket.completed && ticket.completedAt ? formatDate(ticket.completedAt) : '';
+      // 已核銷票卡改顯示核銷時間（到秒，有記錄核銷時間時），不再顯示到期日。
+      const redeemedDateDisplay = ticket.completed && ticket.completedAt ? formatDateTimeWithSeconds(ticket.completedAt) : '';
       const isDuplicateSerial = duplicateSerials.has(ticket.serial);
       const thumbnailImage = typeof ticket.image === 'string' ? ticket.image.trim() : '';
       const hasOriginalImage = !!ticket.originalImage;
@@ -1488,7 +1487,7 @@ export class TicketsPage {
         <div class="min-w-0 flex-1">
           <p class="font-semibold text-wabi-primary truncate">${escapeHtml(ticket.productName || '未命名票券')}</p>
           <p class="text-xs text-wabi-text-secondary font-mono break-all mt-0.5">序號：${escapeHtml(ticket.serial || '—')}</p>
-          <p class="text-xs text-wabi-text-secondary mt-0.5">到期日：${escapeHtml(ticket.expiry || '無期限')} · 核銷時間：${ticket.completedAt ? escapeHtml(formatDateTime(ticket.completedAt)) : '—'}</p>
+          <p class="text-xs text-wabi-text-secondary mt-0.5">到期日：${escapeHtml(ticket.expiry || '無期限')} · 核銷時間：${ticket.completedAt ? escapeHtml(formatDateTimeWithSeconds(ticket.completedAt)) : '—'}</p>
         </div>
         <button type="button" data-action="restore" class="min-h-11 px-4 py-2.5 rounded-lg bg-emerald-100 text-emerald-700 text-sm font-semibold shrink-0">回復未核銷</button>
       </div>
