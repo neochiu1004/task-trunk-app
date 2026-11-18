@@ -1,6 +1,7 @@
 import {
   checkIsExpiringSoon,
   escapeHtml,
+  formatDate,
   formatDateTime,
   parseTags,
   showToast,
@@ -1239,6 +1240,8 @@ export class TicketsPage {
       const expiryCountdown = !ticket.completed && !ticket.isDeleted
         ? getExpiryCountdownLabel(ticket.expiry)
         : '';
+      // 已核銷票卡改顯示核銷日期（有記錄核銷時間時），不再顯示到期日。
+      const redeemedDateDisplay = ticket.completed && ticket.completedAt ? formatDate(ticket.completedAt) : '';
       const isDuplicateSerial = duplicateSerials.has(ticket.serial);
       const thumbnailImage = typeof ticket.image === 'string' ? ticket.image.trim() : '';
       const hasOriginalImage = !!ticket.originalImage;
@@ -1293,14 +1296,18 @@ export class TicketsPage {
             : expiryState === 'soon'
               ? 'ticket-card-expiry--soon ticket-card-expiry--soon-pill'
               : 'ticket-card-expiry--normal ticket-card-expiry--normal-pill';
-        const compactExpiryPrefix = expiryState === 'expired'
-          ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
-          : expiryState === 'today'
-            ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
-            : expiryState === 'soon'
-              ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
-              : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
-        const compactExpiryDisplay = expiryCountdown || escapeHtml(ticket.expiry || '無期限');
+        const compactExpiryPrefix = redeemedDateDisplay
+          ? '<i class="fa-solid fa-circle-check mr-1"></i>核銷 · '
+          : expiryState === 'expired'
+            ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+            : expiryState === 'today'
+              ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+              : expiryState === 'soon'
+                ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+                : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
+        const compactExpiryDisplay = redeemedDateDisplay
+          ? escapeHtml(redeemedDateDisplay)
+          : expiryCountdown || escapeHtml(ticket.expiry || '無期限');
         const swipeMap = {
           active: { left: '核銷', right: '回收' },
           completed: { left: '還原', right: '回收' },
@@ -1384,16 +1391,20 @@ export class TicketsPage {
           : expiryState === 'soon'
             ? 'ticket-card-expiry-highlight ticket-card-expiry-highlight--soon'
             : 'ticket-card-expiry-highlight ticket-card-expiry-highlight--normal';
-      const standardExpiryPrefix = expiryState === 'expired'
-        ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
-        : expiryState === 'today'
-          ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
-          : expiryState === 'soon'
-            ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
-            : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
-      const standardExpiryDisplay = this.view === 'active'
-        ? (ticket.expiry ? `${escapeHtml(ticket.expiry)}${expiryCountdown ? ` · ${escapeHtml(expiryCountdown)}` : ''}` : '無期限')
-        : `${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}`;
+      const standardExpiryPrefix = redeemedDateDisplay
+        ? '<i class="fa-solid fa-circle-check mr-1"></i>核銷 · '
+        : expiryState === 'expired'
+          ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>已過期 · '
+          : expiryState === 'today'
+            ? '<i class="fa-regular fa-clock mr-1"></i>今天到期 · '
+            : expiryState === 'soon'
+              ? '<i class="fa-regular fa-clock mr-1"></i>即將到期 · '
+              : '<i class="fa-regular fa-calendar mr-1"></i>到期 · ';
+      const standardExpiryDisplay = redeemedDateDisplay
+        ? escapeHtml(redeemedDateDisplay)
+        : this.view === 'active'
+          ? (ticket.expiry ? `${escapeHtml(ticket.expiry)}${expiryCountdown ? ` · ${escapeHtml(expiryCountdown)}` : ''}` : '無期限')
+          : `${escapeHtml(ticket.expiry || '無期限')}${expiryCountdown ? ` <span class="ticket-card-expiry-countdown">${escapeHtml(expiryCountdown)}</span>` : ''}`;
       const cardPaddingClass = this.view === 'active'
         ? (compactGrid ? 'p-2.5' : 'p-3')
         : (compactGrid ? 'p-3' : 'p-4');
@@ -1563,10 +1574,6 @@ export class TicketsPage {
   async render() {
     this.clearBackgroundRotationTimer();
     this.clearBackgroundInsetHandler();
-    // 已核銷篩選入口已移除：若先前狀態還殘留此篩選，自動清掉回到所有票券。
-    if (this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG)) {
-      this.app.state.ui.activeTags = this.app.state.ui.activeTags.filter((tag) => tag !== COMPLETED_FILTER_TAG);
-    }
     const meta = VIEW_META[this.view];
     const tickets = this.filterTickets();
     // All ticket views share one layout configuration. This keeps the
@@ -1686,7 +1693,7 @@ export class TicketsPage {
           <div class="flex items-center gap-2">
             <select id="ticket-tag-filter" class="app-sort-select flex-1 min-w-0" aria-label="篩選標籤">
               <option value="" ${this.app.state.ui.activeTags.length === 0 ? 'selected' : ''}>所有票券（${currentViewTotal}）</option>
-              ${this.view === 'active' ? `<option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
+              ${this.view === 'active' ? `<option value="${COMPLETED_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(COMPLETED_FILTER_TAG) ? 'selected' : ''}>已核銷（${completedTotalCount}）</option><option value="${EXPIRY_URGENT_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(EXPIRY_URGENT_FILTER_TAG) ? 'selected' : ''}>到期警示（${urgentActiveCount}）</option><option value="${DUPLICATE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(DUPLICATE_FILTER_TAG) ? 'selected' : ''}>重複序號（${duplicateActiveCount}）</option>` : ''}
               <option value="${ORIGINAL_IMAGE_FILTER_TAG}" ${this.app.state.ui.activeTags.includes(ORIGINAL_IMAGE_FILTER_TAG) ? 'selected' : ''}>有原圖（${originalImageCount}）</option>
               ${allTags.map((tag) => `<option value="${escapeHtml(tag)}" ${this.app.state.ui.activeTags.includes(tag) ? 'selected' : ''}>#${escapeHtml(tag)}（${tagCountByTag.get(tag) || 0}）</option>`).join('')}
             </select>
