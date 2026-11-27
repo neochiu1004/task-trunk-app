@@ -779,6 +779,7 @@ export class TicketsPage {
     `;
 
     let mode = defaultMode;
+    let pureOriginal = false;
     let barcodeVariant = isSpecificView ? 'momo' : 'standard';
     const previewWrap = modal.querySelector('#redeem-preview-wrap');
     const shell = modal.querySelector('#redeem-shell');
@@ -799,9 +800,11 @@ export class TicketsPage {
       });
 
       const immersiveOriginal = mode === 'original' && hasOriginalImage;
+      const pureFullscreen = immersiveOriginal && pureOriginal;
       header?.classList.toggle('hidden', immersiveOriginal);
       modeSwitch?.classList.toggle('hidden', immersiveOriginal);
-      footer?.classList.remove('hidden');
+      footer?.classList.toggle('hidden', pureFullscreen);
+      redeemedStamp?.classList.toggle('hidden', pureFullscreen || !ticket.completed);
 
       if (shell) {
         shell.classList.toggle('p-0', immersiveOriginal);
@@ -992,7 +995,7 @@ export class TicketsPage {
           return;
         }
         previewWrap.innerHTML = `
-          <img src="${displayImage}" alt="替換後票券圖片" data-redeem-keepopen="1" class="h-full w-full object-contain bg-black" />
+          <img src="${displayImage}" alt="替換後票券圖片" data-original-redeem-trigger="1" data-redeem-keepopen="1" class="h-full w-full object-contain bg-black cursor-pointer" />
         `;
         updateModeButtonState();
         return;
@@ -1009,7 +1012,13 @@ export class TicketsPage {
     };
 
     const onKeydown = (event) => {
-      if (event.key === 'Escape') cleanup();
+      if (event.key !== 'Escape') return;
+      if (pureOriginal) {
+        pureOriginal = false;
+        updateModeButtonState();
+        return;
+      }
+      cleanup();
     };
 
     let redeeming = false;
@@ -1118,8 +1127,15 @@ export class TicketsPage {
       if (ticket.redeemUrl) window.open(ticket.redeemUrl, '_blank', 'noopener');
     });
 
-    previewWrap?.addEventListener('click', () => {
-      suppressPreviewClick = false;
+    previewWrap?.addEventListener('click', (event) => {
+      if (suppressPreviewClick) {
+        suppressPreviewClick = false;
+        return;
+      }
+      if (mode !== 'original' || !hasOriginalImage) return;
+      if (!event.target.closest('[data-original-redeem-trigger]')) return;
+      pureOriginal = !pureOriginal;
+      updateModeButtonState();
     });
 
     if (shell) {

@@ -87,6 +87,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [editPinned, setEditPinned] = useState(false);
   const [viewMode, setViewMode] = useState<ViewModeType>('standard');
   const [showFullScreen, setShowFullScreen] = useState(false);
+  const [isPureFullScreen, setIsPureFullScreen] = useState(false);
   const [isRedeemAnimating, setIsRedeemAnimating] = useState(false);
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -119,6 +120,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       setEditRedeemUrl(ticket.redeemUrl || '');
       setEditPinned(!!ticket.pinned);
       setViewMode(getInitialViewMode());
+      setIsPureFullScreen(false);
       if (ticket.originalImage) {
         setShowFullScreen(true);
       } else {
@@ -126,6 +128,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       }
     } else {
       setShowFullScreen(false);
+      setIsPureFullScreen(false);
     }
   }, [getInitialViewMode, ticket]);
 
@@ -294,6 +297,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const handleFullscreenBackPress = (event: React.PointerEvent | React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
+    setIsPureFullScreen(false);
     setShowFullScreen(false);
   };
 
@@ -907,21 +911,26 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
             className="fixed inset-0 bg-black z-[60] flex flex-col"
             onClick={onClose}
           >
-            {/* Close button - top right (closes entire modal) */}
-            <button
-              type="button"
-              onPointerUp={handleClosePress}
-              onClick={(e) => e.preventDefault()}
-              className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <X size={24} />
-            </button>
-            
-            {/* Image container - click to close entire modal */}
-            <div 
-              className="flex-1 flex items-center justify-center p-4 pb-32 cursor-pointer"
-              onClick={onClose}
+            {/* Close button - top right (closes entire modal); hidden in pure fullscreen */}
+            {!isPureFullScreen && (
+              <button
+                type="button"
+                onPointerUp={handleClosePress}
+                onClick={(e) => e.preventDefault()}
+                className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <X size={24} />
+              </button>
+            )}
+
+            {/* Image container - click toggles pure fullscreen (image only, no buttons) */}
+            <div
+              className={`flex-1 flex items-center justify-center cursor-pointer ${isPureFullScreen ? 'p-0' : 'p-4 pb-32'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPureFullScreen((prev) => !prev);
+              }}
             >
               <motion.img
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -932,8 +941,9 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               />
             </div>
             
-            {/* Fixed bottom floating buttons */}
-            <motion.div 
+            {/* Fixed bottom floating buttons; hidden in pure fullscreen */}
+            {!isPureFullScreen && (
+            <motion.div
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2, type: "spring" as const, stiffness: 300, damping: 25 }}
@@ -990,6 +1000,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 </motion.button>
               )}
             </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
