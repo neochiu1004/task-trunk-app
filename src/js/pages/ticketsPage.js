@@ -1706,7 +1706,6 @@ export class TicketsPage {
                   ? `<button id="quick-purge-deleted" title="全部永久刪除（${deletedTotalCount}）" class="w-full px-3 py-2 rounded-lg text-left text-sm bg-red-50 text-red-700 hover:bg-red-100 border border-transparent ${deletedTotalCount > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${deletedTotalCount > 0 ? '' : 'disabled aria-disabled="true"'}><i class="fa-solid fa-trash-can mr-2 text-xs"></i>全部永久刪除</button>`
                   : ''}
               </div>
-              <a id="open-settings-btn" href="#settings" title="設定" class="app-icon-button"><i class="fa-solid fa-gear"></i></a>
             </div>
           </header>
 
@@ -2205,16 +2204,6 @@ export class TicketsPage {
       if (!toolbarMenuOpen) return;
       if (event.target.closest('#toolbar-more-menu, #toggle-toolbar-menu')) return;
       closeToolbarMenu();
-    });
-
-    // Gear settings link: navigate explicitly as well as via the anchor's
-    // default hash change, so the tap still works if anything swallows the
-    // default anchor behaviour.
-    root.querySelector('#open-settings-btn')?.addEventListener('click', (event) => {
-      event.preventDefault();
-      if (window.location.hash !== '#settings') {
-        window.location.hash = 'settings';
-      }
     });
 
     const completedSummaryCard = root.querySelector('[data-dashboard-view="completed"]');
