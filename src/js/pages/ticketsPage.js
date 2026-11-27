@@ -717,7 +717,7 @@ export class TicketsPage {
     });
   }
 
-  openRedeemModeModal(ticket, { enterFrom = 0 } = {}) {
+  openRedeemModeModal(ticket, { enterFrom = 0, pureOriginal: initialPureOriginal = false } = {}) {
     const filteredTickets = this.filterTickets();
     const currentTicketIndex = Math.max(0, filteredTickets.findIndex((item) => item.id === ticket.id));
     const ticketCount = filteredTickets.length;
@@ -779,7 +779,7 @@ export class TicketsPage {
     `;
 
     let mode = defaultMode;
-    let pureOriginal = false;
+    let pureOriginal = initialPureOriginal;
     let barcodeVariant = isSpecificView ? 'momo' : 'standard';
     const previewWrap = modal.querySelector('#redeem-preview-wrap');
     const shell = modal.querySelector('#redeem-shell');
@@ -1045,12 +1045,12 @@ export class TicketsPage {
       );
       if (!outgoing) {
         cleanup();
-        this.openRedeemModeModal(nextTicket, { enterFrom: direction * -1 });
+        this.openRedeemModeModal(nextTicket, { enterFrom: direction * -1, pureOriginal });
         return;
       }
       setTimeout(() => {
         cleanup();
-        this.openRedeemModeModal(nextTicket, { enterFrom: direction * -1 });
+        this.openRedeemModeModal(nextTicket, { enterFrom: direction * -1, pureOriginal });
       }, 180);
     };
 
