@@ -5,6 +5,8 @@ import {
   escapeHtml,
   forceRefreshToLatest,
   formatDateTime,
+  matchTagKeywordRules,
+  normalizeTagKeywordRules,
   parseTags,
   sendTelegramMessage,
   showToast,
@@ -117,6 +119,17 @@ export class SettingsPage {
       <div class="flex items-center justify-between gap-2 py-1">
         <span class="text-sm">#${escapeHtml(tag)}</span>
         <button data-delete-tag="${escapeHtml(tag)}" class="px-2 py-1 rounded bg-red-100 text-red-700 text-xs">移除所有票券上的此標籤</button>
+      </div>
+    `).join('');
+  }
+
+  tagKeywordRulesHtml() {
+    const rules = normalizeTagKeywordRules(this.app.state.settings.tagKeywordRules);
+    if (!rules.length) return '<p class="text-xs text-wabi-text-secondary">尚未建立關鍵字標籤規則</p>';
+    return rules.map((rule) => `
+      <div class="flex items-center justify-between gap-2 py-1">
+        <span class="text-sm min-w-0 truncate">#${escapeHtml(rule.tag)} <span class="text-xs text-wabi-text-secondary">← ${escapeHtml(rule.keywords.join(', ') || rule.tag)}</span></span>
+        <button type="button" data-remove-tag-rule="${escapeHtml(rule.tag)}" class="px-2 py-1 rounded bg-red-100 text-red-700 text-xs shrink-0">刪除規則</button>
       </div>
     `).join('');
   }
@@ -671,6 +684,15 @@ export class SettingsPage {
             <div class="flex gap-2">
               <input id="tag-menu-add-input" placeholder="新增一個標籤" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
               <button type="button" id="tag-menu-add-button" class="px-4 py-2 rounded-lg bg-wabi-primary text-white text-sm">新增</button>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <p class="text-xs text-wabi-text-secondary">關鍵字標籤規則（新增票券時，名稱包含任一關鍵字就自動帶入固定標籤）</p>
+            <div>${this.tagKeywordRulesHtml()}</div>
+            <div class="flex gap-2 flex-wrap">
+              <input id="tag-rule-tag-input" placeholder="固定標籤，如 7-11" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
+              <input id="tag-rule-keywords-input" placeholder="關鍵字，逗號分隔，如 eleven, 7-Eleven" class="min-w-0 flex-1 rounded-lg border border-wabi-border px-3 py-2 text-sm" />
+              <button type="button" id="tag-rule-add-button" class="px-4 py-2 rounded-lg bg-wabi-primary text-white text-sm">新增規則</button>
             </div>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -1816,6 +1838,45 @@ export class SettingsPage {
       addTagMenuTag();
     });
 
+    const addTagRule = async () => {
+      const tagInput = root.querySelector('#tag-rule-tag-input');
+      const keywordsInput = root.querySelector('#tag-rule-keywords-input');
+      const tag = (tagInput?.value || '').trim();
+      if (!tag) {
+        showToast('請先輸入固定標籤', 'error');
+        tagInput?.focus();
+        return;
+      }
+      const keywords = String(keywordsInput?.value || '').split(/[,，、\n]+/).map((kw) => kw.trim()).filter(Boolean);
+      const rules = normalizeTagKeywordRules([
+        ...(this.app.state.settings.tagKeywordRules || []),
+        { tag, keywords },
+      ]);
+      this.app.state.settings = { ...this.app.state.settings, tagKeywordRules: rules };
+      await this.app.persistSettings();
+      showToast('關鍵字標籤規則已新增', 'success', 900);
+      this.render();
+    };
+    root.querySelector('#tag-rule-add-button')?.addEventListener('click', addTagRule);
+    root.querySelector('#tag-rule-keywords-input')?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addTagRule();
+    });
+
+    root.querySelectorAll('[data-remove-tag-rule]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const tag = btn.dataset.removeTagRule;
+        if (!tag) return;
+        const rules = normalizeTagKeywordRules(this.app.state.settings.tagKeywordRules)
+          .filter((rule) => rule.tag !== tag);
+        this.app.state.settings = { ...this.app.state.settings, tagKeywordRules: rules };
+        await this.app.persistSettings();
+        showToast('關鍵字標籤規則已刪除', 'success', 900);
+        this.render();
+      });
+    });
+
     root.querySelector('#collect-ticket-tags')?.addEventListener('click', async () => {
       // 第一步：把全部票卡在用的標籤補進快速標籤選單。
       const existing = new Set((this.app.state.settings.quickTags || []).filter(Boolean));
@@ -1828,15 +1889,20 @@ export class SettingsPage {
       }
 
       // 第二步：逐張比對票券名稱，把名稱有出現、票卡還沒掛的標籤自動補上
-      // （規則同新增票卡的「依名稱檢查標籤」：不分大小寫，名稱包含標籤文字即符合）。
+      // （規則同新增票卡的「依名稱檢查標籤」：不分大小寫，名稱包含標籤文字即符合），
+      // 並一併套用關鍵字標籤規則（關鍵字命中就補上固定標籤）。
       const pool = [...new Set([...menuTags, ...ticketTags])].filter(Boolean);
+      const tagRules = this.app.state.settings.tagKeywordRules || [];
       let touchedTickets = 0;
       let addedTagCount = 0;
       this.app.state.tasks = this.app.state.tasks.map((ticket) => {
         const nameForMatch = (ticket.productName || '').toLocaleLowerCase();
         if (!nameForMatch) return ticket;
         const current = new Set(ticket.tags || []);
-        const matched = pool.filter((tag) => !current.has(tag) && nameForMatch.includes(String(tag).toLocaleLowerCase()));
+        const matched = [
+          ...pool.filter((tag) => !current.has(tag) && nameForMatch.includes(String(tag).toLocaleLowerCase())),
+          ...matchTagKeywordRules(ticket.productName, tagRules).filter((tag) => !current.has(tag)),
+        ];
         if (!matched.length) return ticket;
         touchedTickets += 1;
         addedTagCount += matched.length;

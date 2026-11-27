@@ -33,6 +33,9 @@ export const defaultSettings: Settings = {
   },
   redeemUrlPresets: defaultRedeemUrlPresets,
   defaultTemplateId: '',
+  tagKeywordRules: [
+    { tag: '7-11', keywords: ['7-11', 'eleven'] },
+  ],
 };
 
 export const DB_KEYS = {

@@ -1,4 +1,4 @@
-import { DB_KEYS, defaultSettings, normalizeTicket, GLASS_CARD_OPACITY, LEGACY_DEFAULT_CARD_OPACITY } from '../utils.js';
+import { DB_KEYS, defaultSettings, normalizeTicket, normalizeTagKeywordRules, GLASS_CARD_OPACITY, LEGACY_DEFAULT_CARD_OPACITY } from '../utils.js';
 
 export class DataService {
   constructor() {
@@ -108,6 +108,9 @@ export class DataService {
       quickTags: Array.isArray(source.quickTags)
         ? source.quickTags.filter(Boolean).map((item) => String(item))
         : [],
+      tagKeywordRules: Array.isArray(source.tagKeywordRules)
+        ? normalizeTagKeywordRules(source.tagKeywordRules)
+        : normalizeTagKeywordRules(base.tagKeywordRules),
       localBackupFileName: source.localBackupFileName || base.localBackupFileName || 'ticket_backup',
       viewConfigs: {
         active: this.compactViewConfig(sourceViewConfigs.active || {}, baseViewConfigs.active || {}),

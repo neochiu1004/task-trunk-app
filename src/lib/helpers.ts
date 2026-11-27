@@ -1,3 +1,21 @@
+import type { TagKeywordRule } from '@/types/ticket';
+
+// 關鍵字標籤規則：名稱包含任一關鍵字（不分大小寫）即帶入固定標籤；固定標籤本身也算關鍵字。
+export const matchTagKeywordRules = (productName: string, rules?: TagKeywordRule[]): string[] => {
+  const name = (productName || '').trim().toLocaleLowerCase();
+  if (!name || !Array.isArray(rules)) return [];
+  const matched: string[] = [];
+  rules.forEach((rule) => {
+    const tag = (rule?.tag || '').trim();
+    if (!tag || matched.includes(tag)) return;
+    const candidates = [tag, ...(Array.isArray(rule.keywords) ? rule.keywords : [])];
+    if (candidates.some((kw) => kw && name.includes(String(kw).trim().toLocaleLowerCase()))) {
+      matched.push(tag);
+    }
+  });
+  return matched;
+};
+
 export const compressImage = (
   fileOrUrl: File | string,
   type: 'thumbnail' | 'original' = 'thumbnail'

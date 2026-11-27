@@ -3,6 +3,7 @@ import {
   compressImage,
   escapeHtml,
   generateId,
+  matchTagKeywordRules,
   parseTags,
   showToast,
   tagsToText,
@@ -510,6 +511,26 @@ export class AddPage {
       showToast('標題含 85度C，已自動套用預設範本', 'success');
     });
 
+    // 關鍵字標籤規則：新增票券時，名稱命中任一關鍵字就自動帶入固定標籤
+    // （即時反映在已選標籤，使用者仍可手動移除；編輯既有票券不自動套用）。
+    const applyKeywordRuleTags = () => {
+      if (editing) return;
+      const matched = matchTagKeywordRules(productNameInput?.value || '', this.app.state.settings.tagKeywordRules);
+      if (!matched.length) return;
+      const currentTags = new Set(parseTags(tagsInput?.value || ''));
+      let changed = false;
+      matched.forEach((tag) => {
+        if (!currentTags.has(tag)) {
+          currentTags.add(tag);
+          changed = true;
+        }
+      });
+      if (!changed) return;
+      if (tagsInput) tagsInput.value = tagsToText([...currentTags]);
+      syncQuickTagState();
+    };
+    productNameInput?.addEventListener('input', applyKeywordRuleTags);
+
     root.querySelector('#redeem-url-preset')?.addEventListener('change', (event) => {
       const presetId = event.target.value;
       if (!presetId) return;
@@ -784,6 +805,17 @@ export class AddPage {
         return;
       }
       const expiry = parseExpiryText(expiryRaw) || '';
+
+      // 關鍵字標籤規則：新增票券儲存前再檢查一次名稱，命中就補上固定標籤
+      // （涵蓋範本帶入名稱、貼上等未觸發即時帶入的情況；編輯既有票券不套用）。
+      if (!editing) {
+        const matchedRuleTags = matchTagKeywordRules(productName, this.app.state.settings.tagKeywordRules);
+        if (matchedRuleTags.length) {
+          const tagsField = root.querySelector('#tags');
+          const merged = [...new Set([...parseTags(tagsField?.value || ''), ...matchedRuleTags])];
+          if (tagsField) tagsField.value = tagsToText(merged);
+        }
+      }
 
       // 批量建卡：一次選了多張原圖照片時，每張照片建立一張票卡，
       // 共用表單的名稱/到期日/標籤/兌換網址，序號用各照片辨識到的條碼。

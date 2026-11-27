@@ -54,6 +54,11 @@ export interface RedeemUrlPreset {
   url: string;
 }
 
+export interface TagKeywordRule {
+  tag: string;
+  keywords: string[];
+}
+
 export interface Settings {
   tgToken: string;
   tgChatId: string;
@@ -72,6 +77,7 @@ export interface Settings {
   redeemUrlPresets?: RedeemUrlPreset[];
   defaultTemplateId?: string;
   headerButtonSize?: number;
+  tagKeywordRules?: TagKeywordRule[];
 }
 
 export type ViewType = 'active' | 'completed' | 'deleted';

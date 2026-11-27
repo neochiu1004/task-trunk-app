@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { X, LayoutDashboard, Search, Loader2, ScanLine, RotateCcw, Pin, ChevronDown } from 'lucide-react';
-import { Template, RedeemUrlPreset } from '@/types/ticket';
-import { generateId } from '@/lib/helpers';
+import { Template, RedeemUrlPreset, TagKeywordRule } from '@/types/ticket';
+import { generateId, matchTagKeywordRules } from '@/lib/helpers';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { TagSelectInput } from '../ticket/TagSelectInput';
@@ -27,6 +27,7 @@ interface AddModalProps {
   onEditTemplate?: (id: string, updates: Partial<Omit<Template, 'id'>>) => void;
   redeemUrlPresets?: RedeemUrlPreset[];
   defaultTemplateId?: string;
+  tagKeywordRules?: TagKeywordRule[];
   onSaveTemplate?: (data: { label: string; productName: string; image?: string; originalImage?: string; tags?: string[]; serial?: string; expiry?: string; redeemUrlPresetId?: string }) => void;
   onAddBatch: (tickets: Array<{
     id: string;
@@ -60,6 +61,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   onEditTemplate,
   redeemUrlPresets,
   defaultTemplateId,
+  tagKeywordRules,
   onSaveTemplate,
   onAddBatch,
 }) => {
@@ -83,6 +85,23 @@ export const AddModal: React.FC<AddModalProps> = ({
   // Multi-barcode selection state
   const [pendingBarcodes, setPendingBarcodes] = useState<ScanResult[]>([]);
   const [showBarcodeSelect, setShowBarcodeSelect] = useState(false);
+
+  // 關鍵字標籤規則：新增時名稱命中關鍵字就自動帶入固定標籤（仍可手動移除）。
+  useEffect(() => {
+    const matched = matchTagKeywordRules(manualData.name, tagKeywordRules);
+    if (!matched.length) return;
+    setManualTags((prev) => {
+      const merged = [...prev];
+      let changed = false;
+      matched.forEach((tag) => {
+        if (!merged.includes(tag)) {
+          merged.push(tag);
+          changed = true;
+        }
+      });
+      return changed ? merged : prev;
+    });
+  }, [manualData.name, tagKeywordRules]);
 
   const applyBarcode = (result: ScanResult) => {
     setManualData(prev => ({ ...prev, serial: result.content }));
@@ -264,7 +283,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       originalImageGenerated: generatedOriginalImage || undefined,
       generatedImageVersion: generatedOriginalImage ? 5 : undefined,
       images: images,
-      tags: manualTags,
+      tags: [...new Set([...manualTags, ...matchTagKeywordRules(manualData.name, tagKeywordRules)])],
       barcodeFormat: barcodeFormat,
       redeemUrl: manualData.redeemUrl.trim() || undefined,
       pinned: isPinned || undefined,

@@ -48,6 +48,9 @@ export const defaultSettings = {
   redeemUrlPresets: [],
   defaultTemplateId: '',
   quickTags: [],
+  tagKeywordRules: [
+    { tag: '7-11', keywords: ['7-11', 'eleven'] },
+  ],
   localBackupFileName: 'ticket_backup',
 };
 
@@ -187,6 +190,43 @@ export function parseTags(tagInput) {
 
 export function tagsToText(tags) {
   return (tags || []).join(', ');
+}
+
+// 關鍵字標籤規則：{ tag: 固定標籤, keywords: [關鍵字, ...] }。
+// keywords 可為陣列或逗號分隔字串；正規化時去空白、去重、丟掉空標籤。
+export function normalizeTagKeywordRules(rules) {
+  if (!Array.isArray(rules)) return [];
+  const seen = new Set();
+  const normalized = [];
+  rules.forEach((rule) => {
+    const tag = String(rule?.tag || '').trim();
+    if (!tag) return;
+    const rawKeywords = Array.isArray(rule?.keywords)
+      ? rule.keywords
+      : String(rule?.keywords || '').split(/[,，、\n]+/);
+    const keywords = [...new Set(
+      rawKeywords.map((kw) => String(kw || '').trim()).filter(Boolean),
+    )];
+    const key = tag.toLocaleLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push({ tag, keywords });
+  });
+  return normalized;
+}
+
+// 依票券名稱比對關鍵字規則，回傳命中的固定標籤（不重複、照規則順序）。
+// 不分大小寫，名稱包含任一關鍵字即命中；固定標籤本身也算關鍵字。
+export function matchTagKeywordRules(productName, rules) {
+  const name = String(productName || '').trim().toLocaleLowerCase();
+  if (!name) return [];
+  const matched = [];
+  normalizeTagKeywordRules(rules).forEach((rule) => {
+    const candidates = [rule.tag, ...rule.keywords];
+    const hit = candidates.some((kw) => kw && name.includes(kw.toLocaleLowerCase()));
+    if (hit) matched.push(rule.tag);
+  });
+  return matched;
 }
 
 export function isValidUrl(url) {
