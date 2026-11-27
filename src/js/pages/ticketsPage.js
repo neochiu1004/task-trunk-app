@@ -748,6 +748,7 @@ export class TicketsPage {
     modal.innerHTML = `
       <div id="redeem-shell" class="w-full h-full rounded-none border-0 bg-white shadow-2xl p-3 md:p-4 flex flex-col relative">
         <div id="redeemed-stamp" class="${ticket.completed ? '' : 'hidden'} pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rotate-[-12deg] rounded-lg border-4 border-red-600 bg-white/75 px-4 py-1.5 text-3xl font-black tracking-widest text-red-600 opacity-90">已核銷</div>
+        <button type="button" data-pure-redeem data-redeem-keepopen="1" class="hidden absolute right-4 bottom-4 z-30 min-h-11 px-5 rounded-full bg-emerald-600/90 text-white text-sm font-semibold shadow-lg backdrop-blur-sm">標記核銷</button>
         <div id="redeem-header" data-redeem-keepopen="1" class="flex items-start justify-between gap-3 mb-2 md:mb-3">
           <div class="min-w-0">
             <h3 class="text-xl md:text-2xl font-semibold text-wabi-primary">核銷模式</h3>
@@ -789,6 +790,7 @@ export class TicketsPage {
     const footer = modal.querySelector('#redeem-footer');
     const redeemedStamp = modal.querySelector('#redeemed-stamp');
     const confirmRedeemButton = modal.querySelector('[data-confirm-redeem]');
+    const pureRedeemButton = modal.querySelector('[data-pure-redeem]');
 
     const updateModeButtonState = () => {
       modal.querySelectorAll('[data-redeem-mode]').forEach((btn) => {
@@ -805,6 +807,7 @@ export class TicketsPage {
       modeSwitch?.classList.toggle('hidden', immersiveOriginal);
       footer?.classList.toggle('hidden', pureFullscreen);
       redeemedStamp?.classList.toggle('hidden', pureFullscreen || !ticket.completed);
+      pureRedeemButton?.classList.toggle('hidden', !(pureFullscreen && !ticket.completed));
 
       if (shell) {
         shell.classList.toggle('p-0', immersiveOriginal);
@@ -1081,6 +1084,7 @@ export class TicketsPage {
         await this.app.sendRedeemNotification(ticket);
 
         redeemedStamp?.classList.remove('hidden');
+        pureRedeemButton?.classList.add('hidden');
         if (confirmRedeemButton) {
           confirmRedeemButton.disabled = true;
           confirmRedeemButton.textContent = '已標記核銷';
@@ -1118,6 +1122,12 @@ export class TicketsPage {
     });
 
     modal.querySelector('[data-confirm-redeem]')?.addEventListener('click', () => {
+      redeemTicket({ requireRedeemConfirm: true });
+    });
+
+    pureRedeemButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       redeemTicket({ requireRedeemConfirm: true });
     });
 

@@ -941,6 +941,35 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               />
             </div>
             
+            {/* Pure fullscreen: single floating redeem button, layout stays fullscreen */}
+            {isPureFullScreen && !ticket.isDeleted && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsPureFullScreen(false);
+                  setShowFullScreen(false);
+                  setTimeout(() => handleToggleCompleteWithAnimation(), 300);
+                }}
+                className={`absolute right-4 bottom-4 z-10 px-5 py-3.5 rounded-full font-semibold text-white flex items-center justify-center gap-2 shadow-lg ${
+                  ticket.completed
+                    ? 'bg-ticket-warning shadow-ticket-warning/25'
+                    : 'bg-ticket-success shadow-ticket-success/25'
+                }`}
+                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)', touchAction: 'manipulation' }}
+              >
+                {ticket.completed ? (
+                  <>
+                    <RotateCcw size={18} /> 標記未用
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} /> 標記核銷
+                  </>
+                )}
+              </motion.button>
+            )}
+
             {/* Fixed bottom floating buttons; hidden in pure fullscreen */}
             {!isPureFullScreen && (
             <motion.div
